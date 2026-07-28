@@ -4,9 +4,9 @@ Reference: https://rgbds.gbdev.io/docs/v1.0.2/gbz80.7
 
 ## Legend
 
-- [x] Implemented and working
-- [~] Partially implemented / broken
-- [ ] Not implemented
+- `[x]` Implemented and working
+- `[~]` Partially implemented / broken
+- `[ ]` Not implemented
 
 ## Load Instructions
 
