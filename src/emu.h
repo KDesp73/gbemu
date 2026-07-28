@@ -65,6 +65,18 @@ typedef struct {
 uint8_t bus_read(Bus* bus, uint16_t addr);
 void bus_write(Bus* bus, uint16_t addr, uint8_t value);
 
+
+typedef enum {
+    FLAG_Z = (1 << 7),
+    FLAG_N = (1 << 6),
+    FLAG_H = (1 << 5),
+    FLAG_C = (1 << 4),
+} Flag;
+
+void flag_set(CPU* cpu, Flag flag, bool value);
+bool flag_get(const CPU* cpu, Flag flag);
+
 int cpu_step(CPU* cpu, Bus* bus);
+int cpu_execute_cb(CPU* cpu, Bus* bus);
 
 #endif // EMU_H
