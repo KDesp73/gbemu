@@ -37,22 +37,23 @@ int cpu_step(CPU* cpu, Bus* bus)
     uint8_t opcode = bus_read(bus, cpu->pc++);
 
     // 2. Decode & Execute
+    int cycles = get_opcode_cycles(opcode, false);
     switch (opcode) {
         case OP_NOP:
-            return 4;
+            return cycles;
 
         case OP_INC_A:
             cpu->a++;
             flag_set(cpu, FLAG_Z, cpu->a == 0);
             flag_set(cpu, FLAG_N, false);
             flag_set(cpu, FLAG_H, (cpu->a & 0x0F) == 0x00);
-            return 4;
+            return cycles;
 
         case OP_JP_a16: {
             uint8_t low = bus_read(bus, cpu->pc++);
             uint8_t high = bus_read(bus, cpu->pc++);
             cpu->pc = (high << 8) | low;
-            return 16;
+            return cycles;
         }
 
         case OP_PREFIX:
