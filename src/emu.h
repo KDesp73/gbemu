@@ -79,19 +79,17 @@ typedef struct {
 uint8_t bus_read(Bus* bus, uint16_t addr);
 void bus_write(Bus* bus, uint16_t addr, uint8_t value);
 
-//@module instr
-
-int instr(CPU* cpu, Bus* bus, uint8_t opcode);
-
-
 //@module misc
 
 uint8_t get_reg_by_index(CPU* cpu, Bus* bus, uint8_t index);
 void set_reg_by_index(CPU* cpu, Bus* bus, uint8_t index, uint8_t value);
 
-int cpu_step(CPU* cpu, Bus* bus);
-
 uint8_t fetch8(CPU* cpu, Bus* bus);
 uint16_t fetch16(CPU* cpu, Bus* bus);
+
+//@module exec
+
+int instr(CPU* cpu, Bus* bus, uint8_t opcode);
+int cpu_step(CPU* cpu, Bus* bus);
 
 #endif // EMU_H
