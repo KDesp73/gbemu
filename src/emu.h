@@ -114,4 +114,24 @@ void timer_step(Timer* timer, int cycles);
 uint8_t timer_read(const Timer* timer, uint16_t addr);
 void timer_write(Timer* timer, uint16_t addr, uint8_t value);
 
+//@module ppu
+
+// Game Boy native resolution: 160 pixels wide by 144 pixels high
+#define SCREEN_WIDTH 160
+#define SCREEN_HEIGHT 144
+
+typedef struct {
+    // LCD Registers (0xFF40 - 0xFF4B)
+    uint8_t lcdc;
+    uint8_t stat;
+    uint8_t scy, scx;
+    uint8_t ly;
+    uint8_t lyc;
+    uint8_t bgp, obp0, obp1;
+    uint8_t wy, wx;
+
+    // The finished frame outputted to the host (RGBA8888)
+    uint32_t frame_buffer[SCREEN_HEIGHT][SCREEN_WIDTH];
+} PPU;
+
 #endif // EMU_H
