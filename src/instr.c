@@ -188,11 +188,38 @@ static instrfn instr_handlers[] = {
     instr_stack
 };
 
-bool instr(CPU* cpu, Bus* bus, uint8_t opcode)
+
+static int instr_cb(CPU* cpu, Bus* bus)
 {
+    uint8_t cb_opcode = bus_read(bus, cpu->pc++);
+    int cycles = get_opcode_cycles(cb_opcode, true); // CB cycle lookup
+
+    uint8_t reg_idx = cb_opcode & 0x07;         // Lowest 3 bits
+    uint8_t bit_pos = (cb_opcode >> 3) & 0x07;  // Middle 3 bits
+
+    if (cb_opcode >= 0x40 && cb_opcode <= 0x7F) {
+        uint8_t val = get_reg_by_index(cpu, bus, reg_idx);
+        flag_set(cpu, FLAG_Z, (val & (1 << bit_pos)) == 0);
+        flag_set(cpu, FLAG_N, false);
+        flag_set(cpu, FLAG_H, true);
+        return cycles;
+    }
+
+    // TODO: Add handlers for RLC, RRC, RL, RR, SLA, SRA, SWAP, SRL, RES, SET...
+    
+    return 0; // error
+}
+
+int instr(CPU* cpu, Bus* bus, uint8_t opcode)
+{
+    if (opcode == OP_PREFIX) {
+        return instr_cb(cpu, bus);
+    }
+
+    int cycles = get_opcode_cycles(opcode, false);
     for(size_t i = 0; i < sizeof(instr_handlers) / sizeof(instr_handlers[0]); ++i) {
         instrfn handler = instr_handlers[i];
-        if(handler(cpu, bus, opcode)) return true;
+        if(handler(cpu, bus, opcode)) return cycles;
     }
-    return false;
+    return 0; // error
 }

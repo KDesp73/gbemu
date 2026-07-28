@@ -72,41 +72,12 @@ bool flag_get(const CPU* cpu, Flag flag)
 
 int cpu_step(CPU* cpu, Bus* bus)
 {
-    // 1. Fetch
     uint8_t opcode = bus_read(bus, cpu->pc++);
 
-    // 2. Decode & Execute
-    int cycles = get_opcode_cycles(opcode, false);
-    switch (opcode) {
-        case OP_PREFIX:
-            return cpu_execute_cb(cpu, bus);
+    int cycles = instr(cpu, bus, opcode);
+    if (cycles) return cycles;
 
-        default:
-            if(instr(cpu, bus, opcode)) return cycles;
-
-            fprintf(stderr, "Unhandled opcode: 0x%02X at PC: 0x%04X\n", opcode, cpu->pc - 1);
-            exit(1);
-    }
-
-    // UNREACHABLE
-}
-
-int cpu_execute_cb(CPU* cpu, Bus* bus) {
-    uint8_t cb_opcode = bus_read(bus, cpu->pc++);
-    int cycles = get_opcode_cycles(cb_opcode, true); // CB cycle lookup
-
-    uint8_t reg_idx = cb_opcode & 0x07;         // Lowest 3 bits
-    uint8_t bit_pos = (cb_opcode >> 3) & 0x07;  // Middle 3 bits
-
-    if (cb_opcode >= 0x40 && cb_opcode <= 0x7F) {
-        uint8_t val = get_reg_by_index(cpu, bus, reg_idx);
-        flag_set(cpu, FLAG_Z, (val & (1 << bit_pos)) == 0);
-        flag_set(cpu, FLAG_N, false);
-        flag_set(cpu, FLAG_H, true);
-        return cycles;
-    }
-
-    // TODO: Add handlers for RLC, RRC, RL, RR, SLA, SRA, SWAP, SRL, RES, SET...
-    
-    return cycles;
+    // TODO: handle in a better way
+    fprintf(stderr, "Unhandled opcode: 0x%02X at PC: 0x%04X\n", opcode, cpu->pc - 1);
+    exit(1);
 }
