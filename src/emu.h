@@ -65,4 +65,6 @@ typedef struct {
 uint8_t bus_read(Bus* bus, uint16_t addr);
 void bus_write(Bus* bus, uint16_t addr, uint8_t value);
 
+int cpu_step(CPU* cpu, Bus* bus);
+
 #endif // EMU_H
