@@ -1,7 +1,9 @@
+#include "emu.h"
 #include <stdio.h>
 
 int main(){
-    printf("Hello World\n");
+    CPU cpu = {0};
+    cpu_dump(cpu);
 
     return 0;
 }
