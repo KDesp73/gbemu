@@ -1,0 +1,89 @@
+{
+    "prefix": "@",
+    "markers": [
+        {
+            "name": "module",
+            "type": "module",
+            "arg": "required",
+            "argc": 1
+        },
+        {
+            "name": "type",
+            "type": "type",
+            "arg": "required",
+            "argc": 1
+        },
+        {
+            "name": "enum",
+            "type": "type",
+            "arg": "required",
+            "argc": 1
+        },
+        {
+            "name": "macro",
+            "type": "function",
+            "arg": "required",
+            "argc": 1
+        },
+        {
+            "name": "const",
+            "type": "any",
+            "arg": "required",
+            "argc": 1
+        },
+        {
+            "name": "var",
+            "type": "any",
+            "arg": "required",
+            "argc": 1
+        },
+        {
+            "name": "func",
+            "type": "function",
+            "arg": "required",
+            "argc": 1
+        },
+        {
+            "name": "desc",
+            "type": "description",
+            "arg": "required",
+            "argc": 1
+        },
+        {
+            "name": "param",
+            "type": "parameter",
+            "arg": "required",
+            "argc": 2
+        },
+        {
+            "name": "returns",
+            "type": "return",
+            "arg": "required",
+            "argc": 2
+        },
+        {
+            "name": "ref",
+            "type": "reference",
+            "arg": "required",
+            "argc": 1
+        },
+        {
+            "name": "example",
+            "type": "example",
+            "arg": "required",
+            "argc": 1
+        },
+        {
+            "name": "author",
+            "type": "author",
+            "arg": "required",
+            "argc": 1
+        },
+        {
+            "name": "license",
+            "type": "license",
+            "arg": "required",
+            "argc": 1
+        }
+    ]
+}

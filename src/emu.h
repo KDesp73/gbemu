@@ -1,6 +1,10 @@
 #ifndef EMU_H
 #define EMU_H
 
+//@author Konstantinos Despoinidis (KDesp73)
+//@license MIT
+
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -43,5 +47,22 @@ typedef struct {
 
 void cpu_dump_fd(CPU cpu, FILE* fd);
 #define cpu_dump(cpu) cpu_dump_fd(cpu, stdout)
+
+
+//@type Bus
+//@desc Memory bus representation
+//@ref https://gbdev.io/pandocs/Memory_Map.html
+typedef struct {
+    uint8_t rom[0x8000];    // 32KB Cartridge
+    uint8_t vram[0x2000];   // 8KB Video RAM
+    uint8_t wram[0x2000];   // 8KB Work RAM
+    uint8_t oam[0xA0];      // Sprite Attribute Table
+    uint8_t io[0x80];       // Input/Output Registers
+    uint8_t hram[0x7F];     // High RAM
+    uint8_t ie;             // Interrupt Enable Register
+} Bus;
+
+uint8_t bus_read(Bus* bus, uint16_t addr);
+void bus_write(Bus* bus, uint16_t addr, uint8_t value);
 
 #endif // EMU_H

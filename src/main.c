@@ -3,6 +3,8 @@
 
 int main(){
     CPU cpu = {0};
+    Bus bus = {0};
+
     cpu_dump(cpu);
 
     return 0;

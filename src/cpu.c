@@ -1,4 +1,5 @@
 #include "emu.h"
+#include <stdint.h>
 #include <stdio.h>
 
 #define BOOL(x) ((x) ? "true" : "false")
@@ -13,4 +14,3 @@ void cpu_dump_fd(CPU cpu, FILE* fd)
     fprintf(fd, "SP: %d\tPC: %d\n", cpu.sp, cpu.pc);
     fprintf(fd, "IME: %s\tHALTED: %s\n", BOOL(cpu.ime), BOOL(cpu.halted));
 }
-
