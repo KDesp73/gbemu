@@ -48,10 +48,25 @@ typedef struct {
     bool halted;
 } CPU;
 
+//@func cpu_init
+//@desc Initialize CPU state to boot values
+//@param cpu CPU pointer to initialize
 void cpu_init(CPU* cpu);
+
+//@func cpu_dump_fd
+//@desc Dump CPU register state to a file descriptor
+//@param cpu CPU state to dump
+//@param fd Output file descriptor (e.g. stdout)
 void cpu_dump_fd(CPU cpu, FILE* fd);
+
+//@func cpu_dump
+//@desc Dump CPU register state to stdout
+//@param cpu CPU state to dump
 #define cpu_dump(cpu) cpu_dump_fd(cpu, stdout)
 
+//@enum Flag
+//@desc CPU flag bit positions in the F register
+//@ref https://gbdev.io/pandocs/CPU_Registers_and_Flags.html
 typedef enum {
     FLAG_Z = (1 << 7),
     FLAG_N = (1 << 6),
@@ -59,7 +74,18 @@ typedef enum {
     FLAG_C = (1 << 4),
 } Flag;
 
+//@func flag_set
+//@desc Set or clear a specific CPU flag
+//@param cpu CPU whose flag to modify
+//@param flag The flag bit to set or clear
+//@param value true to set, false to clear
 void flag_set(CPU* cpu, Flag flag, bool value);
+
+//@func flag_get
+//@desc Read the value of a specific CPU flag
+//@param cpu CPU to read from
+//@param flag The flag bit to read
+//@returns true if the flag is set, false otherwise
 bool flag_get(const CPU* cpu, Flag flag);
 
 //@module memory
@@ -77,28 +103,86 @@ typedef struct {
     uint8_t ie;             // Interrupt Enable Register
 } Bus;
 
+//@func bus_read
+//@desc Read a byte from the memory-mapped bus
+//@param bus Memory bus to read from
+//@param addr 16-bit address to read
+//@returns Byte value at the given address
 uint8_t bus_read(Bus* bus, uint16_t addr);
+
+//@func bus_write
+//@desc Write a byte to the memory-mapped bus
+//@param bus Memory bus to write to
+//@param addr 16-bit address to write
+//@param value Byte value to write
 void bus_write(Bus* bus, uint16_t addr, uint8_t value);
 
 //@module misc
 
+//@func get_reg_by_index
+//@desc Get a CPU register value by its 3-bit index (0-7)
+//@param cpu CPU to read from
+//@param bus Memory bus for HL indirect reads
+//@param index Register index (0=B,1=C,2=D,3=E,4=H,5=L,6=(HL),7=A)
+//@returns Byte value of the register
 uint8_t get_reg_by_index(CPU* cpu, Bus* bus, uint8_t index);
+
+//@func set_reg_by_index
+//@desc Set a CPU register value by its 3-bit index (0-7)
+//@param cpu CPU to write to
+//@param bus Memory bus for HL indirect writes
+//@param index Register index (0=B,1=C,2=D,3=E,4=H,5=L,6=(HL),7=A)
+//@param value Byte value to write
 void set_reg_by_index(CPU* cpu, Bus* bus, uint8_t index, uint8_t value);
 
+//@func fetch8
+//@desc Fetch the next byte from PC and advance PC by 1
+//@param cpu CPU to fetch from
+//@param bus Memory bus to read from
+//@returns The fetched byte
 uint8_t fetch8(CPU* cpu, Bus* bus);
+
+//@func fetch16
+//@desc Fetch the next 16-bit value from PC (little-endian) and advance PC by 2
+//@param cpu CPU to fetch from
+//@param bus Memory bus to read from
+//@returns The fetched 16-bit value
 uint16_t fetch16(CPU* cpu, Bus* bus);
 
 //@module exec
 
+//@macro CPU_FREQ
+//@desc CPU clock frequency in Hz (4.194304 MHz)
 #define CPU_FREQ 4194304
-#define CYCLES_PER_FRAME (CPU_FREQ / 60) // ~69,905 T-cycles per frame
-#define FRAME_TIME_NS (1000000000L / 60) // ~16.66 ms in nanoseconds
 
+//@macro CYCLES_PER_FRAME
+//@desc T-cycles per frame at 60 Hz (~69,905)
+#define CYCLES_PER_FRAME (CPU_FREQ / 60)
+
+//@macro FRAME_TIME_NS
+//@desc Frame duration in nanoseconds at 60 Hz (~16.66 ms)
+#define FRAME_TIME_NS (1000000000L / 60)
+
+//@func instr
+//@desc Execute a single CPU instruction by opcode
+//@param cpu CPU state to mutate
+//@param bus Memory bus for reads/writes
+//@param opcode The opcode byte to execute
+//@returns Number of T-cycles the instruction consumed
 int instr(CPU* cpu, Bus* bus, uint8_t opcode);
+
+//@func cpu_step
+//@desc Execute one full CPU step (fetch + decode + execute)
+//@param cpu CPU state to mutate
+//@param bus Memory bus for reads/writes
+//@returns Number of T-cycles the step consumed
 int cpu_step(CPU* cpu, Bus* bus);
 
 //@module timer
 
+//@type Timer
+//@desc Game Boy timer hardware (DIV, TIMA, TMA, TAC registers)
+//@ref https://gbdev.io/pandocs/Timer_and_Divider_Registers.html
 typedef struct {
     uint16_t internal_counter; // 16-bit internal clock (DIV is the upper byte)
     
@@ -109,19 +193,44 @@ typedef struct {
     bool interrupt_requested; // Set to true when TIMA overflows
 } Timer;
 
+//@func timer_init
+//@desc Initialize timer state to default values
+//@param timer Timer pointer to initialize
 void timer_init(Timer* timer);
+
+//@func timer_step
+//@desc Advance the timer by the given number of T-cycles
+//@param timer Timer state to update
+//@param cycles Number of T-cycles elapsed
 void timer_step(Timer* timer, int cycles);
 
+//@func timer_read
+//@desc Read a timer register value
+//@param timer Timer state to read from
+//@param addr Register address (0xFF04-0xFF07)
+//@returns Register byte value
 uint8_t timer_read(const Timer* timer, uint16_t addr);
+
+//@func timer_write
+//@desc Write a value to a timer register
+//@param timer Timer state to write to
+//@param addr Register address (0xFF04-0xFF07)
+//@param value Byte value to write
 void timer_write(Timer* timer, uint16_t addr, uint8_t value);
 
 //@module ppu
 
-// Game Boy native resolution: 160 pixels wide by 144 pixels high
+//@macro SCREEN_WIDTH
+//@desc Game Boy native screen width in pixels
 #define SCREEN_WIDTH 160
+
+//@macro SCREEN_HEIGHT
+//@desc Game Boy native screen height in pixels
 #define SCREEN_HEIGHT 144
 
-// PPU Modes (stored in lower 2 bits of STAT register 0xFF41)
+//@enum PPUMode
+//@desc PPU mode states stored in the lower 2 bits of STAT (0xFF41)
+//@ref https://gbdev.io/pandocs/STAT_Register.html
 typedef enum {
     PPU_MODE_HBLANK = 0, // Mode 0: Horizontal Blank (204 M-cycles)
     PPU_MODE_VBLANK = 1, // Mode 1: Vertical Blank (4560 M-cycles / Scanlines 144-153)
@@ -129,6 +238,9 @@ typedef enum {
     PPU_MODE_XFER   = 3  // Mode 3: Transferring pixel data to LCD (172 M-cycles)
 } PPUMode;
 
+//@type PPU
+//@desc Pixel Processing Unit - renders scanlines to the frame buffer
+//@ref https://gbdev.io/pandocs/PPU.html
 typedef struct {
     uint8_t lcdc; // 0xFF40 - LCD Control
     uint8_t stat; // 0xFF41 - LCD Status
@@ -152,10 +264,30 @@ typedef struct {
     bool stat_interrupt;     // Set to true to request INT 0x48
 } PPU;
 
+//@func ppu_init
+//@desc Initialize PPU registers and frame buffer to default values
+//@param ppu PPU pointer to initialize
 void ppu_init(PPU* ppu);
+
+//@func ppu_step
+//@desc Advance the PPU state machine by the given T-cycles
+//@param ppu PPU state to update
+//@param bus Memory bus for VRAM and OAM reads
+//@param cycles Number of T-cycles elapsed
 void ppu_step(PPU* ppu, Bus* bus, int cycles);
 
+//@func ppu_read
+//@desc Read a PPU register value
+//@param ppu PPU state to read from
+//@param addr Register address (0xFF40-0xFF4B)
+//@returns Register byte value
 uint8_t ppu_read(const PPU* ppu, uint16_t addr);
+
+//@func ppu_write
+//@desc Write a value to a PPU register
+//@param ppu PPU state to write to
+//@param addr Register address (0xFF40-0xFF4B)
+//@param value Byte value to write
 void ppu_write(PPU* ppu, uint16_t addr, uint8_t value);
 
 #endif // EMU_H
