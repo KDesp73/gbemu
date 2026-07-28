@@ -89,7 +89,29 @@ uint16_t fetch16(CPU* cpu, Bus* bus);
 
 //@module exec
 
+#define CPU_FREQ 4194304
+#define CYCLES_PER_FRAME (CPU_FREQ / 60) // ~69,905 T-cycles per frame
+#define FRAME_TIME_NS (1000000000L / 60) // ~16.66 ms in nanoseconds
+
 int instr(CPU* cpu, Bus* bus, uint8_t opcode);
 int cpu_step(CPU* cpu, Bus* bus);
+
+//@module timer
+
+typedef struct {
+    uint16_t internal_counter; // 16-bit internal clock (DIV is the upper byte)
+    
+    uint8_t tima; // 0xFF05
+    uint8_t tma;  // 0xFF06
+    uint8_t tac;  // 0xFF07
+
+    bool interrupt_requested; // Set to true when TIMA overflows
+} Timer;
+
+void timer_init(Timer* timer);
+void timer_step(Timer* timer, int cycles);
+
+uint8_t timer_read(const Timer* timer, uint16_t addr);
+void timer_write(Timer* timer, uint16_t addr, uint8_t value);
 
 #endif // EMU_H
