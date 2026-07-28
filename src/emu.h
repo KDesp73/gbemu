@@ -9,6 +9,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+//@module cpu
+
 //@type CPU
 //@desc Software representation of the Central Processing Unit
 //@ref https://gbdev.io/pandocs/CPU_Registers_and_Flags.html
@@ -45,9 +47,21 @@ typedef struct {
     bool halted;
 } CPU;
 
+void cpu_init(CPU* cpu);
 void cpu_dump_fd(CPU cpu, FILE* fd);
 #define cpu_dump(cpu) cpu_dump_fd(cpu, stdout)
 
+typedef enum {
+    FLAG_Z = (1 << 7),
+    FLAG_N = (1 << 6),
+    FLAG_H = (1 << 5),
+    FLAG_C = (1 << 4),
+} Flag;
+
+void flag_set(CPU* cpu, Flag flag, bool value);
+bool flag_get(const CPU* cpu, Flag flag);
+
+//@module memory
 
 //@type Bus
 //@desc Memory bus representation
@@ -65,18 +79,15 @@ typedef struct {
 uint8_t bus_read(Bus* bus, uint16_t addr);
 void bus_write(Bus* bus, uint16_t addr, uint8_t value);
 
+//@module misc
 
-typedef enum {
-    FLAG_Z = (1 << 7),
-    FLAG_N = (1 << 6),
-    FLAG_H = (1 << 5),
-    FLAG_C = (1 << 4),
-} Flag;
-
-void flag_set(CPU* cpu, Flag flag, bool value);
-bool flag_get(const CPU* cpu, Flag flag);
+uint8_t get_reg_by_index(CPU* cpu, Bus* bus, uint8_t index);
+void set_reg_by_index(CPU* cpu, Bus* bus, uint8_t index, uint8_t value);
 
 int cpu_step(CPU* cpu, Bus* bus);
 int cpu_execute_cb(CPU* cpu, Bus* bus);
+
+uint8_t fetch8(CPU* cpu, Bus* bus);
+uint16_t fetch16(CPU* cpu, Bus* bus);
 
 #endif // EMU_H
