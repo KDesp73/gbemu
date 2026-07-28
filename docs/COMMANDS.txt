@@ -1,0 +1,2 @@
+# Compile RGBASM file to a ROM
+(rgbasm -o - - | rgblink -o - - | rgbfix -v -p 0) < game.asm > game.gb
