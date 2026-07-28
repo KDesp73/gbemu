@@ -78,80 +78,17 @@ int cpu_step(CPU* cpu, Bus* bus)
     // 2. Decode & Execute
     int cycles = get_opcode_cycles(opcode, false);
     switch (opcode) {
-        case OP_NOP:
-            return cycles;
-
-        /*
-         * ADC A, r8
-         * Add the value in r8 plus the carry flag to A.
-         * Cycles: 1 (2 if r8 is [HL]) | Bytes: 1
-         * Flags:
-         *   Z: Set if result is 0.
-         *   N: 0
-         *   H: Set if overflow from bit 3.
-         *   C: Set if overflow from bit 7.
-         */
-        case OP_ADC_A_B:
-        case OP_ADC_A_C:
-        case OP_ADC_A_D:
-        case OP_ADC_A_E:
-        case OP_ADC_A_H:
-        case OP_ADC_A_L:
-        case OP_ADC_A_HL_IND:
-        case OP_ADC_A_A: {
-            // NOTE: `opcode & 0x07` because lowest 3 bits store the target
-            // register ID
-            uint8_t value = get_reg_by_index(cpu, bus, opcode & 0x07);
-            uint8_t carry = flag_get(cpu, FLAG_C) ? 1 : 0;
-            
-            // Perform 16-bit math to catch 8-bit overflow (Carry)
-            uint16_t result = cpu->a + value + carry;
-            
-            // Set Flags
-            flag_set(cpu, FLAG_Z, (uint8_t)result == 0);
-            flag_set(cpu, FLAG_N, false);
-            // Half-carry checks if lower 4 bits overflow bit 3
-            flag_set(cpu, FLAG_H, ((cpu->a & 0x0F) + (value & 0x0F) + carry) > 0x0F);
-            // Carry checks if 8-bit result exceeds 0xFF
-            flag_set(cpu, FLAG_C, result > 0xFF);
-
-            cpu->a = (uint8_t)result;
-            return cycles;
-        }
-        
-        /*
-         * ADC A, n8
-         * Add the value n8 plus the carry flag to A
-         * Cycles: 2 | Bytes: 2
-         *
-         */
-        case OP_ADC_A_n8: {
-            uint8_t value = get_reg_by_index(cpu, bus, opcode & 0x07);
-        }
-
-        case OP_INC_A:
-            cpu->a++;
-            flag_set(cpu, FLAG_Z, cpu->a == 0);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, (cpu->a & 0x0F) == 0x00);
-            return cycles;
-
-        case OP_JP_a16: {
-            cpu->pc = fetch16(cpu, bus);
-            return cycles;
-        }
-
-        case OP_LD_B_n8:
-            cpu->b = fetch8(cpu, bus);
-            return cycles;
-
         case OP_PREFIX:
             return cpu_execute_cb(cpu, bus);
 
         default:
+            if(instr(cpu, bus, opcode)) return cycles;
+
             fprintf(stderr, "Unhandled opcode: 0x%02X at PC: 0x%04X\n", opcode, cpu->pc - 1);
             exit(1);
     }
+
+    // UNREACHABLE
 }
 
 int cpu_execute_cb(CPU* cpu, Bus* bus) {
