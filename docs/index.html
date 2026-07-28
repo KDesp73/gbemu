@@ -169,9 +169,23 @@
             
                 
             
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
         
 
-        <section x-show="shouldShowModule('src/emu.h', 'cpu', ["CPU", "https://gbdev.io/pandocs/CPU_Registers_and_Flags.html"])" x-cloak class="relative">
+        <section x-show="shouldShowModule('src/emu.h', 'cpu', ["CPU", "https://gbdev.io/pandocs/CPU_Registers_and_Flags.html", "cpu_init", "cpu_dump_fd", "cpu_dump", "Flag", "https://gbdev.io/pandocs/CPU_Registers_and_Flags.html", "flag_set", "flag_get"])" x-cloak class="relative">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10 group">
                 <div class="space-y-1">
                     <div class="flex items-center gap-2">
@@ -246,6 +260,301 @@
                         </div>
                     </div>
                     
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('cpu_init') || match('cpu') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('cpu_init') && 'highlight'">
+                                    cpu_init
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 51</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Initialize CPU state to boot values</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">cpu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">CPU pointer to initialize</span>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('cpu_dump_fd') || match('cpu') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('cpu_dump_fd') && 'highlight'">
+                                    cpu_dump_fd
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 56</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Dump CPU register state to a file descriptor</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">cpu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">CPU state to dump</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">fd</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Output file descriptor (e.g. stdout)</span>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('cpu_dump') || match('cpu') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('cpu_dump') && 'highlight'">
+                                    cpu_dump
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 62</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Dump CPU register state to stdout</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">cpu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">CPU state to dump</span>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('Flag') || match('cpu') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300
+                                    ">
+                                    enum
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('Flag') && 'highlight'">
+                                    Flag
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 67</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">CPU flag bit positions in the F register</p>
+                                    
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('https://gbdev.io/pandocs/CPU_Registers_and_Flags.html') || match('cpu') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 ">
+                                    ref
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('https://gbdev.io/pandocs/CPU_Registers_and_Flags.html') && 'highlight'">
+                                    https://gbdev.io/pandocs/CPU_Registers_and_Flags.html
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 69</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('flag_set') || match('cpu') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('flag_set') && 'highlight'">
+                                    flag_set
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 77</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Set or clear a specific CPU flag</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">cpu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">CPU whose flag to modify</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">flag</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">The flag bit to set or clear</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">value</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">true to set, false to clear</span>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('flag_get') || match('cpu') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('flag_get') && 'highlight'">
+                                    flag_get
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 84</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Read the value of a specific CPU flag</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">cpu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">CPU to read from</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">flag</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">The flag bit to read</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-5 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-emerald-500 w-8 shrink-0">returns</span>
+                                            <code class="text-emerald-600 dark:text-emerald-400 font-bold text-sm">true</code>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
                 
             </div>
         </section>
@@ -259,9 +568,13 @@
             
                 
             
+                
+            
+                
+            
         
 
-        <section x-show="shouldShowModule('src/emu.h', 'memory', ["Bus", "https://gbdev.io/pandocs/Memory_Map.html"])" x-cloak class="relative">
+        <section x-show="shouldShowModule('src/emu.h', 'memory', ["Bus", "https://gbdev.io/pandocs/Memory_Map.html", "bus_read", "bus_write"])" x-cloak class="relative">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10 group">
                 <div class="space-y-1">
                     <div class="flex items-center gap-2">
@@ -299,7 +612,7 @@
                                     Bus
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 67</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 93</span>
                             </div>
 
                             <div class="space-y-4">
@@ -327,10 +640,126 @@
                                     https://gbdev.io/pandocs/Memory_Map.html
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 69</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 95</span>
                             </div>
 
                             <div class="space-y-4">
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('bus_read') || match('memory') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('bus_read') && 'highlight'">
+                                    bus_read
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 106</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Read a byte from the memory-mapped bus</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">bus</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Memory bus to read from</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">addr</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">16-bit address to read</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-5 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-emerald-500 w-8 shrink-0">returns</span>
+                                            <code class="text-emerald-600 dark:text-emerald-400 font-bold text-sm">Byte</code>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('bus_write') || match('memory') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('bus_write') && 'highlight'">
+                                    bus_write
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 113</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Write a byte to the memory-mapped bus</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">bus</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Memory bus to write to</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">addr</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">16-bit address to write</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">value</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Byte value to write</span>
+                                        </div>
+
+                                    
                                 
                             </div>
                         </div>
@@ -344,8 +773,18 @@
         
         
         
+            
+                
+            
+                
+            
+                
+            
+                
+            
+        
 
-        <section x-show="shouldShowModule('src/emu.h', 'misc', [])" x-cloak class="relative">
+        <section x-show="shouldShowModule('src/emu.h', 'misc', ["get_reg_by_index", "set_reg_by_index", "fetch8", "fetch16"])" x-cloak class="relative">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10 group">
                 <div class="space-y-1">
                     <div class="flex items-center gap-2">
@@ -367,6 +806,258 @@
                 <div class="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-indigo-500 via-slate-200 dark:via-slate-800 to-transparent ml-4 hidden md:block"></div>
 
                 
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('get_reg_by_index') || match('misc') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('get_reg_by_index') && 'highlight'">
+                                    get_reg_by_index
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 122</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Get a CPU register value by its 3-bit index (0-7)</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">cpu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">CPU to read from</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">bus</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Memory bus for HL indirect reads</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">index</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Register index (0=B,1=C,2=D,3=E,4=H,5=L,6=(HL),7=A)</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-5 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-emerald-500 w-8 shrink-0">returns</span>
+                                            <code class="text-emerald-600 dark:text-emerald-400 font-bold text-sm">Byte</code>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('set_reg_by_index') || match('misc') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('set_reg_by_index') && 'highlight'">
+                                    set_reg_by_index
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 130</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Set a CPU register value by its 3-bit index (0-7)</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">cpu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">CPU to write to</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">bus</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Memory bus for HL indirect writes</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">index</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Register index (0=B,1=C,2=D,3=E,4=H,5=L,6=(HL),7=A)</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">value</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Byte value to write</span>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('fetch8') || match('misc') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('fetch8') && 'highlight'">
+                                    fetch8
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 138</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Fetch the next byte from PC and advance PC by 1</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">cpu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">CPU to fetch from</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">bus</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Memory bus to read from</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-5 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-emerald-500 w-8 shrink-0">returns</span>
+                                            <code class="text-emerald-600 dark:text-emerald-400 font-bold text-sm">The</code>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('fetch16') || match('misc') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('fetch16') && 'highlight'">
+                                    fetch16
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 145</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Fetch the next 16-bit value from PC (little-endian) and advance PC by 2</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">cpu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">CPU to fetch from</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">bus</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Memory bus to read from</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-5 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-emerald-500 w-8 shrink-0">returns</span>
+                                            <code class="text-emerald-600 dark:text-emerald-400 font-bold text-sm">The</code>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                
             </div>
         </section>
         
@@ -374,8 +1065,20 @@
         
         
         
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+        
 
-        <section x-show="shouldShowModule('src/emu.h', 'exec', [])" x-cloak class="relative">
+        <section x-show="shouldShowModule('src/emu.h', 'exec', ["CPU_FREQ", "CYCLES_PER_FRAME", "FRAME_TIME_NS", "instr", "cpu_step"])" x-cloak class="relative">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10 group">
                 <div class="space-y-1">
                     <div class="flex items-center gap-2">
@@ -397,6 +1100,219 @@
                 <div class="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-indigo-500 via-slate-200 dark:via-slate-800 to-transparent ml-4 hidden md:block"></div>
 
                 
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('CPU_FREQ') || match('exec') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    macro
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('CPU_FREQ') && 'highlight'">
+                                    CPU_FREQ
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 154</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">CPU clock frequency in Hz (4.194304 MHz)</p>
+                                    
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('CYCLES_PER_FRAME') || match('exec') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    macro
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('CYCLES_PER_FRAME') && 'highlight'">
+                                    CYCLES_PER_FRAME
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 158</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">T-cycles per frame at 60 Hz (~69,905)</p>
+                                    
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('FRAME_TIME_NS') || match('exec') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    macro
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('FRAME_TIME_NS') && 'highlight'">
+                                    FRAME_TIME_NS
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 162</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Frame duration in nanoseconds at 60 Hz (~16.66 ms)</p>
+                                    
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('instr') || match('exec') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('instr') && 'highlight'">
+                                    instr
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 166</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Execute a single CPU instruction by opcode</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">cpu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">CPU state to mutate</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">bus</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Memory bus for reads/writes</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">opcode</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">The opcode byte to execute</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-5 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-emerald-500 w-8 shrink-0">returns</span>
+                                            <code class="text-emerald-600 dark:text-emerald-400 font-bold text-sm">Number</code>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('cpu_step') || match('exec') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('cpu_step') && 'highlight'">
+                                    cpu_step
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 174</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Execute one full CPU step (fetch + decode + execute)</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">cpu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">CPU state to mutate</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">bus</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Memory bus for reads/writes</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-5 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-emerald-500 w-8 shrink-0">returns</span>
+                                            <code class="text-emerald-600 dark:text-emerald-400 font-bold text-sm">Number</code>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                
             </div>
         </section>
         
@@ -404,8 +1320,22 @@
         
         
         
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+        
 
-        <section x-show="shouldShowModule('src/emu.h', 'timer', [])" x-cloak class="relative">
+        <section x-show="shouldShowModule('src/emu.h', 'timer', ["Timer", "https://gbdev.io/pandocs/Timer_and_Divider_Registers.html", "timer_init", "timer_step", "timer_read", "timer_write"])" x-cloak class="relative">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10 group">
                 <div class="space-y-1">
                     <div class="flex items-center gap-2">
@@ -427,6 +1357,264 @@
                 <div class="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-indigo-500 via-slate-200 dark:via-slate-800 to-transparent ml-4 hidden md:block"></div>
 
                 
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('Timer') || match('timer') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300
+                                    ">
+                                    type
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('Timer') && 'highlight'">
+                                    Timer
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 183</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Game Boy timer hardware (DIV, TIMA, TMA, TAC registers)</p>
+                                    
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('https://gbdev.io/pandocs/Timer_and_Divider_Registers.html') || match('timer') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 ">
+                                    ref
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('https://gbdev.io/pandocs/Timer_and_Divider_Registers.html') && 'highlight'">
+                                    https://gbdev.io/pandocs/Timer_and_Divider_Registers.html
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 185</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('timer_init') || match('timer') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('timer_init') && 'highlight'">
+                                    timer_init
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 196</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Initialize timer state to default values</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">timer</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Timer pointer to initialize</span>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('timer_step') || match('timer') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('timer_step') && 'highlight'">
+                                    timer_step
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 201</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Advance the timer by the given number of T-cycles</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">timer</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Timer state to update</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">cycles</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Number of T-cycles elapsed</span>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('timer_read') || match('timer') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('timer_read') && 'highlight'">
+                                    timer_read
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 207</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Read a timer register value</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">timer</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Timer state to read from</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">addr</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Register address (0xFF04-0xFF07)</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-5 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-emerald-500 w-8 shrink-0">returns</span>
+                                            <code class="text-emerald-600 dark:text-emerald-400 font-bold text-sm">Register</code>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('timer_write') || match('timer') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('timer_write') && 'highlight'">
+                                    timer_write
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 214</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Write a value to a timer register</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">timer</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Timer state to write to</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">addr</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Register address (0xFF04-0xFF07)</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">value</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Byte value to write</span>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                
             </div>
         </section>
         
@@ -434,8 +1622,30 @@
         
         
         
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+                
+            
+        
 
-        <section x-show="shouldShowModule('src/emu.h', 'ppu', [])" x-cloak class="relative">
+        <section x-show="shouldShowModule('src/emu.h', 'ppu', ["SCREEN_WIDTH", "SCREEN_HEIGHT", "PPUMode", "https://gbdev.io/pandocs/STAT_Register.html", "PPU", "https://gbdev.io/pandocs/PPU.html", "ppu_init", "ppu_step", "ppu_read", "ppu_write"])" x-cloak class="relative">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10 group">
                 <div class="space-y-1">
                     <div class="flex items-center gap-2">
@@ -456,6 +1666,384 @@
             <div class="grid grid-cols-1 gap-10 relative">
                 <div class="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-indigo-500 via-slate-200 dark:via-slate-800 to-transparent ml-4 hidden md:block"></div>
 
+                
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('SCREEN_WIDTH') || match('ppu') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    macro
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('SCREEN_WIDTH') && 'highlight'">
+                                    SCREEN_WIDTH
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 223</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Game Boy native screen width in pixels</p>
+                                    
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('SCREEN_HEIGHT') || match('ppu') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    macro
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('SCREEN_HEIGHT') && 'highlight'">
+                                    SCREEN_HEIGHT
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 227</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Game Boy native screen height in pixels</p>
+                                    
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('PPUMode') || match('ppu') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300
+                                    ">
+                                    enum
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('PPUMode') && 'highlight'">
+                                    PPUMode
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 231</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">PPU mode states stored in the lower 2 bits of STAT (0xFF41)</p>
+                                    
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('https://gbdev.io/pandocs/STAT_Register.html') || match('ppu') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 ">
+                                    ref
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('https://gbdev.io/pandocs/STAT_Register.html') && 'highlight'">
+                                    https://gbdev.io/pandocs/STAT_Register.html
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 233</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('PPU') || match('ppu') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300
+                                    ">
+                                    type
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('PPU') && 'highlight'">
+                                    PPU
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 241</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Pixel Processing Unit - renders scanlines to the frame buffer</p>
+                                    
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('https://gbdev.io/pandocs/PPU.html') || match('ppu') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 ">
+                                    ref
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('https://gbdev.io/pandocs/PPU.html') && 'highlight'">
+                                    https://gbdev.io/pandocs/PPU.html
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 243</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('ppu_init') || match('ppu') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('ppu_init') && 'highlight'">
+                                    ppu_init
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 267</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Initialize PPU registers and frame buffer to default values</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">ppu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">PPU pointer to initialize</span>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('ppu_step') || match('ppu') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('ppu_step') && 'highlight'">
+                                    ppu_step
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 272</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Advance the PPU state machine by the given T-cycles</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">ppu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">PPU state to update</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">bus</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Memory bus for VRAM and OAM reads</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">cycles</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Number of T-cycles elapsed</span>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('ppu_read') || match('ppu') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('ppu_read') && 'highlight'">
+                                    ppu_read
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 279</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Read a PPU register value</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">ppu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">PPU state to read from</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">addr</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Register address (0xFF40-0xFF4B)</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-5 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-emerald-500 w-8 shrink-0">returns</span>
+                                            <code class="text-emerald-600 dark:text-emerald-400 font-bold text-sm">Register</code>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('ppu_write') || match('ppu') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('ppu_write') && 'highlight'">
+                                    ppu_write
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 286</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Write a value to a PPU register</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">ppu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">PPU state to write to</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">addr</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Register address (0xFF40-0xFF4B)</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">value</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Byte value to write</span>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
                 
             </div>
         </section>
