@@ -120,18 +120,41 @@ void timer_write(Timer* timer, uint16_t addr, uint8_t value);
 #define SCREEN_WIDTH 160
 #define SCREEN_HEIGHT 144
 
-typedef struct {
-    // LCD Registers (0xFF40 - 0xFF4B)
-    uint8_t lcdc;
-    uint8_t stat;
-    uint8_t scy, scx;
-    uint8_t ly;
-    uint8_t lyc;
-    uint8_t bgp, obp0, obp1;
-    uint8_t wy, wx;
+// PPU Modes (stored in lower 2 bits of STAT register 0xFF41)
+typedef enum {
+    PPU_MODE_HBLANK = 0, // Mode 0: Horizontal Blank (204 M-cycles)
+    PPU_MODE_VBLANK = 1, // Mode 1: Vertical Blank (4560 M-cycles / Scanlines 144-153)
+    PPU_MODE_OAM    = 2, // Mode 2: Searching OAM for sprites (80 M-cycles)
+    PPU_MODE_XFER   = 3  // Mode 3: Transferring pixel data to LCD (172 M-cycles)
+} PPUMode;
 
-    // The finished frame outputted to the host (RGBA8888)
-    uint32_t frame_buffer[SCREEN_HEIGHT][SCREEN_WIDTH];
+typedef struct {
+    uint8_t lcdc; // 0xFF40 - LCD Control
+    uint8_t stat; // 0xFF41 - LCD Status
+    uint8_t scy;  // 0xFF42 - Scroll Y
+    uint8_t scx;  // 0xFF43 - Scroll X
+    uint8_t ly;   // 0xFF44 - LCD Y-Coordinate (Current Scanline 0-153)
+    uint8_t lyc;  // 0xFF45 - LY Compare
+    uint8_t bgp;  // 0xFF47 - BG Palette Data
+    uint8_t obp0; // 0xFF48 - Object Palette 0 Data
+    uint8_t obp1; // 0xFF49 - Object Palette 1 Data
+    uint8_t wy;   // 0xFF4A - Window Y Position
+    uint8_t wx;   // 0xFF4B - Window X Position + 7
+
+    // Internal State
+    uint32_t dots; // Dot/T-cycle counter within the current scanline (0-455)
+    
+    // Output Interfaces
+    uint32_t frame_buffer[SCREEN_HEIGHT][SCREEN_WIDTH]; // Pixel buffer for SDL
+    bool frame_ready;        // Set to true at VBlank, signals SDL to render
+    bool vblank_interrupt;   // Set to true to request INT 0x40
+    bool stat_interrupt;     // Set to true to request INT 0x48
 } PPU;
+
+void ppu_init(PPU* ppu);
+void ppu_step(PPU* ppu, int cycles);
+
+uint8_t ppu_read(const PPU* ppu, uint16_t addr);
+void ppu_write(PPU* ppu, uint16_t addr, uint8_t value);
 
 #endif // EMU_H
