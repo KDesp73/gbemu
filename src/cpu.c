@@ -81,6 +81,54 @@ int cpu_step(CPU* cpu, Bus* bus)
         case OP_NOP:
             return cycles;
 
+        /*
+         * ADC A, r8
+         * Add the value in r8 plus the carry flag to A.
+         * Cycles: 1 (2 if r8 is [HL]) | Bytes: 1
+         * Flags:
+         *   Z: Set if result is 0.
+         *   N: 0
+         *   H: Set if overflow from bit 3.
+         *   C: Set if overflow from bit 7.
+         */
+        case OP_ADC_A_B:
+        case OP_ADC_A_C:
+        case OP_ADC_A_D:
+        case OP_ADC_A_E:
+        case OP_ADC_A_H:
+        case OP_ADC_A_L:
+        case OP_ADC_A_HL_IND:
+        case OP_ADC_A_A: {
+            // NOTE: `opcode & 0x07` because lowest 3 bits store the target
+            // register ID
+            uint8_t value = get_reg_by_index(cpu, bus, opcode & 0x07);
+            uint8_t carry = flag_get(cpu, FLAG_C) ? 1 : 0;
+            
+            // Perform 16-bit math to catch 8-bit overflow (Carry)
+            uint16_t result = cpu->a + value + carry;
+            
+            // Set Flags
+            flag_set(cpu, FLAG_Z, (uint8_t)result == 0);
+            flag_set(cpu, FLAG_N, false);
+            // Half-carry checks if lower 4 bits overflow bit 3
+            flag_set(cpu, FLAG_H, ((cpu->a & 0x0F) + (value & 0x0F) + carry) > 0x0F);
+            // Carry checks if 8-bit result exceeds 0xFF
+            flag_set(cpu, FLAG_C, result > 0xFF);
+
+            cpu->a = (uint8_t)result;
+            return cycles;
+        }
+        
+        /*
+         * ADC A, n8
+         * Add the value n8 plus the carry flag to A
+         * Cycles: 2 | Bytes: 2
+         *
+         */
+        case OP_ADC_A_n8: {
+            uint8_t value = get_reg_by_index(cpu, bus, opcode & 0x07);
+        }
+
         case OP_INC_A:
             cpu->a++;
             flag_set(cpu, FLAG_Z, cpu->a == 0);
@@ -113,7 +161,6 @@ int cpu_execute_cb(CPU* cpu, Bus* bus) {
     uint8_t reg_idx = cb_opcode & 0x07;         // Lowest 3 bits
     uint8_t bit_pos = (cb_opcode >> 3) & 0x07;  // Middle 3 bits
 
-    // Example decoding BIT instructions (0x40 - 0x7F)
     if (cb_opcode >= 0x40 && cb_opcode <= 0x7F) {
         uint8_t val = get_reg_by_index(cpu, bus, reg_idx);
         flag_set(cpu, FLAG_Z, (val & (1 << bit_pos)) == 0);
@@ -122,7 +169,7 @@ int cpu_execute_cb(CPU* cpu, Bus* bus) {
         return cycles;
     }
 
-    // Add handlers for RLC, RRC, RL, RR, SLA, SRA, SWAP, SRL, RES, SET...
+    // TODO: Add handlers for RLC, RRC, RL, RR, SLA, SRA, SWAP, SRL, RES, SET...
     
     return cycles;
 }
