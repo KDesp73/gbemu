@@ -1,6 +1,7 @@
 #ifndef EMU_H
 #define EMU_H
 
+//@module emu
 //@author Konstantinos Despoinidis (KDesp73)
 //@license MIT
 

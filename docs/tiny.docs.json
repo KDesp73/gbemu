@@ -1,0 +1,167 @@
+{
+    "name": "emu",
+    "timestamp": "2026-07-28 16:35:28",
+    "docs": [
+        {
+            "file": "src/emu.h",
+            "docs": {
+                "marker": "module",
+                "type": "module",
+                "args": [
+                    "emu"
+                ],
+                "line": 4,
+                "children": [
+                    {
+                        "marker": "author",
+                        "type": "author",
+                        "args": [
+                            "Konstantinos Despoinidis (KDesp73)"
+                        ],
+                        "line": 5,
+                        "children": []
+                    },
+                    {
+                        "marker": "license",
+                        "type": "license",
+                        "args": [
+                            "MIT"
+                        ],
+                        "line": 6,
+                        "children": []
+                    }
+                ]
+            }
+        },
+        {
+            "file": "src/emu.h",
+            "docs": {
+                "marker": "module",
+                "type": "module",
+                "args": [
+                    "cpu"
+                ],
+                "line": 13,
+                "children": [
+                    {
+                        "marker": "type",
+                        "type": "type",
+                        "args": [
+                            "CPU"
+                        ],
+                        "line": 15,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Software representation of the Central Processing Unit"
+                                ],
+                                "line": 16,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "ref",
+                        "type": "any",
+                        "args": [
+                            "https://gbdev.io/pandocs/CPU_Registers_and_Flags.html"
+                        ],
+                        "line": 17,
+                        "children": []
+                    }
+                ]
+            }
+        },
+        {
+            "file": "src/emu.h",
+            "docs": {
+                "marker": "module",
+                "type": "module",
+                "args": [
+                    "memory"
+                ],
+                "line": 65,
+                "children": [
+                    {
+                        "marker": "type",
+                        "type": "type",
+                        "args": [
+                            "Bus"
+                        ],
+                        "line": 67,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Memory bus representation"
+                                ],
+                                "line": 68,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "ref",
+                        "type": "any",
+                        "args": [
+                            "https://gbdev.io/pandocs/Memory_Map.html"
+                        ],
+                        "line": 69,
+                        "children": []
+                    }
+                ]
+            }
+        },
+        {
+            "file": "src/emu.h",
+            "docs": {
+                "marker": "module",
+                "type": "module",
+                "args": [
+                    "misc"
+                ],
+                "line": 83,
+                "children": []
+            }
+        },
+        {
+            "file": "src/emu.h",
+            "docs": {
+                "marker": "module",
+                "type": "module",
+                "args": [
+                    "exec"
+                ],
+                "line": 91,
+                "children": []
+            }
+        },
+        {
+            "file": "src/emu.h",
+            "docs": {
+                "marker": "module",
+                "type": "module",
+                "args": [
+                    "timer"
+                ],
+                "line": 100,
+                "children": []
+            }
+        },
+        {
+            "file": "src/emu.h",
+            "docs": {
+                "marker": "module",
+                "type": "module",
+                "args": [
+                    "ppu"
+                ],
+                "line": 118,
+                "children": []
+            }
+        }
+    ]
+}
