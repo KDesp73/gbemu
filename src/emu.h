@@ -152,7 +152,7 @@ typedef struct {
 } PPU;
 
 void ppu_init(PPU* ppu);
-void ppu_step(PPU* ppu, int cycles);
+void ppu_step(PPU* ppu, Bus* bus, int cycles);
 
 uint8_t ppu_read(const PPU* ppu, uint16_t addr);
 void ppu_write(PPU* ppu, uint16_t addr, uint8_t value);

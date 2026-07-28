@@ -93,13 +93,22 @@ dist: $(SRC_FILES) ## Create a tarball of the project
 	mkdir -p $(DIST_DIR)
 	tar -czvf $(DIST_DIR)/$(TARGET)-$(VERSION).tar.gz $(SRC_DIR) Makefile README.md
 
-## Generate compile_commands.json
 .PHONY: compile_commands.json
 compile_commands.json: $(SRC_FILES) ## Generate compile_commands.json
 	@echo "[INFO] Generating compile_commands.json"
 	bear -- make all
 
-## Show this help message
+.PHONY: docs
+docs: ## Generate docs using tinydocs
+	tinydocs-cli \
+		--files src/emu.h \
+		--markers docs/tiny.markers.json \
+		--ignore .gitignore \
+		-o docs \
+		--comment-style "//" \
+		--name $(LIBRARY_NAME) \
+		--generate
+
 .PHONY: help
 help: ## Show this help message
 	@echo "Available commands:"
