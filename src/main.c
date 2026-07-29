@@ -31,6 +31,8 @@ int main(int argc, char** argv)
         uint64_t frame_start_time = get_time_ns();
         int frame_cycles = 0;
 
+        int step = 0;
+        static int measured_count = 0;
         while (frame_cycles < CYCLES_PER_FRAME) {
             
             int cycles = cpu_step(&cpu, &bus);
@@ -46,6 +48,17 @@ int main(int argc, char** argv)
             }
 
             frame_cycles += cycles;
+            step++;
+
+            if (step > 100000 && step < 100400) {
+                fprintf(stderr, "[STEP] %d PC=0x%04X A=0x%02X IME=%d IF=0x%02X IE=0x%02X TIMA=%d DIV=%d\n",
+                    step, cpu.pc, cpu.a, cpu.ime, bus_read(&bus, 0xFF0F), bus.ie, timer.tima, (uint8_t)(timer.internal_counter >> 8));
+            }
+            if (cpu.pc == 0xC3C1) measured_count++;
+            if (measured_count > 2 && measured_count < 4) {
+                fprintf(stderr, "[MEASURE] %d PC=0x%04X A=0x%02X BC=0x%04X DE=0x%04X HL=0x%04X IME=%d IF=0x%02X IE=0x%02X TIMA=%d\n",
+                    step, cpu.pc, cpu.a, cpu.bc, cpu.de, cpu.hl, cpu.ime, bus_read(&bus, 0xFF0F), bus.ie, timer.tima);
+            }
         }
 
         if (ppu.frame_ready) {

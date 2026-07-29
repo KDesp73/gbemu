@@ -101,6 +101,7 @@ struct Bus {
     uint8_t rom[0x8000];    // 32KB Cartridge
     uint8_t vram[0x2000];   // 8KB Video RAM
     uint8_t wram[0x2000];   // 8KB Work RAM
+    uint8_t sram[0x2000];   // 8KB Cartridge SRAM (MBC1 external RAM at 0xA000-0xBFFF)
     uint8_t oam[0xA0];      // Sprite Attribute Table
     uint8_t io[0x80];       // Input/Output Registers
     uint8_t hram[0x7F];     // High RAM

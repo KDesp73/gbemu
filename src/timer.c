@@ -53,6 +53,7 @@ void timer_step(Timer* timer, int cycles)
             if (timer->tima == 0xFF) {
                 timer->tima = timer->tma;             // Reload modulo
                 timer->interrupt_requested = true;    // Request TIMER interrupt (bit 2 of IF)
+                fprintf(stderr, "[TRACE] Timer overflow! TIMA=%d TMA=%d\n", timer->tima, timer->tma);
             } else {
                 timer->tima++;
             }

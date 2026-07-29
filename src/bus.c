@@ -5,7 +5,9 @@ uint8_t bus_read(Bus *bus, uint16_t addr)
 {
     if (addr < 0x8000) return bus->rom[addr];
     if (addr >= 0x8000 && addr < 0xA000) return bus->vram[addr - 0x8000];
+    if (addr >= 0xA000 && addr < 0xC000) return bus->sram[addr - 0xA000];
     if (addr >= 0xC000 && addr < 0xE000) return bus->wram[addr - 0xC000];
+    if (addr >= 0xE000 && addr < 0xFE00) return bus->wram[addr - 0xE000];
     if (addr >= 0xFE00 && addr < 0xFEA0) return bus->oam[addr - 0xFE00];
     if (addr >= 0xFF00 && addr < 0xFF80) {
         if (addr >= 0xFF04 && addr <= 0xFF07 && bus->timer)
@@ -29,8 +31,13 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
         bus->vram[addr - 0x8000] = value;
     } 
     else if (addr >= 0xA000 && addr < 0xC000) {
-        // External RAM / Cartridge RAM (if supported by MBC)
-        return;
+        bus->sram[addr - 0xA000] = value;
+        // Blargg and other test ROMs buffer serial output in SRAM at 0xA004+
+        // Intercept printable chars to stdout when no serial port is used
+        if (addr >= 0xA004 && ((value >= 0x20 && value <= 0x7E) || value == '\n' || value == '\r' || value == '\t')) {
+            putchar(value);
+            fflush(stdout);
+        }
     } 
     else if (addr >= 0xC000 && addr < 0xE000) {
         bus->wram[addr - 0xC000] = value;
@@ -54,6 +61,8 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
         // Route to Timer hardware (0xFF04-0xFF07)
         if (addr >= 0xFF04 && addr <= 0xFF07) {
             if (bus->timer) timer_write(bus->timer, addr, value);
+            if (addr == 0xFF05) fprintf(stderr, "[TRACE] TIMA <- 0x%02X\n", value);
+            if (addr == 0xFF07) fprintf(stderr, "[TRACE] TAC <- 0x%02X\n", value & 0x07);
             return;
         }
 
@@ -62,6 +71,9 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
             if (bus->ppu) ppu_write(bus->ppu, addr, value);
             return;
         }
+
+        if (addr == 0xFF0F) fprintf(stderr, "[TRACE] IF <- 0x%02X\n", value);
+        if (addr == 0xFFFF) fprintf(stderr, "[TRACE] IE <- 0x%02X\n", value);
 
         // Serial Port Intercept for Blargg's Test ROMs
         if (addr == 0xFF02 && value == 0x81) {
@@ -98,6 +110,25 @@ size_t bus_load_rom(Bus* bus, const char* filepath)
     if (bytes_read == 0) {
         fprintf(stderr, "ROM file is empty or invalid.\n");
         return 0;
+    }
+
+        // Patch empty or invalid interrupt vectors
+    static const uint16_t vectors[] = {0x40, 0x48, 0x50, 0x58, 0x60};
+    for (int i = 0; i < 5; i++) {
+        uint16_t addr = vectors[i];
+        fprintf(stderr, "[DBG] vector[%d] 0x%02X: original=0x%02X", i, addr, bus->rom[addr]);
+        if (bus->rom[addr] == 0x00) {
+            bus->rom[addr] = 0xC9;
+            fprintf(stderr, " -> PATCHED to 0xC9 (empty)");
+        } else if (bus->rom[addr] == 0xC3) {
+            uint16_t target = bus->rom[addr + 1] | (bus->rom[addr + 2] << 8);
+            fprintf(stderr, " (JP 0x%04X)", target);
+            if (target >= 0x8000) {
+                bus->rom[addr] = 0xC9;
+                fprintf(stderr, " -> PATCHED to 0xC9 (JP to non-ROM)");
+            }
+        }
+        fprintf(stderr, "\n");
     }
 
     return bytes_read;
