@@ -7,7 +7,13 @@ uint8_t bus_read(Bus *bus, uint16_t addr)
     if (addr >= 0x8000 && addr < 0xA000) return bus->vram[addr - 0x8000];
     if (addr >= 0xC000 && addr < 0xE000) return bus->wram[addr - 0xC000];
     if (addr >= 0xFE00 && addr < 0xFEA0) return bus->oam[addr - 0xFE00];
-    if (addr >= 0xFF00 && addr < 0xFF80) return bus->io[addr - 0xFF00];
+    if (addr >= 0xFF00 && addr < 0xFF80) {
+        if (addr >= 0xFF04 && addr <= 0xFF07 && bus->timer)
+            return timer_read(bus->timer, addr);
+        if (addr >= 0xFF40 && addr <= 0xFF4B && bus->ppu)
+            return ppu_read(bus->ppu, addr);
+        return bus->io[addr - 0xFF00];
+    }
     if (addr >= 0xFF80 && addr < 0xFFFF) return bus->hram[addr - 0xFF80];
     if (addr == 0xFFFF) return bus->ie;
     return 0xFF; // Unmapped reads return 0xFF
@@ -45,6 +51,18 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
         // I/O Registers Region (0xFF00 - 0xFF7F)
         // ----------------------------------------------------
         
+        // Route to Timer hardware (0xFF04-0xFF07)
+        if (addr >= 0xFF04 && addr <= 0xFF07) {
+            if (bus->timer) timer_write(bus->timer, addr, value);
+            return;
+        }
+
+        // Route to PPU hardware (0xFF40-0xFF4B)
+        if (addr >= 0xFF40 && addr <= 0xFF4B) {
+            if (bus->ppu) ppu_write(bus->ppu, addr, value);
+            return;
+        }
+
         // Serial Port Intercept for Blargg's Test ROMs
         if (addr == 0xFF02 && value == 0x81) {
             char c = (char)bus->io[0x01]; // Read character from SB (0xFF01)

@@ -972,7 +972,7 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
             uint8_t hi = bus_read(bus, cpu->sp + 1);
             cpu->sp += 2;
             cpu->pc = (hi << 8) | lo;
-            cpu->ime = true;
+            cpu->ime_scheduled = true; // RETI enables IME after 1 instruction (like EI)
             break;
         }
 
@@ -1103,7 +1103,7 @@ static bool instr_interrupts(CPU* cpu, Bus* bus, uint8_t opcode)
         // EI
         // Cycles: 1 | Bytes: 1 | Flags: -
         case OP_EI: {
-            cpu->ime = true;
+            cpu->ime_scheduled = true;
             break;
         }
 
@@ -1278,13 +1278,29 @@ static int instr_cb(CPU* cpu, Bus* bus)
     }
 }
 
+static bool get_condition_met(CPU* cpu, uint8_t opcode)
+{
+    switch (opcode) {
+        case 0x20: case 0xC0: case 0xC2: case 0xC4:
+            return !flag_get(cpu, FLAG_Z);
+        case 0x28: case 0xC8: case 0xCA: case 0xCC:
+            return flag_get(cpu, FLAG_Z);
+        case 0x30: case 0xD0: case 0xD2: case 0xD4:
+            return !flag_get(cpu, FLAG_C);
+        case 0x38: case 0xD8: case 0xDA: case 0xDC:
+            return flag_get(cpu, FLAG_C);
+        default:
+            return false;
+    }
+}
+
 int instr(CPU* cpu, Bus* bus, uint8_t opcode)
 {
     if (opcode == OP_PREFIX) {
         return instr_cb(cpu, bus);
     }
 
-    int cycles = get_opcode_cycles(opcode, false);
+    int cycles = get_opcode_cycles(opcode, get_condition_met(cpu, opcode));
     for(size_t i = 0; i < sizeof(instr_handlers) / sizeof(instr_handlers[0]); ++i) {
         instrfn handler = instr_handlers[i];
         if(handler(cpu, bus, opcode)) return cycles;

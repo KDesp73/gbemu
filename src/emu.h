@@ -45,6 +45,8 @@ typedef struct {
     uint16_t pc;
 
     bool ime; // Interrupt Master Enable
+    bool ime_scheduled; // EI has a 1-instruction delay; set to true, copies to ime after next instr
+    
     bool halted;
 } CPU;
 
@@ -93,7 +95,9 @@ bool flag_get(const CPU* cpu, Flag flag);
 //@type Bus
 //@desc Memory bus representation
 //@ref https://gbdev.io/pandocs/Memory_Map.html
-typedef struct {
+typedef struct Bus Bus;
+
+struct Bus {
     uint8_t rom[0x8000];    // 32KB Cartridge
     uint8_t vram[0x2000];   // 8KB Video RAM
     uint8_t wram[0x2000];   // 8KB Work RAM
@@ -101,7 +105,10 @@ typedef struct {
     uint8_t io[0x80];       // Input/Output Registers
     uint8_t hram[0x7F];     // High RAM
     uint8_t ie;             // Interrupt Enable Register
-} Bus;
+
+    struct Timer* timer;    // For routing timer register reads/writes
+    struct PPU* ppu;        // For routing PPU register reads/writes
+};
 
 //@func bus_read
 //@desc Read a byte from the memory-mapped bus
@@ -185,7 +192,7 @@ int cpu_step(CPU* cpu, Bus* bus);
 //@type Timer
 //@desc Game Boy timer hardware (DIV, TIMA, TMA, TAC registers)
 //@ref https://gbdev.io/pandocs/Timer_and_Divider_Registers.html
-typedef struct {
+typedef struct Timer {
     uint16_t internal_counter; // 16-bit internal clock (DIV is the upper byte)
     
     uint8_t tima; // 0xFF05
@@ -245,7 +252,7 @@ typedef enum {
 //@type PPU
 //@desc Pixel Processing Unit - renders scanlines to the frame buffer
 //@ref https://gbdev.io/pandocs/PPU.html
-typedef struct {
+typedef struct PPU {
     uint8_t lcdc; // 0xFF40 - LCD Control
     uint8_t stat; // 0xFF41 - LCD Status
     uint8_t scy;  // 0xFF42 - Scroll Y

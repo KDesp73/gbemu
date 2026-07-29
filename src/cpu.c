@@ -72,6 +72,12 @@ bool flag_get(const CPU* cpu, Flag flag)
 
 int cpu_step(CPU* cpu, Bus* bus)
 {
+    // EI has a 1-instruction delay: enable IME at the start of the NEXT instruction
+    if (cpu->ime_scheduled) {
+        cpu->ime = true;
+        cpu->ime_scheduled = false;
+    }
+
     if (cpu->halted) {
         return 4; // CPU sleeps for 1 M-cycle (4 T-cycles)
     }
@@ -79,8 +85,10 @@ int cpu_step(CPU* cpu, Bus* bus)
     uint8_t opcode = bus_read(bus, cpu->pc++);
 
     int cycles = instr(cpu, bus, opcode);
-    if (cycles) return cycles;
+    if (!cycles) {
+        fprintf(stderr, "Unhandled opcode: 0x%02X at PC: 0x%04X\n", opcode, cpu->pc - 1);
+        exit(1);
+    }
 
-    fprintf(stderr, "Unhandled opcode: 0x%02X at PC: 0x%04X\n", opcode, cpu->pc - 1);
-    exit(1);
+    return cycles;
 }

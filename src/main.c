@@ -15,6 +15,9 @@ int main(int argc, char** argv)
     Timer timer = {0};
     PPU ppu = {0};
 
+    bus.timer = &timer;
+    bus.ppu = &ppu;
+
     cpu_init(&cpu);
     timer_init(&timer);
     ppu_init(&ppu);
