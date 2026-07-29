@@ -1,9 +1,8 @@
 #include "emu.h"
 #include <time.h>
 
-
-
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     if (argc < 2) {
         fprintf(stderr, "Please provide a rom\n");
         fprintf(stderr, "Usage: %s <ROM>\n", argv[0]);

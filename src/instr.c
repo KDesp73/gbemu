@@ -114,7 +114,7 @@ static bool instr_8bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_DEC_H:
         case OP_DEC_L:
         case OP_DEC_A: {
-            uint8_t reg_idx = opcode & 0x07;
+            uint8_t reg_idx = (opcode >> 3) & 0x07;
             uint8_t value = get_reg_by_index(cpu, bus, reg_idx);
             uint8_t result = value - 1;
             set_reg_by_index(cpu, bus, reg_idx, result);
@@ -145,7 +145,7 @@ static bool instr_8bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_INC_H:
         case OP_INC_L:
         case OP_INC_A: {
-            uint8_t reg_idx = opcode & 0x07;
+            uint8_t reg_idx = (opcode >> 3) & 0x07;
             uint8_t value = get_reg_by_index(cpu, bus, reg_idx);
             uint8_t result = value + 1;
             set_reg_by_index(cpu, bus, reg_idx, result);
