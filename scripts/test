@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+EMU_CLI="$PROJECT_DIR/emu-cli"
+TEST_ROMS_DIR="$PROJECT_DIR/gb-test-roms"
+REPORT_FILE="$PROJECT_DIR/test-report.txt"
+TIMEOUT_INDIVIDUAL=30
+TIMEOUT_COMPOSITE=60
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+if ! command -v gtimeout &>/dev/null; then
+    die "gtimeout not found (install coreutils: brew install coreutils)"
+fi
+
+# Build release version
+echo "Building emulator..."
+cd "$PROJECT_DIR"
+make clean 2>&1 > /dev/null
+make all type=RELEASE 2>&1 | tail -1
+echo ""
+
+# --- Collect test ROMs ---
+declare -a ROM_NAMES=()
+declare -a ROM_PATHS=()
+declare -a ROM_GROUPS=()
+
+collect() {
+    local group="$1"
+    shift
+    for path in "$@"; do
+        [[ -f "$path" ]] || continue
+        local name
+        name="$(basename "$path" .gb)"
+        ROM_NAMES+=("$name")
+        ROM_PATHS+=("$path")
+        ROM_GROUPS+=("$group")
+    done
+}
+
+# Composite (multi-test) ROMs (only those <= 32KB that fit in our ROM buffer)
+# Note: 64KB composite ROMs like cpu_instrs/cpu_instrs.gb, oam_bug/oam_bug.gb,
+#       cgb_sound/cgb_sound.gb, dmg_sound/dmg_sound.gb, mem_timing/mem_timing.gb,
+#       mem_timing-2/mem_timing.gb are skipped because they need MBC banking.
+for rom in "$TEST_ROMS_DIR"/instr_timing/instr_timing.gb \
+           "$TEST_ROMS_DIR"/interrupt_time/interrupt_time.gb \
+           "$TEST_ROMS_DIR"/halt_bug.gb; do
+    collect "composite" "$rom"
+done
+
+# Individual test ROMs
+collect "cpu_instrs"  "$TEST_ROMS_DIR"/cpu_instrs/individual/*.gb
+collect "mem_timing"  "$TEST_ROMS_DIR"/mem_timing/individual/*.gb
+collect "mem_timing-2" "$TEST_ROMS_DIR"/mem_timing-2/rom_singles/*.gb
+collect "oam_bug"     "$TEST_ROMS_DIR"/oam_bug/rom_singles/*.gb
+collect "cgb_sound"   "$TEST_ROMS_DIR"/cgb_sound/rom_singles/*.gb
+collect "dmg_sound"   "$TEST_ROMS_DIR"/dmg_sound/rom_singles/*.gb
+
+# --- Run tests ---
+echo "Running ${#ROM_NAMES[@]} test ROM(s)..."
+echo ""
+
+rm -f "$REPORT_FILE"
+
+total=${#ROM_NAMES[@]}
+pass=0
+fail=0
+timeout_cnt=0
+
+for i in "${!ROM_NAMES[@]}"; do
+    name="${ROM_NAMES[$i]}"
+    path="${ROM_PATHS[$i]}"
+    group="${ROM_GROUPS[$i]}"
+
+    if [[ "$group" == "composite" ]]; then
+        to=$TIMEOUT_COMPOSITE
+    else
+        to=$TIMEOUT_INDIVIDUAL
+    fi
+
+    printf "  [%3d/%3d] %-35s" $((i + 1)) "$total" "[$group] $name"
+
+    set +e
+    output="$(gtimeout "$to" "$EMU_CLI" "$path" 2>/dev/null)"
+    ec=$?
+    set -e
+
+    lines="$(echo "$output" | wc -l | tr -d ' ')"
+
+    if echo "$output" | grep -qi "passed" && ! echo "$output" | grep -qi "failed"; then
+        echo " PASS"
+        verdict="PASS"
+        detail="$(echo "$output" | tr '\n' ';' | sed 's/;/; /g')"
+        pass=$((pass+1))
+    elif echo "$output" | grep -qi "failed"; then
+        echo " FAIL"
+        verdict="FAIL"
+        detail="$(echo "$output" | tr '\n' ';' | sed 's/;/; /g')"
+        fail=$((fail+1))
+    elif [[ $ec -eq 124 ]]; then
+        if [[ -z "$output" ]]; then
+            echo " TIMEOUT"
+            verdict="TIMEOUT"
+            detail="no output (timed out after ${to}s)"
+        else
+            echo " PARTIAL"
+            verdict="PARTIAL"
+            detail="$(echo "$output" | tr '\n' ';' | sed 's/;/; /g')"
+        fi
+        timeout_cnt=$((timeout_cnt+1))
+    elif [[ -z "$output" ]]; then
+        echo " NOOUT"
+        verdict="NOOUT"
+        detail="no output (exited with code $ec)"
+        fail=$((fail+1))
+    else
+        echo " UNKNOWN"
+        verdict="UNKNOWN"
+        detail="output: $(echo "$output" | tr '\n' ';' | sed 's/;/; /g')"
+        fail=$((fail+1))
+    fi
+
+    {
+        echo "TEST: [$group] $name"
+        echo "  File:  $path"
+        echo "  Lines: $lines"
+        echo "  Status: $verdict"
+        echo "  Detail: $detail"
+        echo "---"
+    } >> "$REPORT_FILE"
+done
+
+# --- Report summary ---
+{
+    echo ""
+    echo "========================================"
+    echo "  GB Test ROM Results"
+    echo "========================================"
+    echo "  Total:  $total"
+    echo "  Passed: $pass"
+    echo "  Failed: $fail"
+    echo "  Timeout:$timeout_cnt"
+    echo "========================================"
+    echo ""
+
+    if [[ $fail -gt 0 ]] || [[ $timeout_cnt -gt 0 ]]; then
+        echo "Failed / Timed out tests:"
+        { grep -B1 -A2 "Status: FAIL\|Status: TIMEOUT\|Status: UNKNOWN" "$REPORT_FILE" 2>/dev/null || true; } \
+            | { grep "TEST:\|Status:" || true; }
+        echo ""
+        echo "See $REPORT_FILE for full details."
+    fi
+} >> "$REPORT_FILE"
+
+cat "$REPORT_FILE"
