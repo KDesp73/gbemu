@@ -117,6 +117,8 @@ uint8_t bus_read(Bus* bus, uint16_t addr);
 //@param value Byte value to write
 void bus_write(Bus* bus, uint16_t addr, uint8_t value);
 
+size_t bus_load_rom(Bus* bus, const char* filepath);
+
 //@module misc
 
 //@func get_reg_by_index
@@ -218,6 +220,8 @@ uint8_t timer_read(const Timer* timer, uint16_t addr);
 //@param value Byte value to write
 void timer_write(Timer* timer, uint16_t addr, uint8_t value);
 
+uint64_t get_time_ns(void);
+
 //@module ppu
 
 //@macro SCREEN_WIDTH
@@ -289,5 +293,7 @@ uint8_t ppu_read(const PPU* ppu, uint16_t addr);
 //@param addr Register address (0xFF40-0xFF4B)
 //@param value Byte value to write
 void ppu_write(PPU* ppu, uint16_t addr, uint8_t value);
+
+int handle_interrupts(CPU* cpu, Bus* bus, PPU* ppu, Timer* timer);
 
 #endif // EMU_H

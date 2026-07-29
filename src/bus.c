@@ -1,4 +1,5 @@
 #include "emu.h"
+#include <stddef.h>
 
 uint8_t bus_read(Bus *bus, uint16_t addr)
 {
@@ -21,4 +22,24 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
     else if (addr >= 0xFF80 && addr < 0xFFFF) bus->hram[addr - 0xFF80] = value;
     else if (addr == 0xFFFF) bus->ie = value;
     // NOTE: Writing to 0x0000-0x7FFF is trapped by Memory Bank Controllers (MBCs)
+}
+
+size_t bus_load_rom(Bus* bus, const char* filepath)
+{
+    FILE* file = fopen(filepath, "rb");
+    if (!file) {
+        perror("Failed to open ROM file");
+        return 0;
+    }
+
+    // Read up to 32KB into the fixed cartridge ROM array
+    size_t bytes_read = fread(bus->rom, 1, sizeof(bus->rom), file);
+    fclose(file);
+
+    if (bytes_read == 0) {
+        fprintf(stderr, "ROM file is empty or invalid.\n");
+        return 0;
+    }
+
+    return bytes_read;
 }
