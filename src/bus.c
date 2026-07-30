@@ -1,5 +1,6 @@
 #include "emu.h"
 #include <stddef.h>
+#include <stdio.h>
 
 uint8_t bus_read(Bus *bus, uint16_t addr)
 {
@@ -34,9 +35,19 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
         bus->sram[addr - 0xA000] = value;
         // Blargg and other test ROMs buffer serial output in SRAM at 0xA004+
         // Intercept printable chars to stdout when no serial port is used
-        if (addr >= 0xA004 && ((value >= 0x20 && value <= 0x7E) || value == '\n' || value == '\r' || value == '\t')) {
-            putchar(value);
-            fflush(stdout);
+        if (addr >= 0xA004) {
+            static FILE* ftrace = NULL;
+            if (!ftrace) {
+                ftrace = fopen("/tmp/blargg_raw.bin", "wb");
+            }
+            if (ftrace) {
+                fputc(value, ftrace);
+                fflush(ftrace);
+            }
+            if ((value >= 0x20 && value <= 0x7E) || value == '\n' || value == '\r' || value == '\t') {
+                putchar(value);
+                fflush(stdout);
+            }
         }
     } 
     else if (addr >= 0xC000 && addr < 0xE000) {

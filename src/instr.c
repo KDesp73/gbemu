@@ -1108,9 +1108,21 @@ static bool instr_interrupts(CPU* cpu, Bus* bus, uint8_t opcode)
         }
 
         // HALT
-        // Cycles: - | Bytes: 1 | Flags: -
+        // Cycles: 4 | Bytes: 1 | Flags: -
         case OP_HALT: {
-            cpu->halted = true;
+            uint8_t if_reg = bus_read(bus, 0xFF0F);
+            if (if_reg & bus->ie) {
+                if (!cpu->ime) {
+                    // Halt bug: PC "fails to be normally incremented"
+                    // Extra data read from PC, but PC doesn't advance.
+                    // The byte at this address gets "read a second time"
+                    // as the next opcode fetch, so it IS executed.
+                    bus_read(bus, cpu->pc);
+                }
+                // IME=1: PC stays at HALT+1, interrupt fires normally
+            } else {
+                cpu->halted = true;
+            }
             break;
         }
 
