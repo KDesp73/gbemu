@@ -1,6 +1,6 @@
 {
     "name": "emu",
-    "timestamp": "2026-07-28 16:43:26",
+    "timestamp": "2026-07-31 13:37:26",
     "docs": [
         {
             "file": "src/emu.h",
@@ -77,7 +77,7 @@
                         "args": [
                             "cpu_init"
                         ],
-                        "line": 51,
+                        "line": 53,
                         "children": [
                             {
                                 "marker": "desc",
@@ -85,7 +85,7 @@
                                 "args": [
                                     "Initialize CPU state to boot values"
                                 ],
-                                "line": 52,
+                                "line": 54,
                                 "children": []
                             },
                             {
@@ -95,7 +95,7 @@
                                     "cpu",
                                     "CPU pointer to initialize"
                                 ],
-                                "line": 53,
+                                "line": 55,
                                 "children": []
                             }
                         ]
@@ -106,7 +106,7 @@
                         "args": [
                             "cpu_dump_fd"
                         ],
-                        "line": 56,
+                        "line": 58,
                         "children": [
                             {
                                 "marker": "desc",
@@ -114,7 +114,7 @@
                                 "args": [
                                     "Dump CPU register state to a file descriptor"
                                 ],
-                                "line": 57,
+                                "line": 59,
                                 "children": []
                             },
                             {
@@ -124,7 +124,7 @@
                                     "cpu",
                                     "CPU state to dump"
                                 ],
-                                "line": 58,
+                                "line": 60,
                                 "children": []
                             },
                             {
@@ -134,7 +134,7 @@
                                     "fd",
                                     "Output file descriptor (e.g. stdout)"
                                 ],
-                                "line": 59,
+                                "line": 61,
                                 "children": []
                             }
                         ]
@@ -145,7 +145,7 @@
                         "args": [
                             "cpu_dump"
                         ],
-                        "line": 62,
+                        "line": 64,
                         "children": [
                             {
                                 "marker": "desc",
@@ -153,7 +153,7 @@
                                 "args": [
                                     "Dump CPU register state to stdout"
                                 ],
-                                "line": 63,
+                                "line": 65,
                                 "children": []
                             },
                             {
@@ -163,7 +163,7 @@
                                     "cpu",
                                     "CPU state to dump"
                                 ],
-                                "line": 64,
+                                "line": 66,
                                 "children": []
                             }
                         ]
@@ -174,7 +174,7 @@
                         "args": [
                             "Flag"
                         ],
-                        "line": 67,
+                        "line": 69,
                         "children": [
                             {
                                 "marker": "desc",
@@ -182,7 +182,7 @@
                                 "args": [
                                     "CPU flag bit positions in the F register"
                                 ],
-                                "line": 68,
+                                "line": 70,
                                 "children": []
                             }
                         ]
@@ -193,7 +193,7 @@
                         "args": [
                             "https://gbdev.io/pandocs/CPU_Registers_and_Flags.html"
                         ],
-                        "line": 69,
+                        "line": 71,
                         "children": []
                     },
                     {
@@ -202,7 +202,7 @@
                         "args": [
                             "flag_set"
                         ],
-                        "line": 77,
+                        "line": 79,
                         "children": [
                             {
                                 "marker": "desc",
@@ -210,7 +210,7 @@
                                 "args": [
                                     "Set or clear a specific CPU flag"
                                 ],
-                                "line": 78,
+                                "line": 80,
                                 "children": []
                             },
                             {
@@ -220,7 +220,7 @@
                                     "cpu",
                                     "CPU whose flag to modify"
                                 ],
-                                "line": 79,
+                                "line": 81,
                                 "children": []
                             },
                             {
@@ -230,7 +230,7 @@
                                     "flag",
                                     "The flag bit to set or clear"
                                 ],
-                                "line": 80,
+                                "line": 82,
                                 "children": []
                             },
                             {
@@ -240,7 +240,7 @@
                                     "value",
                                     "true to set, false to clear"
                                 ],
-                                "line": 81,
+                                "line": 83,
                                 "children": []
                             }
                         ]
@@ -251,7 +251,7 @@
                         "args": [
                             "flag_get"
                         ],
-                        "line": 84,
+                        "line": 86,
                         "children": [
                             {
                                 "marker": "desc",
@@ -259,7 +259,7 @@
                                 "args": [
                                     "Read the value of a specific CPU flag"
                                 ],
-                                "line": 85,
+                                "line": 87,
                                 "children": []
                             },
                             {
@@ -269,7 +269,7 @@
                                     "cpu",
                                     "CPU to read from"
                                 ],
-                                "line": 86,
+                                "line": 88,
                                 "children": []
                             },
                             {
@@ -279,7 +279,7 @@
                                     "flag",
                                     "The flag bit to read"
                                 ],
-                                "line": 87,
+                                "line": 89,
                                 "children": []
                             },
                             {
@@ -289,7 +289,7 @@
                                     "true",
                                     "if the flag is set, false otherwise"
                                 ],
-                                "line": 88,
+                                "line": 90,
                                 "children": []
                             }
                         ]
@@ -305,7 +305,7 @@
                 "args": [
                     "memory"
                 ],
-                "line": 91,
+                "line": 93,
                 "children": [
                     {
                         "marker": "type",
@@ -313,7 +313,7 @@
                         "args": [
                             "Bus"
                         ],
-                        "line": 93,
+                        "line": 95,
                         "children": [
                             {
                                 "marker": "desc",
@@ -321,7 +321,7 @@
                                 "args": [
                                     "Memory bus representation"
                                 ],
-                                "line": 94,
+                                "line": 96,
                                 "children": []
                             }
                         ]
@@ -332,7 +332,7 @@
                         "args": [
                             "https://gbdev.io/pandocs/Memory_Map.html"
                         ],
-                        "line": 95,
+                        "line": 97,
                         "children": []
                     },
                     {
@@ -341,7 +341,7 @@
                         "args": [
                             "bus_read"
                         ],
-                        "line": 106,
+                        "line": 117,
                         "children": [
                             {
                                 "marker": "desc",
@@ -349,7 +349,7 @@
                                 "args": [
                                     "Read a byte from the memory-mapped bus"
                                 ],
-                                "line": 107,
+                                "line": 118,
                                 "children": []
                             },
                             {
@@ -359,7 +359,7 @@
                                     "bus",
                                     "Memory bus to read from"
                                 ],
-                                "line": 108,
+                                "line": 119,
                                 "children": []
                             },
                             {
@@ -369,7 +369,7 @@
                                     "addr",
                                     "16-bit address to read"
                                 ],
-                                "line": 109,
+                                "line": 120,
                                 "children": []
                             },
                             {
@@ -379,7 +379,7 @@
                                     "Byte",
                                     "value at the given address"
                                 ],
-                                "line": 110,
+                                "line": 121,
                                 "children": []
                             }
                         ]
@@ -390,7 +390,7 @@
                         "args": [
                             "bus_write"
                         ],
-                        "line": 113,
+                        "line": 124,
                         "children": [
                             {
                                 "marker": "desc",
@@ -398,7 +398,7 @@
                                 "args": [
                                     "Write a byte to the memory-mapped bus"
                                 ],
-                                "line": 114,
+                                "line": 125,
                                 "children": []
                             },
                             {
@@ -408,7 +408,7 @@
                                     "bus",
                                     "Memory bus to write to"
                                 ],
-                                "line": 115,
+                                "line": 126,
                                 "children": []
                             },
                             {
@@ -418,7 +418,7 @@
                                     "addr",
                                     "16-bit address to write"
                                 ],
-                                "line": 116,
+                                "line": 127,
                                 "children": []
                             },
                             {
@@ -428,7 +428,7 @@
                                     "value",
                                     "Byte value to write"
                                 ],
-                                "line": 117,
+                                "line": 128,
                                 "children": []
                             }
                         ]
@@ -444,7 +444,7 @@
                 "args": [
                     "misc"
                 ],
-                "line": 120,
+                "line": 133,
                 "children": [
                     {
                         "marker": "func",
@@ -452,7 +452,7 @@
                         "args": [
                             "get_reg_by_index"
                         ],
-                        "line": 122,
+                        "line": 135,
                         "children": [
                             {
                                 "marker": "desc",
@@ -460,7 +460,7 @@
                                 "args": [
                                     "Get a CPU register value by its 3-bit index (0-7)"
                                 ],
-                                "line": 123,
+                                "line": 136,
                                 "children": []
                             },
                             {
@@ -470,7 +470,7 @@
                                     "cpu",
                                     "CPU to read from"
                                 ],
-                                "line": 124,
+                                "line": 137,
                                 "children": []
                             },
                             {
@@ -480,7 +480,7 @@
                                     "bus",
                                     "Memory bus for HL indirect reads"
                                 ],
-                                "line": 125,
+                                "line": 138,
                                 "children": []
                             },
                             {
@@ -490,7 +490,7 @@
                                     "index",
                                     "Register index (0=B,1=C,2=D,3=E,4=H,5=L,6=(HL),7=A)"
                                 ],
-                                "line": 126,
+                                "line": 139,
                                 "children": []
                             },
                             {
@@ -500,7 +500,7 @@
                                     "Byte",
                                     "value of the register"
                                 ],
-                                "line": 127,
+                                "line": 140,
                                 "children": []
                             }
                         ]
@@ -511,7 +511,7 @@
                         "args": [
                             "set_reg_by_index"
                         ],
-                        "line": 130,
+                        "line": 143,
                         "children": [
                             {
                                 "marker": "desc",
@@ -519,7 +519,7 @@
                                 "args": [
                                     "Set a CPU register value by its 3-bit index (0-7)"
                                 ],
-                                "line": 131,
+                                "line": 144,
                                 "children": []
                             },
                             {
@@ -529,7 +529,7 @@
                                     "cpu",
                                     "CPU to write to"
                                 ],
-                                "line": 132,
+                                "line": 145,
                                 "children": []
                             },
                             {
@@ -539,7 +539,7 @@
                                     "bus",
                                     "Memory bus for HL indirect writes"
                                 ],
-                                "line": 133,
+                                "line": 146,
                                 "children": []
                             },
                             {
@@ -549,7 +549,7 @@
                                     "index",
                                     "Register index (0=B,1=C,2=D,3=E,4=H,5=L,6=(HL),7=A)"
                                 ],
-                                "line": 134,
+                                "line": 147,
                                 "children": []
                             },
                             {
@@ -559,7 +559,7 @@
                                     "value",
                                     "Byte value to write"
                                 ],
-                                "line": 135,
+                                "line": 148,
                                 "children": []
                             }
                         ]
@@ -570,7 +570,7 @@
                         "args": [
                             "fetch8"
                         ],
-                        "line": 138,
+                        "line": 151,
                         "children": [
                             {
                                 "marker": "desc",
@@ -578,7 +578,7 @@
                                 "args": [
                                     "Fetch the next byte from PC and advance PC by 1"
                                 ],
-                                "line": 139,
+                                "line": 152,
                                 "children": []
                             },
                             {
@@ -588,7 +588,7 @@
                                     "cpu",
                                     "CPU to fetch from"
                                 ],
-                                "line": 140,
+                                "line": 153,
                                 "children": []
                             },
                             {
@@ -598,7 +598,7 @@
                                     "bus",
                                     "Memory bus to read from"
                                 ],
-                                "line": 141,
+                                "line": 154,
                                 "children": []
                             },
                             {
@@ -608,7 +608,7 @@
                                     "The",
                                     "fetched byte"
                                 ],
-                                "line": 142,
+                                "line": 155,
                                 "children": []
                             }
                         ]
@@ -619,7 +619,7 @@
                         "args": [
                             "fetch16"
                         ],
-                        "line": 145,
+                        "line": 158,
                         "children": [
                             {
                                 "marker": "desc",
@@ -627,7 +627,7 @@
                                 "args": [
                                     "Fetch the next 16-bit value from PC (little-endian) and advance PC by 2"
                                 ],
-                                "line": 146,
+                                "line": 159,
                                 "children": []
                             },
                             {
@@ -637,7 +637,7 @@
                                     "cpu",
                                     "CPU to fetch from"
                                 ],
-                                "line": 147,
+                                "line": 160,
                                 "children": []
                             },
                             {
@@ -647,7 +647,7 @@
                                     "bus",
                                     "Memory bus to read from"
                                 ],
-                                "line": 148,
+                                "line": 161,
                                 "children": []
                             },
                             {
@@ -657,7 +657,7 @@
                                     "The",
                                     "fetched 16-bit value"
                                 ],
-                                "line": 149,
+                                "line": 162,
                                 "children": []
                             }
                         ]
@@ -673,7 +673,7 @@
                 "args": [
                     "exec"
                 ],
-                "line": 152,
+                "line": 165,
                 "children": [
                     {
                         "marker": "macro",
@@ -681,15 +681,15 @@
                         "args": [
                             "CPU_FREQ"
                         ],
-                        "line": 154,
+                        "line": 167,
                         "children": [
                             {
                                 "marker": "desc",
                                 "type": "description",
                                 "args": [
-                                    "CPU clock frequency in Hz (4.194304 MHz)"
+                                    "CGB dot clock frequency in Hz (8.388608 MHz), the emulator's base time unit"
                                 ],
-                                "line": 155,
+                                "line": 168,
                                 "children": []
                             }
                         ]
@@ -700,15 +700,15 @@
                         "args": [
                             "CYCLES_PER_FRAME"
                         ],
-                        "line": 158,
+                        "line": 171,
                         "children": [
                             {
                                 "marker": "desc",
                                 "type": "description",
                                 "args": [
-                                    "T-cycles per frame at 60 Hz (~69,905)"
+                                    "System cycles per frame at ~60 Hz (~139,810 dots); constant across both CPU speed modes"
                                 ],
-                                "line": 159,
+                                "line": 172,
                                 "children": []
                             }
                         ]
@@ -719,7 +719,7 @@
                         "args": [
                             "FRAME_TIME_NS"
                         ],
-                        "line": 162,
+                        "line": 175,
                         "children": [
                             {
                                 "marker": "desc",
@@ -727,7 +727,7 @@
                                 "args": [
                                     "Frame duration in nanoseconds at 60 Hz (~16.66 ms)"
                                 ],
-                                "line": 163,
+                                "line": 176,
                                 "children": []
                             }
                         ]
@@ -738,7 +738,7 @@
                         "args": [
                             "instr"
                         ],
-                        "line": 166,
+                        "line": 179,
                         "children": [
                             {
                                 "marker": "desc",
@@ -746,7 +746,7 @@
                                 "args": [
                                     "Execute a single CPU instruction by opcode"
                                 ],
-                                "line": 167,
+                                "line": 180,
                                 "children": []
                             },
                             {
@@ -756,7 +756,7 @@
                                     "cpu",
                                     "CPU state to mutate"
                                 ],
-                                "line": 168,
+                                "line": 181,
                                 "children": []
                             },
                             {
@@ -766,7 +766,7 @@
                                     "bus",
                                     "Memory bus for reads/writes"
                                 ],
-                                "line": 169,
+                                "line": 182,
                                 "children": []
                             },
                             {
@@ -776,7 +776,7 @@
                                     "opcode",
                                     "The opcode byte to execute"
                                 ],
-                                "line": 170,
+                                "line": 183,
                                 "children": []
                             },
                             {
@@ -786,7 +786,7 @@
                                     "Number",
                                     "of T-cycles the instruction consumed"
                                 ],
-                                "line": 171,
+                                "line": 184,
                                 "children": []
                             }
                         ]
@@ -797,7 +797,7 @@
                         "args": [
                             "cpu_step"
                         ],
-                        "line": 174,
+                        "line": 187,
                         "children": [
                             {
                                 "marker": "desc",
@@ -805,7 +805,7 @@
                                 "args": [
                                     "Execute one full CPU step (fetch + decode + execute)"
                                 ],
-                                "line": 175,
+                                "line": 188,
                                 "children": []
                             },
                             {
@@ -815,7 +815,7 @@
                                     "cpu",
                                     "CPU state to mutate"
                                 ],
-                                "line": 176,
+                                "line": 189,
                                 "children": []
                             },
                             {
@@ -825,7 +825,7 @@
                                     "bus",
                                     "Memory bus for reads/writes"
                                 ],
-                                "line": 177,
+                                "line": 190,
                                 "children": []
                             },
                             {
@@ -835,7 +835,7 @@
                                     "Number",
                                     "of T-cycles the step consumed"
                                 ],
-                                "line": 178,
+                                "line": 191,
                                 "children": []
                             }
                         ]
@@ -851,7 +851,7 @@
                 "args": [
                     "timer"
                 ],
-                "line": 181,
+                "line": 194,
                 "children": [
                     {
                         "marker": "type",
@@ -859,7 +859,7 @@
                         "args": [
                             "Timer"
                         ],
-                        "line": 183,
+                        "line": 196,
                         "children": [
                             {
                                 "marker": "desc",
@@ -867,7 +867,7 @@
                                 "args": [
                                     "Game Boy timer hardware (DIV, TIMA, TMA, TAC registers)"
                                 ],
-                                "line": 184,
+                                "line": 197,
                                 "children": []
                             }
                         ]
@@ -878,7 +878,7 @@
                         "args": [
                             "https://gbdev.io/pandocs/Timer_and_Divider_Registers.html"
                         ],
-                        "line": 185,
+                        "line": 198,
                         "children": []
                     },
                     {
@@ -887,7 +887,7 @@
                         "args": [
                             "timer_init"
                         ],
-                        "line": 196,
+                        "line": 209,
                         "children": [
                             {
                                 "marker": "desc",
@@ -895,7 +895,7 @@
                                 "args": [
                                     "Initialize timer state to default values"
                                 ],
-                                "line": 197,
+                                "line": 210,
                                 "children": []
                             },
                             {
@@ -904,94 +904,6 @@
                                 "args": [
                                     "timer",
                                     "Timer pointer to initialize"
-                                ],
-                                "line": 198,
-                                "children": []
-                            }
-                        ]
-                    },
-                    {
-                        "marker": "func",
-                        "type": "function",
-                        "args": [
-                            "timer_step"
-                        ],
-                        "line": 201,
-                        "children": [
-                            {
-                                "marker": "desc",
-                                "type": "description",
-                                "args": [
-                                    "Advance the timer by the given number of T-cycles"
-                                ],
-                                "line": 202,
-                                "children": []
-                            },
-                            {
-                                "marker": "param",
-                                "type": "parameter",
-                                "args": [
-                                    "timer",
-                                    "Timer state to update"
-                                ],
-                                "line": 203,
-                                "children": []
-                            },
-                            {
-                                "marker": "param",
-                                "type": "parameter",
-                                "args": [
-                                    "cycles",
-                                    "Number of T-cycles elapsed"
-                                ],
-                                "line": 204,
-                                "children": []
-                            }
-                        ]
-                    },
-                    {
-                        "marker": "func",
-                        "type": "function",
-                        "args": [
-                            "timer_read"
-                        ],
-                        "line": 207,
-                        "children": [
-                            {
-                                "marker": "desc",
-                                "type": "description",
-                                "args": [
-                                    "Read a timer register value"
-                                ],
-                                "line": 208,
-                                "children": []
-                            },
-                            {
-                                "marker": "param",
-                                "type": "parameter",
-                                "args": [
-                                    "timer",
-                                    "Timer state to read from"
-                                ],
-                                "line": 209,
-                                "children": []
-                            },
-                            {
-                                "marker": "param",
-                                "type": "parameter",
-                                "args": [
-                                    "addr",
-                                    "Register address (0xFF04-0xFF07)"
-                                ],
-                                "line": 210,
-                                "children": []
-                            },
-                            {
-                                "marker": "returns",
-                                "type": "return",
-                                "args": [
-                                    "Register",
-                                    "byte value"
                                 ],
                                 "line": 211,
                                 "children": []
@@ -1002,7 +914,7 @@
                         "marker": "func",
                         "type": "function",
                         "args": [
-                            "timer_write"
+                            "timer_step"
                         ],
                         "line": 214,
                         "children": [
@@ -1010,7 +922,7 @@
                                 "marker": "desc",
                                 "type": "description",
                                 "args": [
-                                    "Write a value to a timer register"
+                                    "Advance the timer by the given number of T-cycles"
                                 ],
                                 "line": 215,
                                 "children": []
@@ -1020,9 +932,48 @@
                                 "type": "parameter",
                                 "args": [
                                     "timer",
-                                    "Timer state to write to"
+                                    "Timer state to update"
                                 ],
                                 "line": 216,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "cycles",
+                                    "Number of T-cycles elapsed"
+                                ],
+                                "line": 217,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "timer_read"
+                        ],
+                        "line": 220,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Read a timer register value"
+                                ],
+                                "line": 221,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "timer",
+                                    "Timer state to read from"
+                                ],
+                                "line": 222,
                                 "children": []
                             },
                             {
@@ -1032,7 +983,56 @@
                                     "addr",
                                     "Register address (0xFF04-0xFF07)"
                                 ],
-                                "line": 217,
+                                "line": 223,
+                                "children": []
+                            },
+                            {
+                                "marker": "returns",
+                                "type": "return",
+                                "args": [
+                                    "Register",
+                                    "byte value"
+                                ],
+                                "line": 224,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "timer_write"
+                        ],
+                        "line": 227,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Write a value to a timer register"
+                                ],
+                                "line": 228,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "timer",
+                                    "Timer state to write to"
+                                ],
+                                "line": 229,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "addr",
+                                    "Register address (0xFF04-0xFF07)"
+                                ],
+                                "line": 230,
                                 "children": []
                             },
                             {
@@ -1042,7 +1042,7 @@
                                     "value",
                                     "Byte value to write"
                                 ],
-                                "line": 218,
+                                "line": 231,
                                 "children": []
                             }
                         ]
@@ -1058,7 +1058,7 @@
                 "args": [
                     "ppu"
                 ],
-                "line": 221,
+                "line": 236,
                 "children": [
                     {
                         "marker": "macro",
@@ -1066,7 +1066,7 @@
                         "args": [
                             "SCREEN_WIDTH"
                         ],
-                        "line": 223,
+                        "line": 238,
                         "children": [
                             {
                                 "marker": "desc",
@@ -1074,7 +1074,7 @@
                                 "args": [
                                     "Game Boy native screen width in pixels"
                                 ],
-                                "line": 224,
+                                "line": 239,
                                 "children": []
                             }
                         ]
@@ -1085,7 +1085,7 @@
                         "args": [
                             "SCREEN_HEIGHT"
                         ],
-                        "line": 227,
+                        "line": 242,
                         "children": [
                             {
                                 "marker": "desc",
@@ -1093,7 +1093,7 @@
                                 "args": [
                                     "Game Boy native screen height in pixels"
                                 ],
-                                "line": 228,
+                                "line": 243,
                                 "children": []
                             }
                         ]
@@ -1104,7 +1104,7 @@
                         "args": [
                             "PPUMode"
                         ],
-                        "line": 231,
+                        "line": 246,
                         "children": [
                             {
                                 "marker": "desc",
@@ -1112,7 +1112,7 @@
                                 "args": [
                                     "PPU mode states stored in the lower 2 bits of STAT (0xFF41)"
                                 ],
-                                "line": 232,
+                                "line": 247,
                                 "children": []
                             }
                         ]
@@ -1123,7 +1123,7 @@
                         "args": [
                             "https://gbdev.io/pandocs/STAT_Register.html"
                         ],
-                        "line": 233,
+                        "line": 248,
                         "children": []
                     },
                     {
@@ -1132,7 +1132,7 @@
                         "args": [
                             "PPU"
                         ],
-                        "line": 241,
+                        "line": 256,
                         "children": [
                             {
                                 "marker": "desc",
@@ -1140,7 +1140,7 @@
                                 "args": [
                                     "Pixel Processing Unit - renders scanlines to the frame buffer"
                                 ],
-                                "line": 242,
+                                "line": 257,
                                 "children": []
                             }
                         ]
@@ -1151,7 +1151,7 @@
                         "args": [
                             "https://gbdev.io/pandocs/PPU.html"
                         ],
-                        "line": 243,
+                        "line": 258,
                         "children": []
                     },
                     {
@@ -1160,7 +1160,7 @@
                         "args": [
                             "ppu_init"
                         ],
-                        "line": 267,
+                        "line": 282,
                         "children": [
                             {
                                 "marker": "desc",
@@ -1168,7 +1168,7 @@
                                 "args": [
                                     "Initialize PPU registers and frame buffer to default values"
                                 ],
-                                "line": 268,
+                                "line": 283,
                                 "children": []
                             },
                             {
@@ -1178,7 +1178,7 @@
                                     "ppu",
                                     "PPU pointer to initialize"
                                 ],
-                                "line": 269,
+                                "line": 284,
                                 "children": []
                             }
                         ]
@@ -1189,7 +1189,7 @@
                         "args": [
                             "ppu_step"
                         ],
-                        "line": 272,
+                        "line": 287,
                         "children": [
                             {
                                 "marker": "desc",
@@ -1197,7 +1197,7 @@
                                 "args": [
                                     "Advance the PPU state machine by the given T-cycles"
                                 ],
-                                "line": 273,
+                                "line": 288,
                                 "children": []
                             },
                             {
@@ -1207,7 +1207,7 @@
                                     "ppu",
                                     "PPU state to update"
                                 ],
-                                "line": 274,
+                                "line": 289,
                                 "children": []
                             },
                             {
@@ -1217,7 +1217,7 @@
                                     "bus",
                                     "Memory bus for VRAM and OAM reads"
                                 ],
-                                "line": 275,
+                                "line": 290,
                                 "children": []
                             },
                             {
@@ -1227,7 +1227,7 @@
                                     "cycles",
                                     "Number of T-cycles elapsed"
                                 ],
-                                "line": 276,
+                                "line": 291,
                                 "children": []
                             }
                         ]
@@ -1238,7 +1238,7 @@
                         "args": [
                             "ppu_read"
                         ],
-                        "line": 279,
+                        "line": 294,
                         "children": [
                             {
                                 "marker": "desc",
@@ -1246,7 +1246,7 @@
                                 "args": [
                                     "Read a PPU register value"
                                 ],
-                                "line": 280,
+                                "line": 295,
                                 "children": []
                             },
                             {
@@ -1256,7 +1256,7 @@
                                     "ppu",
                                     "PPU state to read from"
                                 ],
-                                "line": 281,
+                                "line": 296,
                                 "children": []
                             },
                             {
@@ -1266,7 +1266,7 @@
                                     "addr",
                                     "Register address (0xFF40-0xFF4B)"
                                 ],
-                                "line": 282,
+                                "line": 297,
                                 "children": []
                             },
                             {
@@ -1276,7 +1276,7 @@
                                     "Register",
                                     "byte value"
                                 ],
-                                "line": 283,
+                                "line": 298,
                                 "children": []
                             }
                         ]
@@ -1287,7 +1287,7 @@
                         "args": [
                             "ppu_write"
                         ],
-                        "line": 286,
+                        "line": 301,
                         "children": [
                             {
                                 "marker": "desc",
@@ -1295,7 +1295,7 @@
                                 "args": [
                                     "Write a value to a PPU register"
                                 ],
-                                "line": 287,
+                                "line": 302,
                                 "children": []
                             },
                             {
@@ -1305,7 +1305,7 @@
                                     "ppu",
                                     "PPU state to write to"
                                 ],
-                                "line": 288,
+                                "line": 303,
                                 "children": []
                             },
                             {
@@ -1315,7 +1315,7 @@
                                     "addr",
                                     "Register address (0xFF40-0xFF4B)"
                                 ],
-                                "line": 289,
+                                "line": 304,
                                 "children": []
                             },
                             {
@@ -1325,7 +1325,214 @@
                                     "value",
                                     "Byte value to write"
                                 ],
-                                "line": 290,
+                                "line": 305,
+                                "children": []
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "file": "src/emu.h",
+            "docs": {
+                "marker": "module",
+                "type": "module",
+                "args": [
+                    "apu"
+                ],
+                "line": 310,
+                "children": [
+                    {
+                        "marker": "type",
+                        "type": "type",
+                        "args": [
+                            "APU"
+                        ],
+                        "line": 312,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Minimal audio unit: channel power/length-counter state for NR52 (no wave generation)"
+                                ],
+                                "line": 313,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "ref",
+                        "type": "any",
+                        "args": [
+                            "https://gbdev.io/pandocs/Audio.html"
+                        ],
+                        "line": 314,
+                        "children": []
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "apu_init"
+                        ],
+                        "line": 325,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Initialize APU state to default values"
+                                ],
+                                "line": 326,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "apu",
+                                    "APU pointer to initialize"
+                                ],
+                                "line": 327,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "apu_step"
+                        ],
+                        "line": 330,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Advance the APU frame sequencer by the given number of dots (system cycles)"
+                                ],
+                                "line": 331,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "apu",
+                                    "APU state to update"
+                                ],
+                                "line": 332,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "dots",
+                                    "Number of dot clock cycles elapsed (fixed 4.194304 MHz)"
+                                ],
+                                "line": 333,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "apu_read"
+                        ],
+                        "line": 336,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Read a sound register value"
+                                ],
+                                "line": 337,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "apu",
+                                    "APU state to read from"
+                                ],
+                                "line": 338,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "addr",
+                                    "Register address (0xFF10-0xFF3F)"
+                                ],
+                                "line": 339,
+                                "children": []
+                            },
+                            {
+                                "marker": "returns",
+                                "type": "return",
+                                "args": [
+                                    "Register",
+                                    "byte value"
+                                ],
+                                "line": 340,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "apu_write"
+                        ],
+                        "line": 343,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Write a value to a sound register"
+                                ],
+                                "line": 344,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "apu",
+                                    "APU state to write to"
+                                ],
+                                "line": 345,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "addr",
+                                    "Register address (0xFF10-0xFF3F)"
+                                ],
+                                "line": 346,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "value",
+                                    "Byte value to write"
+                                ],
+                                "line": 347,
                                 "children": []
                             }
                         ]
