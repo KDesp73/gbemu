@@ -50,21 +50,21 @@ void ppu_step(PPU* ppu, Bus* bus, int cycles)
 
     switch ((PPUMode)(ppu->stat & 0x03)) {
         case PPU_MODE_OAM:
-            if (ppu->dots >= 80) {
+            if (ppu->dots >= 160) {
                 ppu_change_mode(ppu, PPU_MODE_XFER);
             }
             break;
 
         case PPU_MODE_XFER:
-            if (ppu->dots >= 252) { // 80 + 172
+            if (ppu->dots >= 504) { // 160 + 344
                 ppu_render_scanline(ppu, bus); // Draw current line LY to frame_buffer
                 ppu_change_mode(ppu, PPU_MODE_HBLANK);
             }
             break;
 
         case PPU_MODE_HBLANK:
-            if (ppu->dots >= 456) {
-                ppu->dots -= 456;
+            if (ppu->dots >= 912) {
+                ppu->dots -= 912;
                 ppu->ly++;
 
                 if (ppu->ly == 144) {
@@ -79,8 +79,8 @@ void ppu_step(PPU* ppu, Bus* bus, int cycles)
             break;
 
         case PPU_MODE_VBLANK:
-            if (ppu->dots >= 456) {
-                ppu->dots -= 456;
+            if (ppu->dots >= 912) {
+                ppu->dots -= 912;
                 ppu->ly++;
 
                 if (ppu->ly > 153) { // End of VBlank, restart frame

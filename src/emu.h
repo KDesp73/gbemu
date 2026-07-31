@@ -109,6 +109,9 @@ struct Bus {
 
     struct Timer* timer;    // For routing timer register reads/writes
     struct PPU* ppu;        // For routing PPU register reads/writes
+    struct APU* apu;        // For routing sound register reads/writes
+
+    bool double_speed;      // CGB double-speed mode (CPU T-cycle = 0.5 system cycle)
 };
 
 //@func bus_read
@@ -162,11 +165,11 @@ uint16_t fetch16(CPU* cpu, Bus* bus);
 //@module exec
 
 //@macro CPU_FREQ
-//@desc CPU clock frequency in Hz (4.194304 MHz)
-#define CPU_FREQ 4194304
+//@desc CGB dot clock frequency in Hz (8.388608 MHz), the emulator's base time unit
+#define CPU_FREQ 8388608
 
 //@macro CYCLES_PER_FRAME
-//@desc T-cycles per frame at 60 Hz (~69,905)
+//@desc System cycles per frame at ~60 Hz (~139,810 dots); constant across both CPU speed modes
 #define CYCLES_PER_FRAME (CPU_FREQ / 60)
 
 //@macro FRAME_TIME_NS
@@ -304,6 +307,44 @@ void ppu_write(PPU* ppu, uint16_t addr, uint8_t value);
 
 int handle_interrupts(CPU* cpu, Bus* bus, PPU* ppu, Timer* timer);
 
-extern uint64_t g_cycles;
+//@module apu
+
+//@type APU
+//@desc Minimal audio unit: channel power/length-counter state for NR52 (no wave generation)
+//@ref https://gbdev.io/pandocs/Audio.html
+typedef struct APU {
+    uint8_t regs[0x30];     // Sound registers FF10-FF3F
+    bool power;             // NR52 bit 7 (master power)
+    bool ch_on[4];          // Channel active status (NR52 bits 0-3)
+    uint8_t length[4];      // Length counter for each channel
+    uint8_t length_load[4]; // Length counter reload value (64 - (NRx1 & 0x3F))
+    bool length_enable[4];  // NRx4 bit 6 (length counter enable)
+    uint16_t frame_accum;   // System-cycle accumulator (length clock ticks every 16384)
+} APU;
+
+//@func apu_init
+//@desc Initialize APU state to default values
+//@param apu APU pointer to initialize
+void apu_init(APU* apu);
+
+//@func apu_step
+//@desc Advance the APU frame sequencer by the given number of dots (system cycles)
+//@param apu APU state to update
+//@param dots Number of dot clock cycles elapsed (fixed 4.194304 MHz)
+void apu_step(APU* apu, int dots);
+
+//@func apu_read
+//@desc Read a sound register value
+//@param apu APU state to read from
+//@param addr Register address (0xFF10-0xFF3F)
+//@returns Register byte value
+uint8_t apu_read(const APU* apu, uint16_t addr);
+
+//@func apu_write
+//@desc Write a value to a sound register
+//@param apu APU state to write to
+//@param addr Register address (0xFF10-0xFF3F)
+//@param value Byte value to write
+void apu_write(APU* apu, uint16_t addr, uint8_t value);
 
 #endif // EMU_H

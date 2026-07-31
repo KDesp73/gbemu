@@ -14,13 +14,16 @@ int main(int argc, char** argv)
     Bus bus = {0};
     Timer timer = {0};
     PPU ppu = {0};
+    APU apu = {0};
 
     bus.timer = &timer;
     bus.ppu = &ppu;
+    bus.apu = &apu;
 
     cpu_init(&cpu);
     timer_init(&timer);
     ppu_init(&ppu);
+    apu_init(&apu);
 
     if (!bus_load_rom(&bus, rom_path)) return 1;
 
@@ -31,36 +34,35 @@ int main(int argc, char** argv)
         uint64_t frame_start_time = get_time_ns();
         int frame_cycles = 0;
 
-        int step = 0;
-        static int measured_count = 0;
         while (frame_cycles < CYCLES_PER_FRAME) {
-            
+            if (cpu.pc == 0xC106) fprintf(stderr, "[CRC] byte=0x%02X\n", cpu.a);
+            if (cpu.pc == 0xC293) fprintf(stderr, "[CHECK] crc=%02X%02X%02X%02X\n", bus_read(&bus,0xFF80), bus_read(&bus,0xFF81), bus_read(&bus,0xFF82), bus_read(&bus,0xFF83));
             int cycles = cpu_step(&cpu, &bus);
-            g_cycles += cycles;
 
+            // On CGB the dot clock is fixed at 8.39 MHz: at normal speed the
+            // CPU runs at half that (2 dots per T-cycle), at double speed the
+            // CPU runs at the dot clock (1 dot per T-cycle).
+            int scale = bus.double_speed ? 1 : 2;
+            int sys_cycles = cycles * scale;
+
+            // The timer is CPU-clock derived: it runs at the same rate in
+            // T-cycles regardless of speed mode (so DIV/TIMA frequencies
+            // double in real time in double-speed mode). The PPU and APU
+            // are dot-clock derived: they advance at the fixed 8.39 MHz
+            // CGB dot rate, so one T-cycle = two dots at normal speed and
+            // one dot in double-speed mode.
             timer_step(&timer, cycles);
-            ppu_step(&ppu, &bus, cycles);
+            ppu_step(&ppu, &bus, sys_cycles);
+            apu_step(&apu, sys_cycles);
 
             int int_cycles = handle_interrupts(&cpu, &bus, &ppu, &timer);
             if (int_cycles > 0) {
-                g_cycles += int_cycles;
                 timer_step(&timer, int_cycles);
-                ppu_step(&ppu, &bus, int_cycles);
-                cycles += int_cycles;
+                ppu_step(&ppu, &bus, int_cycles * scale);
+                sys_cycles += int_cycles * scale;
             }
 
-            frame_cycles += cycles;
-            step++;
-
-            if (step > 100000 && step < 100400) {
-                fprintf(stderr, "[STEP] %d PC=0x%04X A=0x%02X IME=%d IF=0x%02X IE=0x%02X TIMA=%d DIV=%d\n",
-                    step, cpu.pc, cpu.a, cpu.ime, bus_read(&bus, 0xFF0F), bus.ie, timer.tima, (uint8_t)(timer.internal_counter >> 8));
-            }
-            if (cpu.pc == 0xC3C1) measured_count++;
-            if (measured_count > 2 && measured_count < 4) {
-                fprintf(stderr, "[MEASURE] %d PC=0x%04X A=0x%02X BC=0x%04X DE=0x%04X HL=0x%04X IME=%d IF=0x%02X IE=0x%02X TIMA=%d\n",
-                    step, cpu.pc, cpu.a, cpu.bc, cpu.de, cpu.hl, cpu.ime, bus_read(&bus, 0xFF0F), bus.ie, timer.tima);
-            }
+            frame_cycles += sys_cycles;
         }
 
         if (ppu.frame_ready) {

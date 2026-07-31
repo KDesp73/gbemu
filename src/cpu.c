@@ -9,7 +9,7 @@
 void cpu_init(CPU* cpu)
 {
     cpu->pc = 0x0100; // ROM execution begins at 0x0100
-    cpu->af = 0x01B0;
+    cpu->af = 0x11B0; // CGB boot registers (A=0x11 selects Game Boy Color)
     cpu->bc = 0x0013;
     cpu->de = 0x00D8;
     cpu->hl = 0x014D;
@@ -83,9 +83,6 @@ int cpu_step(CPU* cpu, Bus* bus)
     }
 
     uint8_t opcode = bus_read(bus, cpu->pc++);
-
-    if (g_cycles > 1762260 && g_cycles < 1762400)
-        fprintf(stderr, "[OP] cyc=%llu pc=%04X op=%02X\n", (unsigned long long)g_cycles, cpu->pc - 1, opcode);
 
     int cycles = instr(cpu, bus, opcode);
     if (!cycles) {

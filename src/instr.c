@@ -1160,9 +1160,15 @@ static bool instr_misc(CPU* cpu, Bus* bus, uint8_t opcode)
         }
 
         // STOP
-        // Cycles: - | Bytes: 2 | Flags: -
+        // Cycles: 1 | Bytes: 2 | Flags: -
         case OP_STOP_n8: {
             fetch8(cpu, bus);
+            // CGB: STOP is the only way to switch between normal and
+            // double-speed mode (when KEY1 bit 0 is set)
+            if (bus->io[0x4D] & 0x01) {
+                bus->double_speed = !bus->double_speed;
+                bus->io[0x4D] &= ~0x01;
+            }
             break;
         }
 

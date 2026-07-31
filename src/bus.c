@@ -13,8 +13,12 @@ uint8_t bus_read(Bus *bus, uint16_t addr)
     if (addr >= 0xFF00 && addr < 0xFF80) {
         if (addr >= 0xFF04 && addr <= 0xFF07 && bus->timer)
             return timer_read(bus->timer, addr);
+        if (addr >= 0xFF10 && addr <= 0xFF3F && bus->apu)
+            return apu_read(bus->apu, addr);
         if (addr >= 0xFF40 && addr <= 0xFF4B && bus->ppu)
             return ppu_read(bus->ppu, addr);
+        if (addr == 0xFF4D) // KEY1
+            return (bus->double_speed ? 0x80 : 0x00) | (bus->io[0x4D] & 0x01);
         return bus->io[addr - 0xFF00];
     }
     if (addr >= 0xFF80 && addr < 0xFFFF) return bus->hram[addr - 0xFF80];
@@ -72,8 +76,12 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
         // Route to Timer hardware (0xFF04-0xFF07)
         if (addr >= 0xFF04 && addr <= 0xFF07) {
             if (bus->timer) timer_write(bus->timer, addr, value);
-            if (addr == 0xFF05) fprintf(stderr, "[TRACE] TIMA <- 0x%02X\n", value);
-            if (addr == 0xFF07) fprintf(stderr, "[TRACE] TAC <- 0x%02X\n", value & 0x07);
+            return;
+        }
+
+        // Route to Sound hardware (0xFF10-0xFF3F)
+        if (addr >= 0xFF10 && addr <= 0xFF3F) {
+            if (bus->apu) apu_write(bus->apu, addr, value);
             return;
         }
 
@@ -83,8 +91,11 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
             return;
         }
 
-        if (addr == 0xFF0F) fprintf(stderr, "[TRACE] cyc=%llu IF <- 0x%02X\n", (unsigned long long)g_cycles, value);
-        if (addr == 0xFFFF) fprintf(stderr, "[TRACE] IE <- 0x%02X\n", value);
+        // KEY1 (0xFF4D): only bit 0 (speed switch request) is writable
+        if (addr == 0xFF4D) {
+            bus->io[0x4D] = value & 0x01;
+            return;
+        }
 
         // Serial Port Intercept for Blargg's Test ROMs
         if (addr == 0xFF02 && value == 0x81) {
@@ -127,22 +138,17 @@ size_t bus_load_rom(Bus* bus, const char* filepath)
     static const uint16_t vectors[] = {0x40, 0x48, 0x50, 0x58, 0x60};
     for (int i = 0; i < 5; i++) {
         uint16_t addr = vectors[i];
-        fprintf(stderr, "[DBG] vector[%d] 0x%02X: original=0x%02X", i, addr, bus->rom[addr]);
         if (bus->rom[addr] == 0x00) {
             bus->rom[addr] = 0xC9;
-            fprintf(stderr, " -> PATCHED to 0xC9 (empty)");
         } else if (bus->rom[addr] == 0xC3) {
             uint16_t target = bus->rom[addr + 1] | (bus->rom[addr + 2] << 8);
-            fprintf(stderr, " (JP 0x%04X)", target);
             // Only patch jumps to non-executable memory (VRAM, SRAM, OAM, I/O).
             // Blargg tests run code from WRAM ($C000+), so those targets are valid.
             if ((target >= 0x8000 && target < 0xC000) ||
                 (target >= 0xFE00 && target < 0xFF80)) {
                 bus->rom[addr] = 0xC9;
-                fprintf(stderr, " -> PATCHED to 0xC9 (JP to non-executable memory)");
             }
         }
-        fprintf(stderr, "\n");
     }
 
     return bytes_read;
