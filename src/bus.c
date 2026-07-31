@@ -83,7 +83,7 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
             return;
         }
 
-        if (addr == 0xFF0F) fprintf(stderr, "[TRACE] IF <- 0x%02X\n", value);
+        if (addr == 0xFF0F) fprintf(stderr, "[TRACE] cyc=%llu IF <- 0x%02X\n", (unsigned long long)g_cycles, value);
         if (addr == 0xFFFF) fprintf(stderr, "[TRACE] IE <- 0x%02X\n", value);
 
         // Serial Port Intercept for Blargg's Test ROMs
@@ -134,9 +134,12 @@ size_t bus_load_rom(Bus* bus, const char* filepath)
         } else if (bus->rom[addr] == 0xC3) {
             uint16_t target = bus->rom[addr + 1] | (bus->rom[addr + 2] << 8);
             fprintf(stderr, " (JP 0x%04X)", target);
-            if (target >= 0x8000) {
+            // Only patch jumps to non-executable memory (VRAM, SRAM, OAM, I/O).
+            // Blargg tests run code from WRAM ($C000+), so those targets are valid.
+            if ((target >= 0x8000 && target < 0xC000) ||
+                (target >= 0xFE00 && target < 0xFF80)) {
                 bus->rom[addr] = 0xC9;
-                fprintf(stderr, " -> PATCHED to 0xC9 (JP to non-ROM)");
+                fprintf(stderr, " -> PATCHED to 0xC9 (JP to non-executable memory)");
             }
         }
         fprintf(stderr, "\n");

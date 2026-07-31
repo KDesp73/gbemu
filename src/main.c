@@ -36,12 +36,14 @@ int main(int argc, char** argv)
         while (frame_cycles < CYCLES_PER_FRAME) {
             
             int cycles = cpu_step(&cpu, &bus);
+            g_cycles += cycles;
 
             timer_step(&timer, cycles);
             ppu_step(&ppu, &bus, cycles);
 
             int int_cycles = handle_interrupts(&cpu, &bus, &ppu, &timer);
             if (int_cycles > 0) {
+                g_cycles += int_cycles;
                 timer_step(&timer, int_cycles);
                 ppu_step(&ppu, &bus, int_cycles);
                 cycles += int_cycles;

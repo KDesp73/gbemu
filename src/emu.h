@@ -304,4 +304,6 @@ void ppu_write(PPU* ppu, uint16_t addr, uint8_t value);
 
 int handle_interrupts(CPU* cpu, Bus* bus, PPU* ppu, Timer* timer);
 
+extern uint64_t g_cycles;
+
 #endif // EMU_H

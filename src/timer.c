@@ -56,6 +56,9 @@ void timer_step(Timer* timer, int cycles)
                 fprintf(stderr, "[TRACE] Timer overflow! TIMA=%d TMA=%d\n", timer->tima, timer->tma);
             } else {
                 timer->tima++;
+                if (g_cycles > 1761800 && g_cycles < 1762600)
+                    fprintf(stderr, "[TRACE] TIMA++ cyc=%llu -> 0x%02X\n",
+                        (unsigned long long)g_cycles, timer->tima);
             }
         }
     }
@@ -67,6 +70,9 @@ uint8_t timer_read(const Timer* timer, uint16_t addr)
         case 0xFF04: // DIV
             return (uint8_t)(timer->internal_counter >> 8);
         case 0xFF05: // TIMA
+            if (g_cycles > 1761800 && g_cycles < 1762600)
+                fprintf(stderr, "[TRACE] TIMA read cyc=%llu -> 0x%02X (internal=%04X)\n",
+                    (unsigned long long)g_cycles, timer->tima, timer->internal_counter);
             return timer->tima;
         case 0xFF06: // TMA
             return timer->tma;
@@ -84,6 +90,9 @@ void timer_write(Timer* timer, uint16_t addr, uint8_t value)
             timer->internal_counter = 0;
             break;
         case 0xFF05: // TIMA
+            if (g_cycles > 1761800 && g_cycles < 1762600)
+                fprintf(stderr, "[TRACE] TIMA write cyc=%llu <- 0x%02X\n",
+                    (unsigned long long)g_cycles, value);
             timer->tima = value;
             break;
         case 0xFF06: // TMA

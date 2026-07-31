@@ -84,6 +84,9 @@ int cpu_step(CPU* cpu, Bus* bus)
 
     uint8_t opcode = bus_read(bus, cpu->pc++);
 
+    if (g_cycles > 1762260 && g_cycles < 1762400)
+        fprintf(stderr, "[OP] cyc=%llu pc=%04X op=%02X\n", (unsigned long long)g_cycles, cpu->pc - 1, opcode);
+
     int cycles = instr(cpu, bus, opcode);
     if (!cycles) {
         fprintf(stderr, "Unhandled opcode: 0x%02X at PC: 0x%04X\n", opcode, cpu->pc - 1);

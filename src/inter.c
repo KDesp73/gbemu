@@ -1,5 +1,7 @@
 #include "emu.h"
 
+uint64_t g_cycles = 0;
+
 // Service hardware interrupts and return cycles consumed (0 if none serviced)
 int handle_interrupts(CPU* cpu, Bus* bus, PPU* ppu, Timer* timer)
 {
@@ -46,8 +48,8 @@ int handle_interrupts(CPU* cpu, Bus* bus, PPU* ppu, Timer* timer)
                 // Jump to interrupt vector table (0x0040, 0x0048, 0x0050, 0x0058, 0x0060)
                 cpu->pc = 0x0040 + (bit * 8);
 
-                fprintf(stderr, "[TRACE] Interrupt fired! bit=%d IE=0x%02X IF=0x%02X PC->0x%04X SP=0x%04X\n",
-                    bit, bus->ie, bus_read(bus, 0xFF0F), cpu->pc, cpu->sp);
+                fprintf(stderr, "[TRACE] cyc=%llu Interrupt fired! bit=%d IE=0x%02X IF=0x%02X PC->0x%04X SP=0x%04X\n",
+                    (unsigned long long)g_cycles, bit, bus->ie, bus_read(bus, 0xFF0F), cpu->pc, cpu->sp);
 
                 return 20; // Servicing an interrupt vector consumes 20 T-cycles (5 M-cycles)
             }
