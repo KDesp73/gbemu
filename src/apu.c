@@ -151,8 +151,13 @@ void apu_write(APU* apu, uint16_t addr, uint8_t value)
             apu_power_off(apu);
         } else if (on && !apu->power) {
             apu->power = true;
-            // Powering on resets the frame sequencer so the next step is 0.
-            apu->frame_accum = 0;
+            // Powering on resets the frame sequencer so the next step is 0
+            // (a length-clocking step). Extra length clocking on NRx4 only
+            // occurs when the *next* step would *not* clock length, so after
+            // power-on there must be no extra clock. Model that as starting
+            // in the second half of the length period (SameBoy: div_divider
+            // starts at 0, so (div_divider & 1) is false).
+            apu->frame_accum = LENGTH_CLOCK_PERIOD / 2;
         }
         return;
     }
