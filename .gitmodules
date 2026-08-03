@@ -1,3 +1,6 @@
 [submodule "gb-test-roms"]
-	path = gb-test-roms
+	path = tests/gb-test-roms
 	url = https://github.com/retrio/gb-test-roms
+[submodule "SameSuite"]
+	path = tests/SameSuite
+	url = https://github.com/LIJI32/SameSuite
