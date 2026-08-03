@@ -347,4 +347,7 @@ uint8_t apu_read(const APU* apu, uint16_t addr);
 //@param value Byte value to write
 void apu_write(APU* apu, uint16_t addr, uint8_t value);
 
+
+void loop(CPU* cpu, Bus* bus, Timer* timer, PPU* ppu, APU* apu);
+
 #endif // EMU_H
