@@ -28,6 +28,7 @@ void ppu_init(PPU* ppu)
     ppu->wy = 0;
     ppu->wx = 0;
     ppu->dots = 0;
+    ppu->first_line_after_enable = false;
     ppu->frame_ready = false;
     ppu->vblank_interrupt = false;
     ppu->stat_interrupt = false;
@@ -38,15 +39,25 @@ void ppu_init(PPU* ppu)
 
 void ppu_step(PPU* ppu, Bus* bus, int cycles)
 {
-    // If LCD is disabled in LCDC (Bit 7 == 0), clear LCD and return
+    // LCD off: frozen (state set by ppu_write on the off edge)
     if (!(ppu->lcdc & 0x80)) {
-        ppu->ly = 0;
-        ppu->dots = 0;
-        ppu_change_mode(ppu, PPU_MODE_HBLANK);
         return;
     }
 
     ppu->dots += cycles;
+
+    // First line after LCD enable is shortened. Blargg oam_bug/1-lcd_sync
+    // reads LY at ~896 dots (expect 0) and ~904 dots (expect 1).
+    if (ppu->first_line_after_enable) {
+        if (ppu->dots >= 900) {
+            ppu->dots -= 900;
+            ppu->ly = 1;
+            ppu->first_line_after_enable = false;
+            ppu_change_mode(ppu, PPU_MODE_OAM);
+            check_lyc_stat_interrupt(ppu);
+        }
+        return;
+    }
 
     switch ((PPUMode)(ppu->stat & 0x03)) {
         case PPU_MODE_OAM:
@@ -114,7 +125,25 @@ uint8_t ppu_read(const PPU* ppu, uint16_t addr)
 void ppu_write(PPU* ppu, uint16_t addr, uint8_t value)
 {
     switch (addr) {
-        case 0xFF40: ppu->lcdc = value; break;
+        case 0xFF40: {
+            bool was_on = (ppu->lcdc & 0x80) != 0;
+            ppu->lcdc = value;
+            bool now_on = (value & 0x80) != 0;
+            if (was_on && !now_on) {
+                // LCD off: freeze PPU
+                ppu->ly = 0;
+                ppu->dots = 0;
+                ppu->stat = (ppu->stat & ~0x03) | PPU_MODE_HBLANK;
+                ppu->first_line_after_enable = false;
+            } else if (!was_on && now_on) {
+                // LCD on: start shortened first scanline
+                ppu->ly = 0;
+                ppu->dots = 0;
+                ppu->stat = (ppu->stat & ~0x03) | PPU_MODE_HBLANK;
+                ppu->first_line_after_enable = true;
+            }
+            break;
+        }
         case 0xFF41: ppu->stat = (ppu->stat & 0x07) | (value & 0x78); break; // Only bits 3-6 writable
         case 0xFF42: ppu->scy = value; break;
         case 0xFF43: ppu->scx = value; break;

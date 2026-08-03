@@ -272,7 +272,8 @@ typedef struct PPU {
 
     // Internal State
     uint32_t dots; // Dot/T-cycle counter within the current scanline (0-455)
-    
+    bool first_line_after_enable; // Shortened first scanline after LCD on
+
     // Output Interfaces
     uint32_t frame_buffer[SCREEN_HEIGHT][SCREEN_WIDTH]; // Pixel buffer for SDL
     bool frame_ready;        // Set to true at VBlank, signals SDL to render

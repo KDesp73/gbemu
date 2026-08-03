@@ -10,6 +10,18 @@
 // NR10-NR51 occupy regs[0x00..0x15]; wave RAM is regs[0x20..0x2F] (FF30-FF3F).
 #define NR_REG_COUNT 0x16 // FF10 through FF25 inclusive
 
+// Unused bits read as 1 (OR'd with stored value). Indexed by (addr - 0xFF10).
+static const uint8_t NR_READ_MASK[0x30] = {
+    /* FF10-FF14 */ 0x80, 0x3F, 0x00, 0xFF, 0xBF,
+    /* FF15-FF19 */ 0xFF, 0x3F, 0x00, 0xFF, 0xBF,
+    /* FF1A-FF1E */ 0x7F, 0xFF, 0x9F, 0xFF, 0xBF,
+    /* FF1F-FF23 */ 0xFF, 0xFF, 0x00, 0x00, 0xBF,
+    /* FF24-FF25 */ 0x00, 0x00,
+    /* FF26-FF2F */ 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+    /* FF30-FF3F wave RAM */ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                              0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+};
+
 static bool is_wave_ram(uint16_t addr)
 {
     return addr >= 0xFF30 && addr <= 0xFF3F;
@@ -66,19 +78,21 @@ static bool dac_enabled(const APU* apu, int ch)
     }
 }
 
+static void apu_clock_length(APU* apu, int ch)
+{
+    if (!apu->length_enable[ch] || apu->length[ch] == 0) return;
+    if (--apu->length[ch] == 0) {
+        apu->ch_on[ch] = false;
+    }
+}
+
 static void apu_power_off(APU* apu)
 {
     apu->power = false;
 
-    // Preserve DMG length-load registers (NRx1); CGB clears everything.
-    uint8_t len_regs[4] = {
-        apu->regs[0x01], // NR11
-        apu->regs[0x06], // NR21
-        apu->regs[0x0B], // NR31
-        apu->regs[0x10], // NR41
-    };
-
     // Powering off instantly clears NR10-NR51. Wave RAM is unaffected.
+    // DMG: internal length counters survive, but the readable register
+    // bytes still clear (length bits are write-only on read-back).
     memset(apu->regs, 0, NR_REG_COUNT);
 
     for (int i = 0; i < 4; i++) {
@@ -87,11 +101,8 @@ static void apu_power_off(APU* apu)
         if (apu->cgb) {
             apu->length[i] = 0;
             apu->length_load[i] = 0;
-        } else {
-            // DMG: length counters survive power-off.
-            static const uint8_t len_idx[4] = {0x01, 0x06, 0x0B, 0x10};
-            apu->regs[len_idx[i]] = len_regs[i];
         }
+        // DMG: leave length[] / length_load[] as-is
     }
 }
 
@@ -111,14 +122,9 @@ void apu_step(APU* apu, int dots)
     while (apu->frame_accum >= LENGTH_CLOCK_PERIOD) {
         apu->frame_accum -= LENGTH_CLOCK_PERIOD;
 
-        // Length counter: one decrement per length clock tick
+        // Length clocks whenever enabled, even if the channel is already off.
         for (int i = 0; i < 4; i++) {
-            if (apu->ch_on[i] && apu->length_enable[i]) {
-                if (apu->length[i] > 0) apu->length[i]--;
-                if (apu->length[i] == 0) {
-                    apu->ch_on[i] = false;
-                }
-            }
+            apu_clock_length(apu, i);
         }
     }
 }
@@ -126,14 +132,15 @@ void apu_step(APU* apu, int dots)
 uint8_t apu_read(const APU* apu, uint16_t addr)
 {
     if (addr == 0xFF26) { // NR52
-        if (!apu->power) return 0x00;
-        return 0x80
+        // Bits 4-6 always read as 1
+        if (!apu->power) return 0x70;
+        return 0xF0
             | (apu->ch_on[0] ? 0x01 : 0x00)
             | (apu->ch_on[1] ? 0x02 : 0x00)
             | (apu->ch_on[2] ? 0x04 : 0x00)
             | (apu->ch_on[3] ? 0x08 : 0x00);
     }
-    return apu->regs[addr - 0xFF10];
+    return apu->regs[addr - 0xFF10] | NR_READ_MASK[addr - 0xFF10];
 }
 
 void apu_write(APU* apu, uint16_t addr, uint8_t value)
@@ -151,11 +158,20 @@ void apu_write(APU* apu, uint16_t addr, uint8_t value)
     }
 
     // While powered off, NR10-NR51 are read-only (wave RAM stays writable).
-    // DMG exception: length counters (NRx1) can still be written.
+    // DMG exception: NRx1 updates the internal length counter only.
     if (!apu->power && !is_wave_ram(addr)) {
         if (apu->cgb || !is_length_reg(addr)) {
             return;
         }
+        // DMG: apply length load without storing to the readable register.
+        int ch = channel_from_reg(addr);
+        if (ch == 2) {
+            apu->length_load[ch] = 256 - value;
+        } else {
+            apu->length_load[ch] = 64 - (value & 0x3F);
+        }
+        apu->length[ch] = apu->length_load[ch];
+        return;
     }
 
     apu->regs[addr - 0xFF10] = value;
@@ -184,18 +200,33 @@ void apu_write(APU* apu, uint16_t addr, uint8_t value)
     ch = control_from_reg(addr);
     if (ch >= 0) {
         // NRx4: length enable (bit 6) and trigger (bit 7)
-        apu->length_enable[ch] = (value & 0x40) != 0;
+        bool was_enabled = apu->length_enable[ch];
+        bool now_enabled = (value & 0x40) != 0;
+        bool first_half = apu->frame_accum < (LENGTH_CLOCK_PERIOD / 2);
+        apu->length_enable[ch] = now_enabled;
+
+        // Extra clock: enabling length (0→1) in the first half of the period
+        if (!was_enabled && now_enabled && apu->power && first_half) {
+            apu_clock_length(apu, ch);
+        }
+
         if (value & 0x80) {
             // Trigger only enables the channel if its DAC is on.
+            bool unfroze = (apu->length[ch] == 0);
             if (dac_enabled(apu, ch)) {
                 apu->ch_on[ch] = true;
-                if (apu->length[ch] == 0) {
-                    apu->length[ch] = (ch == 2) ? 256 : 64;
-                }
-                if (apu->length_enable[ch] && apu->length[ch] == 0) {
-                    apu->ch_on[ch] = false;
-                }
             } else {
+                apu->ch_on[ch] = false;
+            }
+            // Trigger unfreezes a zeroed length counter to maximum
+            if (unfroze) {
+                apu->length[ch] = (ch == 2) ? 256 : 64;
+            }
+            // Unfreezing with length enabled in the first half clocks once
+            if (unfroze && apu->length_enable[ch] && apu->power && first_half) {
+                apu_clock_length(apu, ch);
+            }
+            if (apu->length_enable[ch] && apu->length[ch] == 0) {
                 apu->ch_on[ch] = false;
             }
         }
