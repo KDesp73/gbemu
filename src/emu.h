@@ -316,9 +316,10 @@ int handle_interrupts(CPU* cpu, Bus* bus, PPU* ppu, Timer* timer);
 typedef struct APU {
     uint8_t regs[0x30];     // Sound registers FF10-FF3F
     bool power;             // NR52 bit 7 (master power)
+    bool cgb;               // CGB mode (from cartridge header); affects length on power-off
     bool ch_on[4];          // Channel active status (NR52 bits 0-3)
-    uint8_t length[4];      // Length counter for each channel
-    uint8_t length_load[4]; // Length counter reload value (64 - (NRx1 & 0x3F))
+    uint16_t length[4];     // Length counter (max 64 for square/noise, 256 for wave)
+    uint16_t length_load[4]; // Length counter reload value
     bool length_enable[4];  // NRx4 bit 6 (length counter enable)
     uint16_t frame_accum;   // System-cycle accumulator (length clock ticks every 16384)
 } APU;

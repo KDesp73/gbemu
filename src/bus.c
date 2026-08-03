@@ -140,6 +140,12 @@ size_t bus_load_rom(Bus* bus, const char* filepath)
         return 0;
     }
 
+    // Cartridge header 0x0143: $80 = CGB compatible, $C0 = CGB only
+    if (bus->apu && bytes_read > 0x143) {
+        uint8_t cgb_flag = bus->rom[0x143];
+        bus->apu->cgb = (cgb_flag == 0x80 || cgb_flag == 0xC0);
+    }
+
         // Patch empty or invalid interrupt vectors
     static const uint16_t vectors[] = {0x40, 0x48, 0x50, 0x58, 0x60};
     for (int i = 0; i < 5; i++) {
