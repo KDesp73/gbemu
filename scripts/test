@@ -5,11 +5,52 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 EMU_CLI="$PROJECT_DIR/emu-cli"
 TEST_ROMS_DIR="$PROJECT_DIR/tests/gb-test-roms"
+SAMESUITE_DIR="$PROJECT_DIR/tests/SameSuite"
 REPORT_FILE="$PROJECT_DIR/test-report.txt"
 TIMEOUT_INDIVIDUAL=30
 TIMEOUT_COMPOSITE=60
+# SameSuite ROMs emit their serial result within a few seconds and then halt
+# forever, so a shorter timeout is enough.
+TIMEOUT_SAMESUITE=15
 
 die() { echo "ERROR: $*" >&2; exit 1; }
+
+usage() {
+    cat <<EOF
+Usage: $0 [suite ...]
+
+Run the emulator test suites. With no arguments, all suites are run.
+
+Suites:
+  gb          gb-test-roms (Blargg-style composite + individual ROMs)
+  samesuite   SameSuite (SameBoy hardware-behavior test ROMs)
+  all         both of the above (default)
+
+Examples:
+  $0          run every suite
+  $0 gb       run only gb-test-roms
+  $0 samesuite  run only SameSuite
+  $0 gb samesuite  run both
+EOF
+}
+
+# --- Parse suite selection ---
+RUN_GB=false
+RUN_SAMESUITE=false
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        gb)          RUN_GB=true ;;
+        samesuite)   RUN_SAMESUITE=true ;;
+        all)         RUN_GB=true; RUN_SAMESUITE=true ;;
+        -h|--help)   usage; exit 0 ;;
+        *)           die "unknown suite '$1' (run '$0 --help' for usage)" ;;
+    esac
+    shift
+done
+if ! $RUN_GB && ! $RUN_SAMESUITE; then
+    RUN_GB=true
+    RUN_SAMESUITE=true
+fi
 
 if ! command -v gtimeout &>/dev/null; then
     die "gtimeout not found (install coreutils: brew install coreutils)"
@@ -22,14 +63,25 @@ make clean 2>&1 > /dev/null
 make all type=RELEASE 2>&1 | tail -1
 echo ""
 
+# Build SameSuite ROMs if needed
+if $RUN_SAMESUITE; then
+    if ! command -v rgbasm &>/dev/null || ! command -v rgblink &>/dev/null || ! command -v rgbfix &>/dev/null; then
+        die "rgbds tools not found (install rgbds: brew install rgbds)"
+    fi
+    echo "Building SameSuite ROMs..."
+    make -C "$SAMESUITE_DIR" 2>&1 | tail -1
+    echo ""
+fi
+
 # --- Collect test ROMs ---
 declare -a ROM_NAMES=()
 declare -a ROM_PATHS=()
 declare -a ROM_GROUPS=()
+declare -a ROM_SUITES=()
 
 collect() {
-    local group="$1"
-    shift
+    local suite="$1" group="$2"
+    shift 2
     for path in "$@"; do
         [[ -f "$path" ]] || continue
         local name
@@ -37,26 +89,42 @@ collect() {
         ROM_NAMES+=("$name")
         ROM_PATHS+=("$path")
         ROM_GROUPS+=("$group")
+        ROM_SUITES+=("$suite")
     done
 }
 
-# Composite (multi-test) ROMs (only those <= 32KB that fit in our ROM buffer)
-# Note: 64KB composite ROMs like cpu_instrs/cpu_instrs.gb, oam_bug/oam_bug.gb,
-#       cgb_sound/cgb_sound.gb, dmg_sound/dmg_sound.gb, mem_timing/mem_timing.gb,
-#       mem_timing-2/mem_timing.gb are skipped because they need MBC banking.
-for rom in "$TEST_ROMS_DIR"/instr_timing/instr_timing.gb \
-           "$TEST_ROMS_DIR"/interrupt_time/interrupt_time.gb \
-           "$TEST_ROMS_DIR"/halt_bug.gb; do
-    collect "composite" "$rom"
-done
+if $RUN_GB; then
+    # Composite (multi-test) ROMs (only those <= 32KB that fit in our ROM buffer)
+    # Note: 64KB composite ROMs like cpu_instrs/cpu_instrs.gb, oam_bug/oam_bug.gb,
+    #       cgb_sound/cgb_sound.gb, dmg_sound/dmg_sound.gb, mem_timing/mem_timing.gb,
+    #       mem_timing-2/mem_timing.gb are skipped because they need MBC banking.
+    for rom in "$TEST_ROMS_DIR"/instr_timing/instr_timing.gb \
+               "$TEST_ROMS_DIR"/interrupt_time/interrupt_time.gb \
+               "$TEST_ROMS_DIR"/halt_bug.gb; do
+        collect "gb" "composite" "$rom"
+    done
 
-# Individual test ROMs
-collect "cpu_instrs"  "$TEST_ROMS_DIR"/cpu_instrs/individual/*.gb
-collect "mem_timing"  "$TEST_ROMS_DIR"/mem_timing/individual/*.gb
-collect "mem_timing-2" "$TEST_ROMS_DIR"/mem_timing-2/rom_singles/*.gb
-collect "oam_bug"     "$TEST_ROMS_DIR"/oam_bug/rom_singles/*.gb
-collect "cgb_sound"   "$TEST_ROMS_DIR"/cgb_sound/rom_singles/*.gb
-collect "dmg_sound"   "$TEST_ROMS_DIR"/dmg_sound/rom_singles/*.gb
+    # Individual test ROMs
+    collect "gb" "cpu_instrs"   "$TEST_ROMS_DIR"/cpu_instrs/individual/*.gb
+    collect "gb" "mem_timing"   "$TEST_ROMS_DIR"/mem_timing/individual/*.gb
+    collect "gb" "mem_timing-2" "$TEST_ROMS_DIR"/mem_timing-2/rom_singles/*.gb
+    collect "gb" "oam_bug"      "$TEST_ROMS_DIR"/oam_bug/rom_singles/*.gb
+    collect "gb" "cgb_sound"    "$TEST_ROMS_DIR"/cgb_sound/rom_singles/*.gb
+    collect "gb" "dmg_sound"    "$TEST_ROMS_DIR"/dmg_sound/rom_singles/*.gb
+fi
+
+if $RUN_SAMESUITE; then
+    while IFS= read -r rom; do
+        [[ -f "$rom" ]] || continue
+        name="$(basename "$rom" .gb)"
+        rel="${rom#"$SAMESUITE_DIR"/}"
+        group="$(dirname "$rel")"
+        ROM_NAMES+=("$name")
+        ROM_PATHS+=("$rom")
+        ROM_GROUPS+=("$group")
+        ROM_SUITES+=("samesuite")
+    done < <(find "$SAMESUITE_DIR" -name "*.gb" | sort)
+fi
 
 # --- Run tests ---
 echo "Running ${#ROM_NAMES[@]} test ROM(s)..."
@@ -69,12 +137,20 @@ pass=0
 fail=0
 timeout_cnt=0
 
+# SameSuite verdicts come over the serial port: Fibonacci registers
+# (3,5,8,13,21,34) on success, $42 on failure.
+SAMESUITE_PASS_HEX="0305080d1522"
+SAMESUITE_FAIL_HEX="424242424242"
+
 for i in "${!ROM_NAMES[@]}"; do
     name="${ROM_NAMES[$i]}"
     path="${ROM_PATHS[$i]}"
     group="${ROM_GROUPS[$i]}"
+    suite="${ROM_SUITES[$i]}"
 
-    if [[ "$group" == "composite" ]]; then
+    if [[ "$suite" == "samesuite" ]]; then
+        to=$TIMEOUT_SAMESUITE
+    elif [[ "$group" == "composite" ]]; then
         to=$TIMEOUT_COMPOSITE
     else
         to=$TIMEOUT_INDIVIDUAL
@@ -82,14 +158,50 @@ for i in "${!ROM_NAMES[@]}"; do
 
     printf "  [%3d/%3d] %-35s" $((i + 1)) "$total" "[$group] $name"
 
-    set +e
-    output="$(gtimeout "$to" "$EMU_CLI" "$path" 2>/dev/null)"
-    ec=$?
-    set -e
+    if [[ "$suite" == "samesuite" ]]; then
+        output="$(gtimeout "$to" "$EMU_CLI" "$path" 2>/dev/null | xxd -p | tr -d '\n')"
+        ec=$?
+        lines="${#output}"
+    else
+        output="$(gtimeout "$to" "$EMU_CLI" "$path" 2>/dev/null)"
+        ec=$?
+        lines="$(echo "$output" | wc -l | tr -d ' ')"
+    fi
 
-    lines="$(echo "$output" | wc -l | tr -d ' ')"
-
-    if echo "$output" | grep -qi "passed" && ! echo "$output" | grep -qi "failed"; then
+    if [[ "$suite" == "samesuite" ]]; then
+        if [[ "$output" == "$SAMESUITE_PASS_HEX" ]]; then
+            echo " PASS"
+            verdict="PASS"
+            detail="serial result: $output"
+            pass=$((pass+1))
+        elif [[ "$output" == "$SAMESUITE_FAIL_HEX" ]]; then
+            echo " FAIL"
+            verdict="FAIL"
+            detail="serial result: $output"
+            fail=$((fail+1))
+        elif [[ $ec -eq 124 ]]; then
+            if [[ -z "$output" ]]; then
+                echo " TIMEOUT"
+                verdict="TIMEOUT"
+                detail="no output (timed out after ${to}s)"
+            else
+                echo " PARTIAL"
+                verdict="PARTIAL"
+                detail="incomplete serial result: $output"
+            fi
+            timeout_cnt=$((timeout_cnt+1))
+        elif [[ -z "$output" ]]; then
+            echo " NOOUT"
+            verdict="NOOUT"
+            detail="no output (exited with code $ec)"
+            fail=$((fail+1))
+        else
+            echo " UNKNOWN"
+            verdict="UNKNOWN"
+            detail="unexpected serial result: $output"
+            fail=$((fail+1))
+        fi
+    elif echo "$output" | grep -qi "passed" && ! echo "$output" | grep -qi "failed"; then
         echo " PASS"
         verdict="PASS"
         detail="$(echo "$output" | tr '\n' ';' | sed 's/;/; /g')"
@@ -136,7 +248,7 @@ done
 {
     echo ""
     echo "========================================"
-    echo "  GB Test ROM Results"
+    echo "  Emulator Test Results"
     echo "========================================"
     echo "  Total:  $total"
     echo "  Passed: $pass"
@@ -147,7 +259,7 @@ done
 
     if [[ $fail -gt 0 ]] || [[ $timeout_cnt -gt 0 ]]; then
         echo "Failed / Timed out tests:"
-        { grep -B1 -A2 "Status: FAIL\|Status: TIMEOUT\|Status: UNKNOWN" "$REPORT_FILE" 2>/dev/null || true; } \
+        { grep -B1 -A2 "Status: FAIL\|Status: TIMEOUT\|Status: PARTIAL\|Status: NOOUT\|Status: UNKNOWN" "$REPORT_FILE" 2>/dev/null || true; } \
             | { grep "TEST:\|Status:" || true; }
         echo ""
         echo "See $REPORT_FILE for full details."
