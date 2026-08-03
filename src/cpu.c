@@ -82,7 +82,14 @@ int cpu_step(CPU* cpu, Bus* bus)
         return 4; // CPU sleeps for 1 M-cycle (4 T-cycles)
     }
 
-    uint8_t opcode = bus_read(bus, cpu->pc++);
+    // Halt bug: the byte after a buggy HALT is read twice, so the opcode
+    // fetch below does not advance PC (operand reads shift back one byte).
+    uint8_t opcode = bus_read(bus, cpu->pc);
+    if (cpu->halt_bug) {
+        cpu->halt_bug = false;
+    } else {
+        cpu->pc++;
+    }
 
     int cycles = instr(cpu, bus, opcode);
     if (!cycles) {

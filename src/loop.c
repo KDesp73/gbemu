@@ -1,4 +1,5 @@
 #include "emu.h"
+#include <stdlib.h>
 #include <time.h>
 
 void loop(CPU* cpu, Bus* bus, Timer* timer, PPU* ppu, APU* apu)
@@ -47,7 +48,7 @@ void loop(CPU* cpu, Bus* bus, Timer* timer, PPU* ppu, APU* apu)
         }
 
         uint64_t frame_duration = get_time_ns() - frame_start_time;
-        if (frame_duration < FRAME_TIME_NS) {
+        if (!getenv("EMU_NOSLEEP") && frame_duration < FRAME_TIME_NS) {
             struct timespec sleep_time;
             sleep_time.tv_sec = 0;
             sleep_time.tv_nsec = (long)(FRAME_TIME_NS - frame_duration);

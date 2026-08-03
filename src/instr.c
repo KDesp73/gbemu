@@ -1097,6 +1097,7 @@ static bool instr_interrupts(CPU* cpu, Bus* bus, uint8_t opcode)
         // Cycles: 1 | Bytes: 1 | Flags: -
         case OP_DI: {
             cpu->ime = false;
+            cpu->ime_scheduled = false;
             break;
         }
 
@@ -1111,13 +1112,17 @@ static bool instr_interrupts(CPU* cpu, Bus* bus, uint8_t opcode)
         // Cycles: 4 | Bytes: 1 | Flags: -
         case OP_HALT: {
             uint8_t if_reg = bus_read(bus, 0xFF0F);
-            if (if_reg & bus->ie) {
+            // Only bits 0-4 are valid interrupt sources; bits 5-7 of IF are unused
+            // (always read as 1) and must not participate in the pending check.
+            if ((if_reg & bus->ie & 0x1F) != 0) {
                 if (!cpu->ime) {
-                    // Halt bug: PC "fails to be normally incremented"
-                    // Extra data read from PC, but PC doesn't advance.
-                    // The byte at this address gets "read a second time"
-                    // as the next opcode fetch, so it IS executed.
-                    bus_read(bus, cpu->pc);
+                    // Halt bug (DMG/GBC): when HALT runs with IME=0 and an
+                    // interrupt pending, the CPU does not halt and PC "fails to
+                    // be normally incremented". The byte after the HALT is read
+                    // twice, so the next instruction executes with its operand
+                    // reads shifted back one byte (cpu_step skips the PC
+                    // increment for the next opcode fetch).
+                    cpu->halt_bug = true;
                 }
                 // IME=1: PC stays at HALT+1, interrupt fires normally
             } else {

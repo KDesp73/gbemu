@@ -19,6 +19,9 @@ uint8_t bus_read(Bus *bus, uint16_t addr)
             return ppu_read(bus->ppu, addr);
         if (addr == 0xFF4D) // KEY1
             return (bus->double_speed ? 0x80 : 0x00) | (bus->io[0x4D] & 0x01);
+        // IF (0xFF0F): bits 5-7 always read as 1
+        if (addr == 0xFF0F)
+            return bus->io[0x0F] | 0xE0;
         return bus->io[addr - 0xFF00];
     }
     if (addr >= 0xFF80 && addr < 0xFFFF) return bus->hram[addr - 0xFF80];
@@ -104,6 +107,9 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
             fflush(stdout); // Instantly output to console
             // Clear bit 7 (transfer complete) and bit 0 (clock source) immediately
             bus->io[addr - 0xFF00] = 0x01;
+        } else if (addr == 0xFF0F) {
+            // IF: only bits 0-4 are writable
+            bus->io[0x0F] = value & 0x1F;
         } else {
             // Store value in I/O array
             bus->io[addr - 0xFF00] = value;

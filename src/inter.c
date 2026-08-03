@@ -22,7 +22,7 @@ int handle_interrupts(CPU* cpu, Bus* bus, PPU* ppu, Timer* timer)
     bus_write(bus, 0xFF0F, if_reg);
 
     // 2. Unhalt CPU if an interrupt is pending (even if IME is false)
-    uint8_t pending = if_reg & bus->ie;
+    uint8_t pending = if_reg & bus->ie & 0x1F;
     if (pending != 0) {
         cpu->halted = false;
     }

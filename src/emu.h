@@ -48,6 +48,7 @@ typedef struct {
     bool ime_scheduled; // EI has a 1-instruction delay; set to true, copies to ime after next instr
     
     bool halted;
+    bool halt_bug; // HALT executed with IME=0 + pending interrupt: PC not incremented on next fetch
 } CPU;
 
 //@func cpu_init
