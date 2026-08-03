@@ -4,7 +4,7 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 EMU_CLI="$PROJECT_DIR/emu-cli"
-TEST_ROMS_DIR="$PROJECT_DIR/gb-test-roms"
+TEST_ROMS_DIR="$PROJECT_DIR/tests/gb-test-roms"
 REPORT_FILE="$PROJECT_DIR/test-report.txt"
 TIMEOUT_INDIVIDUAL=30
 TIMEOUT_COMPOSITE=60
