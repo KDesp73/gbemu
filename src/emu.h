@@ -168,35 +168,6 @@ uint8_t fetch8(CPU* cpu, Bus* bus);
 //@returns The fetched 16-bit value
 uint16_t fetch16(CPU* cpu, Bus* bus);
 
-//@module exec
-
-//@macro CPU_FREQ
-//@desc CGB dot clock frequency in Hz (8.388608 MHz), the emulator's base time unit
-#define CPU_FREQ 8388608
-
-//@macro CYCLES_PER_FRAME
-//@desc System cycles per frame at ~60 Hz (~139,810 dots); constant across both CPU speed modes
-#define CYCLES_PER_FRAME (CPU_FREQ / 60)
-
-//@macro FRAME_TIME_NS
-//@desc Frame duration in nanoseconds at 60 Hz (~16.66 ms)
-#define FRAME_TIME_NS (1000000000L / 60)
-
-//@func instr
-//@desc Execute a single CPU instruction by opcode
-//@param cpu CPU state to mutate
-//@param bus Memory bus for reads/writes
-//@param opcode The opcode byte to execute
-//@returns Number of T-cycles the instruction consumed
-int instr(CPU* cpu, Bus* bus, uint8_t opcode);
-
-//@func cpu_step
-//@desc Execute one full CPU step (fetch + decode + execute)
-//@param cpu CPU state to mutate
-//@param bus Memory bus for reads/writes
-//@returns Number of T-cycles the step consumed
-int cpu_step(CPU* cpu, Bus* bus);
-
 //@module timer
 
 //@type Timer
@@ -365,6 +336,34 @@ uint8_t apu_read(const APU* apu, uint16_t addr);
 //@param value Byte value to write
 void apu_write(APU* apu, uint16_t addr, uint8_t value);
 
+//@module exec
+
+//@macro CPU_FREQ
+//@desc CGB dot clock frequency in Hz (8.388608 MHz), the emulator's base time unit
+#define CPU_FREQ 8388608
+
+//@macro CYCLES_PER_FRAME
+//@desc System cycles per frame at ~60 Hz (~139,810 dots); constant across both CPU speed modes
+#define CYCLES_PER_FRAME (CPU_FREQ / 60)
+
+//@macro FRAME_TIME_NS
+//@desc Frame duration in nanoseconds at 60 Hz (~16.66 ms)
+#define FRAME_TIME_NS (1000000000L / 60)
+
+//@func instr
+//@desc Execute a single CPU instruction by opcode
+//@param cpu CPU state to mutate
+//@param bus Memory bus for reads/writes
+//@param opcode The opcode byte to execute
+//@returns Number of T-cycles the instruction consumed
+int instr(CPU* cpu, Bus* bus, uint8_t opcode);
+
+//@func cpu_step
+//@desc Execute one full CPU step (fetch + decode + execute)
+//@param cpu CPU state to mutate
+//@param bus Memory bus for reads/writes
+//@returns Number of T-cycles the step consumed
+int cpu_step(CPU* cpu, Bus* bus);
 
 //@func loop
 //@desc Main emulation loop: executes CPU steps until a frame's worth of cycles elapse, advances the timer/PPU/APU, services interrupts, and paces the frame to ~60 Hz
