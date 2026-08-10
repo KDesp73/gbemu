@@ -129,6 +129,11 @@ uint8_t bus_read(Bus* bus, uint16_t addr);
 //@param value Byte value to write
 void bus_write(Bus* bus, uint16_t addr, uint8_t value);
 
+//@func bus_load_rom
+//@desc Load a cartridge ROM file into the bus ROM array (up to 32KB) and set CGB mode from the cartridge header
+//@param bus Memory bus to load into
+//@param filepath Path to the ROM file to load
+//@returns Number of bytes read, or 0 on failure
 size_t bus_load_rom(Bus* bus, const char* filepath);
 
 //@module misc
@@ -232,6 +237,9 @@ uint8_t timer_read(const Timer* timer, uint16_t addr);
 //@param value Byte value to write
 void timer_write(Timer* timer, uint16_t addr, uint8_t value);
 
+//@func get_time_ns
+//@desc Get the current monotonic clock time in nanoseconds
+//@returns Monotonic time in nanoseconds since an arbitrary epoch
 uint64_t get_time_ns(void);
 
 //@module ppu
@@ -307,6 +315,13 @@ uint8_t ppu_read(const PPU* ppu, uint16_t addr);
 //@param value Byte value to write
 void ppu_write(PPU* ppu, uint16_t addr, uint8_t value);
 
+//@func handle_interrupts
+//@desc Service pending hardware interrupts: sync PPU/Timer requests into IF (0xFF0F), unhalt the CPU if a pending interrupt is enabled, and jump to the interrupt vector if IME is set
+//@param cpu CPU state to mutate
+//@param bus Memory bus for IF register reads/writes
+//@param ppu PPU providing vblank/stat interrupt requests
+//@param timer Timer providing TIMA overflow interrupt requests
+//@returns Number of T-cycles consumed by interrupt servicing (0 if none serviced)
 int handle_interrupts(CPU* cpu, Bus* bus, PPU* ppu, Timer* timer);
 
 //@module apu
@@ -351,6 +366,13 @@ uint8_t apu_read(const APU* apu, uint16_t addr);
 void apu_write(APU* apu, uint16_t addr, uint8_t value);
 
 
+//@func loop
+//@desc Main emulation loop: executes CPU steps until a frame's worth of cycles elapse, advances the timer/PPU/APU, services interrupts, and paces the frame to ~60 Hz
+//@param cpu CPU state to run
+//@param bus Memory bus for reads/writes
+//@param timer Timer state to advance
+//@param ppu PPU state to advance
+//@param apu APU state to advance
 void loop(CPU* cpu, Bus* bus, Timer* timer, PPU* ppu, APU* apu);
 
 #endif // EMU_H

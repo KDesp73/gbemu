@@ -275,7 +275,7 @@
                                     cpu_init
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 53</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 54</span>
                             </div>
 
                             <div class="space-y-4">
@@ -314,7 +314,7 @@
                                     cpu_dump_fd
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 58</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 59</span>
                             </div>
 
                             <div class="space-y-4">
@@ -363,7 +363,7 @@
                                     cpu_dump
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 64</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 65</span>
                             </div>
 
                             <div class="space-y-4">
@@ -402,7 +402,7 @@
                                     Flag
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 69</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 70</span>
                             </div>
 
                             <div class="space-y-4">
@@ -430,7 +430,7 @@
                                     https://gbdev.io/pandocs/CPU_Registers_and_Flags.html
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 71</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 72</span>
                             </div>
 
                             <div class="space-y-4">
@@ -454,7 +454,7 @@
                                     flag_set
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 79</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 80</span>
                             </div>
 
                             <div class="space-y-4">
@@ -513,7 +513,7 @@
                                     flag_get
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 86</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 87</span>
                             </div>
 
                             <div class="space-y-4">
@@ -572,9 +572,11 @@
             
                 
             
+                
+            
         
 
-        <section x-show="shouldShowModule('src/emu.h', 'memory', ["Bus", "https://gbdev.io/pandocs/Memory_Map.html", "bus_read", "bus_write"])" x-cloak class="relative">
+        <section x-show="shouldShowModule('src/emu.h', 'memory', ["Bus", "https://gbdev.io/pandocs/Memory_Map.html", "bus_read", "bus_write", "bus_load_rom"])" x-cloak class="relative">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10 group">
                 <div class="space-y-1">
                     <div class="flex items-center gap-2">
@@ -612,7 +614,7 @@
                                     Bus
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 95</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 96</span>
                             </div>
 
                             <div class="space-y-4">
@@ -640,7 +642,7 @@
                                     https://gbdev.io/pandocs/Memory_Map.html
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 97</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 98</span>
                             </div>
 
                             <div class="space-y-4">
@@ -664,7 +666,7 @@
                                     bus_read
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 117</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 118</span>
                             </div>
 
                             <div class="space-y-4">
@@ -721,7 +723,7 @@
                                     bus_write
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 124</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 125</span>
                             </div>
 
                             <div class="space-y-4">
@@ -757,6 +759,63 @@
                                             <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">value</code>
                                             <span class="text-slate-400 text-xs">—</span>
                                             <span class="text-slate-500 dark:text-slate-400 italic text-xs">Byte value to write</span>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('bus_load_rom') || match('memory') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('bus_load_rom') && 'highlight'">
+                                    bus_load_rom
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 132</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Load a cartridge ROM file into the bus ROM array (up to 32KB) and set CGB mode from the cartridge header</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">bus</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Memory bus to load into</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">filepath</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Path to the ROM file to load</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-5 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-emerald-500 w-8 shrink-0">returns</span>
+                                            <code class="text-emerald-600 dark:text-emerald-400 font-bold text-sm">Number</code>
                                         </div>
 
                                     
@@ -822,7 +881,7 @@
                                     get_reg_by_index
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 135</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 141</span>
                             </div>
 
                             <div class="space-y-4">
@@ -889,7 +948,7 @@
                                     set_reg_by_index
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 143</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 149</span>
                             </div>
 
                             <div class="space-y-4">
@@ -958,7 +1017,7 @@
                                     fetch8
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 151</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 157</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1015,7 +1074,7 @@
                                     fetch16
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 158</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 164</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1116,7 +1175,7 @@
                                     CPU_FREQ
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 167</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 173</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1145,7 +1204,7 @@
                                     CYCLES_PER_FRAME
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 171</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 177</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1174,7 +1233,7 @@
                                     FRAME_TIME_NS
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 175</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 181</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1203,7 +1262,7 @@
                                     instr
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 179</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 185</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1270,7 +1329,7 @@
                                     cpu_step
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 187</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 193</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1333,9 +1392,11 @@
             
                 
             
+                
+            
         
 
-        <section x-show="shouldShowModule('src/emu.h', 'timer', ["Timer", "https://gbdev.io/pandocs/Timer_and_Divider_Registers.html", "timer_init", "timer_step", "timer_read", "timer_write"])" x-cloak class="relative">
+        <section x-show="shouldShowModule('src/emu.h', 'timer', ["Timer", "https://gbdev.io/pandocs/Timer_and_Divider_Registers.html", "timer_init", "timer_step", "timer_read", "timer_write", "get_time_ns"])" x-cloak class="relative">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10 group">
                 <div class="space-y-1">
                     <div class="flex items-center gap-2">
@@ -1373,7 +1434,7 @@
                                     Timer
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 196</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 202</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1401,7 +1462,7 @@
                                     https://gbdev.io/pandocs/Timer_and_Divider_Registers.html
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 198</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 204</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1425,7 +1486,7 @@
                                     timer_init
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 209</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 215</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1464,7 +1525,7 @@
                                     timer_step
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 214</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 220</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1513,7 +1574,7 @@
                                     timer_read
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 220</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 226</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1570,7 +1631,7 @@
                                     timer_write
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 227</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 233</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1614,6 +1675,43 @@
                         </div>
                     </div>
                     
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('get_time_ns') || match('timer') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('get_time_ns') && 'highlight'">
+                                    get_time_ns
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 240</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Get the current monotonic clock time in nanoseconds</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-5 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-emerald-500 w-8 shrink-0">returns</span>
+                                            <code class="text-emerald-600 dark:text-emerald-400 font-bold text-sm">Monotonic</code>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
                 
             </div>
         </section>
@@ -1643,9 +1741,11 @@
             
                 
             
+                
+            
         
 
-        <section x-show="shouldShowModule('src/emu.h', 'ppu', ["SCREEN_WIDTH", "SCREEN_HEIGHT", "PPUMode", "https://gbdev.io/pandocs/STAT_Register.html", "PPU", "https://gbdev.io/pandocs/PPU.html", "ppu_init", "ppu_step", "ppu_read", "ppu_write"])" x-cloak class="relative">
+        <section x-show="shouldShowModule('src/emu.h', 'ppu', ["SCREEN_WIDTH", "SCREEN_HEIGHT", "PPUMode", "https://gbdev.io/pandocs/STAT_Register.html", "PPU", "https://gbdev.io/pandocs/PPU.html", "ppu_init", "ppu_step", "ppu_read", "ppu_write", "handle_interrupts"])" x-cloak class="relative">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10 group">
                 <div class="space-y-1">
                     <div class="flex items-center gap-2">
@@ -1683,7 +1783,7 @@
                                     SCREEN_WIDTH
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 238</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 247</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1712,7 +1812,7 @@
                                     SCREEN_HEIGHT
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 242</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 251</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1741,7 +1841,7 @@
                                     PPUMode
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 246</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 255</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1769,7 +1869,7 @@
                                     https://gbdev.io/pandocs/STAT_Register.html
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 248</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 257</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1793,7 +1893,7 @@
                                     PPU
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 256</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 265</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1821,7 +1921,7 @@
                                     https://gbdev.io/pandocs/PPU.html
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 258</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 267</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1845,7 +1945,7 @@
                                     ppu_init
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 282</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 292</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1884,7 +1984,7 @@
                                     ppu_step
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 287</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 297</span>
                             </div>
 
                             <div class="space-y-4">
@@ -1943,7 +2043,7 @@
                                     ppu_read
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 294</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 304</span>
                             </div>
 
                             <div class="space-y-4">
@@ -2000,7 +2100,7 @@
                                     ppu_write
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 301</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 311</span>
                             </div>
 
                             <div class="space-y-4">
@@ -2044,6 +2144,83 @@
                         </div>
                     </div>
                     
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('handle_interrupts') || match('ppu') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('handle_interrupts') && 'highlight'">
+                                    handle_interrupts
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 318</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Service pending hardware interrupts: sync PPU/Timer requests into IF (0xFF0F), unhalt the CPU if a pending interrupt is enabled, and jump to the interrupt vector if IME is set</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">cpu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">CPU state to mutate</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">bus</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Memory bus for IF register reads/writes</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">ppu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">PPU providing vblank/stat interrupt requests</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">timer</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Timer providing TIMA overflow interrupt requests</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-5 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-emerald-500 w-8 shrink-0">returns</span>
+                                            <code class="text-emerald-600 dark:text-emerald-400 font-bold text-sm">Number</code>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
                 
             </div>
         </section>
@@ -2065,9 +2242,11 @@
             
                 
             
+                
+            
         
 
-        <section x-show="shouldShowModule('src/emu.h', 'apu', ["APU", "https://gbdev.io/pandocs/Audio.html", "apu_init", "apu_step", "apu_read", "apu_write"])" x-cloak class="relative">
+        <section x-show="shouldShowModule('src/emu.h', 'apu', ["APU", "https://gbdev.io/pandocs/Audio.html", "apu_init", "apu_step", "apu_read", "apu_write", "loop"])" x-cloak class="relative">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10 group">
                 <div class="space-y-1">
                     <div class="flex items-center gap-2">
@@ -2105,7 +2284,7 @@
                                     APU
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 312</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 329</span>
                             </div>
 
                             <div class="space-y-4">
@@ -2133,7 +2312,7 @@
                                     https://gbdev.io/pandocs/Audio.html
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 314</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 331</span>
                             </div>
 
                             <div class="space-y-4">
@@ -2157,7 +2336,7 @@
                                     apu_init
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 325</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 343</span>
                             </div>
 
                             <div class="space-y-4">
@@ -2196,7 +2375,7 @@
                                     apu_step
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 330</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 348</span>
                             </div>
 
                             <div class="space-y-4">
@@ -2245,7 +2424,7 @@
                                     apu_read
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 336</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 354</span>
                             </div>
 
                             <div class="space-y-4">
@@ -2302,7 +2481,7 @@
                                     apu_write
                                 </h3>
                                 
-                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 343</span>
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 361</span>
                             </div>
 
                             <div class="space-y-4">
@@ -2338,6 +2517,85 @@
                                             <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">value</code>
                                             <span class="text-slate-400 text-xs">—</span>
                                             <span class="text-slate-500 dark:text-slate-400 italic text-xs">Byte value to write</span>
+                                        </div>
+
+                                    
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="relative pl-0 md:pl-12 group" x-show="match('loop') || match('apu') || match('src/emu.h')">
+                        <div class="absolute left-[-5px] top-4 w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 border-2 border-indigo-500 hidden md:block group-hover:scale-125 transition-transform"></div>
+
+                        <div class="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="flex flex-wrap items-center gap-3 mb-6">
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider
+                                     bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+                                    ">
+                                    func
+                                </span>
+                                
+                                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight" :class="match('loop') && 'highlight'">
+                                    loop
+                                </h3>
+                                
+                                <span class="text-[10px] font-mono text-slate-400 ml-auto">Line 369</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                
+                                    
+                                        <p class="text-slate-600 dark:text-slate-400 leading-relaxed text-base">Main emulation loop: executes CPU steps until a frame's worth of cycles elapse, advances the timer/PPU/APU, services interrupts, and paces the frame to ~60 Hz</p>
+                                    
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">cpu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">CPU state to run</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">bus</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Memory bus for reads/writes</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">timer</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">Timer state to advance</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">ppu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">PPU state to advance</span>
+                                        </div>
+
+                                    
+                                
+                                    
+                                        <div class="flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                                            <span class="text-[9px] font-black uppercase text-pink-500 w-8 shrink-0">param</span>
+                                            <code class="text-pink-600 dark:text-pink-400 font-bold text-sm">apu</code>
+                                            <span class="text-slate-400 text-xs">—</span>
+                                            <span class="text-slate-500 dark:text-slate-400 italic text-xs">APU state to advance</span>
                                         </div>
 
                                     
