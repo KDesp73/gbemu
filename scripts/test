@@ -314,10 +314,10 @@ for suite in "gb" "samesuite" "mooneye"; do
     report_file="$(report_file_for "$suite")"
     [[ -f "$report_file" ]] || continue
 
-    suite_total="$(grep -c '^TEST:' "$report_file" 2>/dev/null || echo 0)"
-    suite_pass="$(grep -c 'Status: PASS' "$report_file" 2>/dev/null || echo 0)"
-    suite_fail="$(grep -c 'Status: FAIL\|Status: NOOUT\|Status: UNKNOWN' "$report_file" 2>/dev/null || echo 0)"
-    suite_timeout="$(grep -c 'Status: TIMEOUT\|Status: PARTIAL' "$report_file" 2>/dev/null || echo 0)"
+    suite_total="$(grep -c '^TEST:' "$report_file" 2>/dev/null || true)"
+    suite_pass="$(grep -c 'Status: PASS' "$report_file" 2>/dev/null || true)"
+    suite_fail="$(grep -c 'Status: FAIL\|Status: NOOUT\|Status: UNKNOWN' "$report_file" 2>/dev/null || true)"
+    suite_timeout="$(grep -c 'Status: TIMEOUT\|Status: PARTIAL' "$report_file" 2>/dev/null || true)"
 
     {
         echo ""

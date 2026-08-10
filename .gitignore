@@ -6,4 +6,4 @@ compile_commands.json
 
 libemu*
 emu-cli
-test-report.txt
+test-report*.txt
