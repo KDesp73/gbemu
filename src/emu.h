@@ -99,10 +99,16 @@ bool flag_get(const CPU* cpu, Flag flag);
 typedef struct Bus Bus;
 
 struct Bus {
-    uint8_t rom[0x8000];    // 32KB Cartridge
+    uint8_t* rom;           // Dynamically allocated cartridge ROM (all banks)
+    size_t rom_size;        // Total allocated ROM size in bytes
+    uint16_t rom_banks;     // Number of 16KB ROM banks (power of two)
+
     uint8_t vram[0x2000];   // 8KB Video RAM
     uint8_t wram[0x2000];   // 8KB Work RAM
-    uint8_t sram[0x2000];   // 8KB Cartridge SRAM (MBC1 external RAM at 0xA000-0xBFFF)
+    uint8_t* sram;          // Dynamically allocated cartridge SRAM (0xA000-0xBFFF)
+    size_t sram_size;       // Total allocated SRAM size in bytes
+    uint16_t sram_banks;    // Number of 8KB SRAM banks
+
     uint8_t oam[0xA0];      // Sprite Attribute Table
     uint8_t io[0x80];       // Input/Output Registers
     uint8_t hram[0x7F];     // High RAM
@@ -113,6 +119,14 @@ struct Bus {
     struct APU* apu;        // For routing sound register reads/writes
 
     bool double_speed;      // CGB double-speed mode (CPU T-cycle = 0.5 system cycle)
+
+    // MBC1 bank-switching state (active when mbc_type selects an MBC1 cart)
+    uint8_t mbc_type;          // Cartridge type from header 0x0147 (0 = no MBC)
+    uint8_t mbc1_rom_bank;     // ROM bank register (0x2000-0x3FFF), low 5 bits
+    uint8_t mbc1_ram_bank;     // RAM bank / upper ROM bits (0x4000-0x5FFF), low 2 bits
+    bool    mbc1_mode;         // Banking mode (0x6000-0x7FFF): 0 = ROM, 1 = RAM
+    bool    mbc1_ram_enable;   // External RAM enable (0x0000-0x1FFF)
+    bool    mbc1_multicart;    // MBC1M multicart mode (1MB carts with multiple games)
 };
 
 //@func bus_read
@@ -130,7 +144,7 @@ uint8_t bus_read(Bus* bus, uint16_t addr);
 void bus_write(Bus* bus, uint16_t addr, uint8_t value);
 
 //@func bus_load_rom
-//@desc Load a cartridge ROM file into the bus ROM array (up to 32KB) and set CGB mode from the cartridge header
+//@desc Load a cartridge ROM file into the bus (allocating all ROM banks), set up MBC1 bank switching and SRAM from the cartridge header, and set CGB mode
 //@param bus Memory bus to load into
 //@param filepath Path to the ROM file to load
 //@returns Number of bytes read, or 0 on failure

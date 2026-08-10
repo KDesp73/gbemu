@@ -94,13 +94,17 @@ collect() {
 }
 
 if $RUN_GB; then
-    # Composite (multi-test) ROMs (only those <= 32KB that fit in our ROM buffer)
-    # Note: 64KB composite ROMs like cpu_instrs/cpu_instrs.gb, oam_bug/oam_bug.gb,
-    #       cgb_sound/cgb_sound.gb, dmg_sound/dmg_sound.gb, mem_timing/mem_timing.gb,
-    #       mem_timing-2/mem_timing.gb are skipped because they need MBC banking.
+    # Composite (multi-test) ROMs, including the 64KB MBC1-banked ones that
+    # need bank switching to run.
     for rom in "$TEST_ROMS_DIR"/instr_timing/instr_timing.gb \
                "$TEST_ROMS_DIR"/interrupt_time/interrupt_time.gb \
-               "$TEST_ROMS_DIR"/halt_bug.gb; do
+               "$TEST_ROMS_DIR"/halt_bug.gb \
+               "$TEST_ROMS_DIR"/cpu_instrs/cpu_instrs.gb \
+               "$TEST_ROMS_DIR"/mem_timing/mem_timing.gb \
+               "$TEST_ROMS_DIR"/mem_timing-2/mem_timing.gb \
+               "$TEST_ROMS_DIR"/oam_bug/oam_bug.gb \
+               "$TEST_ROMS_DIR"/dmg_sound/dmg_sound.gb \
+               "$TEST_ROMS_DIR"/cgb_sound/cgb_sound.gb; do
         collect "gb" "composite" "$rom"
     done
 
