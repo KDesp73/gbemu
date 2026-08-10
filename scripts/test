@@ -6,12 +6,18 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 EMU_CLI="$PROJECT_DIR/emu-cli"
 TEST_ROMS_DIR="$PROJECT_DIR/tests/gb-test-roms"
 SAMESUITE_DIR="$PROJECT_DIR/tests/SameSuite"
-REPORT_FILE="$PROJECT_DIR/test-report.txt"
+MOONEYE_DIR="$PROJECT_DIR/tests/mooneye-test-suite"
+MOONEYE_BUILD_DIR="$MOONEYE_DIR/build"
+REPORT_BASE="$PROJECT_DIR/test-report"
+REPORT_GB="$REPORT_BASE-gb.txt"
+REPORT_SAMESUITE="$REPORT_BASE-samesuite.txt"
+REPORT_MOONEYE="$REPORT_BASE-mooneye.txt"
 TIMEOUT_INDIVIDUAL=30
 TIMEOUT_COMPOSITE=60
-# SameSuite ROMs emit their serial result within a few seconds and then halt
-# forever, so a shorter timeout is enough.
+# SameSuite and mooneye ROMs emit their serial result within a few seconds and
+# then halt forever, so a shorter timeout is enough.
 TIMEOUT_SAMESUITE=15
+TIMEOUT_MOONEYE=15
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
@@ -24,32 +30,38 @@ Run the emulator test suites. With no arguments, all suites are run.
 Suites:
   gb          gb-test-roms (Blargg-style composite + individual ROMs)
   samesuite   SameSuite (SameBoy hardware-behavior test ROMs)
-  all         both of the above (default)
+  mooneye     mooneye-test-suite (acceptance + emulator-only tests expected
+              to pass on a DMG, based on each test's hardware suffix)
+  all         all of the above (default)
 
 Examples:
   $0          run every suite
   $0 gb       run only gb-test-roms
   $0 samesuite  run only SameSuite
-  $0 gb samesuite  run both
+  $0 mooneye  run only mooneye-test-suite
+  $0 gb samesuite mooneye  run all three
 EOF
 }
 
 # --- Parse suite selection ---
 RUN_GB=false
 RUN_SAMESUITE=false
+RUN_MOONEYE=false
 while [[ $# -gt 0 ]]; do
     case "$1" in
         gb)          RUN_GB=true ;;
         samesuite)   RUN_SAMESUITE=true ;;
-        all)         RUN_GB=true; RUN_SAMESUITE=true ;;
+        mooneye)     RUN_MOONEYE=true ;;
+        all)         RUN_GB=true; RUN_SAMESUITE=true; RUN_MOONEYE=true ;;
         -h|--help)   usage; exit 0 ;;
         *)           die "unknown suite '$1' (run '$0 --help' for usage)" ;;
     esac
     shift
 done
-if ! $RUN_GB && ! $RUN_SAMESUITE; then
+if ! $RUN_GB && ! $RUN_SAMESUITE && ! $RUN_MOONEYE; then
     RUN_GB=true
     RUN_SAMESUITE=true
+    RUN_MOONEYE=true
 fi
 
 if ! command -v gtimeout &>/dev/null; then
@@ -71,6 +83,17 @@ if $RUN_SAMESUITE; then
     echo "Building SameSuite ROMs..."
     make -C "$SAMESUITE_DIR" 2>&1 | tail -1
     echo ""
+fi
+
+# Build mooneye-test-suite ROMs if needed
+if $RUN_MOONEYE; then
+    if command -v wla-gb &>/dev/null && command -v wlalink &>/dev/null; then
+        echo "Building mooneye-test-suite ROMs..."
+        make -C "$MOONEYE_DIR" 2>&1 | tail -1
+        echo ""
+    elif [[ -z "$(find "$MOONEYE_BUILD_DIR" -name '*.gb' 2>/dev/null | head -1)" ]]; then
+        die "wla-gb/wlalink not found and no prebuilt ROMs in $MOONEYE_BUILD_DIR (install wla-dx: brew install wla-dx)"
+    fi
 fi
 
 # --- Collect test ROMs ---
@@ -130,19 +153,52 @@ if $RUN_SAMESUITE; then
     done < <(find "$SAMESUITE_DIR" -name "*.gb" | sort)
 fi
 
+if $RUN_MOONEYE; then
+    # Keep only tests expected to pass on a DMG. mooneye names carry a
+    # hardware suffix after the last '-' (empty suffix = all models), e.g.
+    # "-GS", "-dmgABCmgb", "-sgb". Groups: G=dmg+mgb, S=sgb+sgb2,
+    # C=cgb+agb+ags, A=agb+ags.
+    mooneye_supported() {
+        local name="$1"
+        local base="${name%.gb}"
+        local suffix="${base##*-}"
+        [[ "$suffix" == "$base" ]] && return 0
+        [[ "$suffix" == *dmg* || "$suffix" == *G* ]]
+    }
+    while IFS= read -r rom; do
+        [[ -f "$rom" ]] || continue
+        name="$(basename "$rom" .gb)"
+        mooneye_supported "$name" || continue
+        rel="${rom#"$MOONEYE_BUILD_DIR"/}"
+        group="$(dirname "$rel")"
+        ROM_NAMES+=("$name")
+        ROM_PATHS+=("$rom")
+        ROM_GROUPS+=("$group")
+        ROM_SUITES+=("mooneye")
+    done < <(find "$MOONEYE_BUILD_DIR/acceptance" "$MOONEYE_BUILD_DIR/emulator-only" -name "*.gb" 2>/dev/null | sort)
+fi
+
 # --- Run tests ---
 echo "Running ${#ROM_NAMES[@]} test ROM(s)..."
 echo ""
 
-rm -f "$REPORT_FILE"
+rm -f "$REPORT_GB" "$REPORT_SAMESUITE" "$REPORT_MOONEYE"
+
+report_file_for() {
+    case "$1" in
+        gb)        echo "$REPORT_GB" ;;
+        samesuite) echo "$REPORT_SAMESUITE" ;;
+        mooneye)   echo "$REPORT_MOONEYE" ;;
+    esac
+}
 
 total=${#ROM_NAMES[@]}
 pass=0
 fail=0
 timeout_cnt=0
 
-# SameSuite verdicts come over the serial port: Fibonacci registers
-# (3,5,8,13,21,34) on success, $42 on failure.
+# SameSuite and mooneye verdicts come over the serial port: Fibonacci
+# registers (3,5,8,13,21,34) on success, $42 on failure.
 SAMESUITE_PASS_HEX="0305080d1522"
 SAMESUITE_FAIL_HEX="424242424242"
 
@@ -154,6 +210,8 @@ for i in "${!ROM_NAMES[@]}"; do
 
     if [[ "$suite" == "samesuite" ]]; then
         to=$TIMEOUT_SAMESUITE
+    elif [[ "$suite" == "mooneye" ]]; then
+        to=$TIMEOUT_MOONEYE
     elif [[ "$group" == "composite" ]]; then
         to=$TIMEOUT_COMPOSITE
     else
@@ -162,7 +220,7 @@ for i in "${!ROM_NAMES[@]}"; do
 
     printf "  [%3d/%3d] %-35s" $((i + 1)) "$total" "[$group] $name"
 
-    if [[ "$suite" == "samesuite" ]]; then
+    if [[ "$suite" == "samesuite" || "$suite" == "mooneye" ]]; then
         output="$(gtimeout "$to" "$EMU_CLI" "$path" 2>/dev/null | xxd -p | tr -d '\n')"
         ec=$?
         lines="${#output}"
@@ -172,7 +230,7 @@ for i in "${!ROM_NAMES[@]}"; do
         lines="$(echo "$output" | wc -l | tr -d ' ')"
     fi
 
-    if [[ "$suite" == "samesuite" ]]; then
+    if [[ "$suite" == "samesuite" || "$suite" == "mooneye" ]]; then
         if [[ "$output" == "$SAMESUITE_PASS_HEX" ]]; then
             echo " PASS"
             verdict="PASS"
@@ -238,6 +296,8 @@ for i in "${!ROM_NAMES[@]}"; do
         fail=$((fail+1))
     fi
 
+    report_file="$(report_file_for "$suite")"
+
     {
         echo "TEST: [$group] $name"
         echo "  File:  $path"
@@ -245,29 +305,55 @@ for i in "${!ROM_NAMES[@]}"; do
         echo "  Status: $verdict"
         echo "  Detail: $detail"
         echo "---"
-    } >> "$REPORT_FILE"
+    } >> "$report_file"
 done
 
 # --- Report summary ---
-{
-    echo ""
-    echo "========================================"
-    echo "  Emulator Test Results"
-    echo "========================================"
-    echo "  Total:  $total"
-    echo "  Passed: $pass"
-    echo "  Failed: $fail"
-    echo "  Timeout:$timeout_cnt"
-    echo "========================================"
-    echo ""
+# Aggregate a summary into each suite's own report file.
+for suite in "gb" "samesuite" "mooneye"; do
+    report_file="$(report_file_for "$suite")"
+    [[ -f "$report_file" ]] || continue
 
-    if [[ $fail -gt 0 ]] || [[ $timeout_cnt -gt 0 ]]; then
-        echo "Failed / Timed out tests:"
-        { grep -B1 -A2 "Status: FAIL\|Status: TIMEOUT\|Status: PARTIAL\|Status: NOOUT\|Status: UNKNOWN" "$REPORT_FILE" 2>/dev/null || true; } \
-            | { grep "TEST:\|Status:" || true; }
+    suite_total="$(grep -c '^TEST:' "$report_file" 2>/dev/null || echo 0)"
+    suite_pass="$(grep -c 'Status: PASS' "$report_file" 2>/dev/null || echo 0)"
+    suite_fail="$(grep -c 'Status: FAIL\|Status: NOOUT\|Status: UNKNOWN' "$report_file" 2>/dev/null || echo 0)"
+    suite_timeout="$(grep -c 'Status: TIMEOUT\|Status: PARTIAL' "$report_file" 2>/dev/null || echo 0)"
+
+    {
         echo ""
-        echo "See $REPORT_FILE for full details."
-    fi
-} >> "$REPORT_FILE"
+        echo "========================================"
+        echo "  Emulator Test Results: $suite"
+        echo "========================================"
+        echo "  Total:  $suite_total"
+        echo "  Passed: $suite_pass"
+        echo "  Failed: $suite_fail"
+        echo "  Timeout:$suite_timeout"
+        echo "========================================"
+        echo ""
 
-cat "$REPORT_FILE"
+        if [[ "$suite_fail" -gt 0 ]] || [[ "$suite_timeout" -gt 0 ]]; then
+            echo "Failed / Timed out tests:"
+            { grep -B1 -A2 "Status: FAIL\|Status: TIMEOUT\|Status: PARTIAL\|Status: NOOUT\|Status: UNKNOWN" "$report_file" 2>/dev/null || true; } \
+                | { grep "TEST:\|Status:" || true; }
+            echo ""
+            echo "See $report_file for full details."
+        fi
+    } >> "$report_file"
+done
+
+# --- Console summary ---
+echo ""
+echo "========================================"
+echo "  Emulator Test Results"
+echo "========================================"
+echo "  Total:  $total"
+echo "  Passed: $pass"
+echo "  Failed: $fail"
+echo "  Timeout:$timeout_cnt"
+echo "========================================"
+echo ""
+for suite in "gb" "samesuite" "mooneye"; do
+    report_file="$(report_file_for "$suite")"
+    [[ -f "$report_file" ]] || continue
+    echo "  Report: $report_file"
+done
