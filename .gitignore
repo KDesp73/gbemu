@@ -10,3 +10,4 @@ test-report*.txt
 
 roms
 .DS_Store
+*.dSYM
