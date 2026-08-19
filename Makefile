@@ -7,6 +7,7 @@ LDFLAGS = $(shell PKG_CONFIG_PATH=/opt/homebrew/lib/pkgconfig pkg-config --libs 
 SRC_DIR = src
 BUILD_DIR = build
 DIST_DIR = dist
+PREFIX = /usr/local/bin
 
 LIBRARY_NAME = emu
 SO_NAME = lib$(LIBRARY_NAME).so
@@ -102,7 +103,7 @@ compile_commands.json: $(SRC_FILES) ## Generate compile_commands.json
 .PHONY: docs
 docs: ## Generate docs using tinydocs
 	tinydocs-cli \
-		--files src/emu.h \
+		--files src/emu.h,src/frontend.h \
 		--markers docs/tiny.markers.json \
 		--ignore .gitignore \
 		-o docs \
@@ -110,15 +111,15 @@ docs: ## Generate docs using tinydocs
 		--name $(LIBRARY_NAME) \
 		--generate
 
+.PHONY: install
+install: ## Install emulator system-wide (run with sudo)
+	cp $(TARGET) $(PREFIX)/$(TARGET)
+
+.PHONY: uninstall
+uninstall: ## Uninstalls the executable (run with sudo)
+	rm $(PREFIX)/$(TARGET)
+
 .PHONY: help
 help: ## Show this help message
 	@echo "Available commands:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
-
-## Enable verbose output for debugging
-.PHONY: verbose
-verbose: CFLAGS += -DVERBOSE
-verbose: all ## Build the project in verbose mode
-
-# Phony targets to avoid conflicts with file names
-.PHONY: all clean distclean install uninstall dist compile_commands.json help check_tools verbose
