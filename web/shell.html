@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMU - Game Boy Emulator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #1a1a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #e0e0e0;
+        }
+        #container {
+            text-align: center;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 16px;
+            color: #9bcc50;
+            letter-spacing: 4px;
+        }
+        #screen {
+            border: 4px solid #333;
+            border-radius: 4px;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            background: #9bbc0f;
+            display: block;
+            margin: 0 auto;
+        }
+        #controls {
+            margin-top: 12px;
+            font-size: 12px;
+            color: #666;
+            line-height: 1.8;
+        }
+        #controls kbd {
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 3px;
+            padding: 1px 5px;
+            font-family: inherit;
+            font-size: 11px;
+            color: #ccc;
+        }
+        #rom-loader {
+            margin-top: 16px;
+        }
+        #rom-loader label {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #9bcc50;
+            color: #1a1a2e;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+        #rom-loader label:hover {
+            background: #aacd5e;
+        }
+        #rom-loader input[type="file"] {
+            display: none;
+        }
+        #status {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #9bcc50;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>EMU</h1>
+        <canvas id="screen" width="160" height="144"></canvas>
+        <div id="controls">
+            <kbd>&larr;</kbd><kbd>&rarr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd> D-Pad &nbsp;&nbsp;
+            <kbd>Z</kbd> A &nbsp; <kbd>X</kbd> B &nbsp;
+            <kbd>Backspace</kbd> Select &nbsp; <kbd>Enter</kbd> Start
+        </div>
+        <div id="rom-loader">
+            <label for="rom-file">Load ROM (.gb)</label>
+            <input type="file" id="rom-file" accept=".gb,.gbc">
+        </div>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        var Module = {
+            onRuntimeInitialized: function() {
+                document.getElementById('status').textContent = 'Ready. Load a ROM to start.';
+            },
+            print: function(text) { console.log(text); },
+            printErr: function(text) { console.error(text); }
+        };
+
+        var usedKeys = [37, 38, 39, 40, 8, 13, 90, 88];
+
+        document.addEventListener('keydown', function(e) {
+            if (usedKeys.indexOf(e.keyCode) !== -1) {
+                e.preventDefault();
+                if (Module._wasm_set_key) {
+                    Module._wasm_set_key(e.keyCode, 1);
+                }
+            }
+        });
+
+        document.addEventListener('keyup', function(e) {
+            if (usedKeys.indexOf(e.keyCode) !== -1) {
+                e.preventDefault();
+                if (Module._wasm_set_key) {
+                    Module._wasm_set_key(e.keyCode, 0);
+                }
+            }
+        });
+
+        document.getElementById('rom-file').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('status').textContent = 'Loading ' + file.name + '...';
+
+            var reader = new FileReader();
+            reader.onload = function() {
+                var data = new Uint8Array(reader.result);
+                Module.FS.writeFile('/rom.gb', data);
+
+                if (Module._wasm_load_rom) {
+                    Module._wasm_load_rom();
+                    document.getElementById('status').textContent = 'Running: ' + file.name;
+                }
+            };
+            reader.onerror = function() {
+                document.getElementById('status').textContent = 'Failed to load ROM.';
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    </script>
+    {{{ SCRIPT }}}
+</body>
+</html>

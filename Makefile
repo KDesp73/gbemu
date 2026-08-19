@@ -3,6 +3,7 @@
 include ./make/common.mk
 include ./make/libs.mk
 include ./make/utils.mk
+include ./make/wasm.mk
 
 .PHONY: help
 help: ## Show this help message

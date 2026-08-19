@@ -11,3 +11,8 @@ test-report*.txt
 roms
 .DS_Store
 *.dSYM
+
+web/emu-wasm.html
+web/emu-wasm.js
+web/emu-wasm.wasm
+web/emu-wasm.data
