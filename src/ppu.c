@@ -248,12 +248,12 @@ static void ppu_render_sprites(PPU* ppu, Bus* bus)
     int sprite_count = 0;
 
     // Collect sprites on this scanline (max 10)
-    typedef struct { uint8_t y, x, tile, flags; } Sprite;
+    typedef struct { int16_t y, x; uint8_t tile, flags; } Sprite;
     Sprite sprites[10];
 
     for (int i = 0; i < 40 && sprite_count < 10; i++) {
-        uint8_t sy = bus_read(bus, 0xFE00 + i * 4) - 16;
-        uint8_t sx = bus_read(bus, 0xFE00 + i * 4 + 1) - 8;
+        int16_t sy = (int16_t)bus_read(bus, 0xFE00 + i * 4) - 16;
+        int16_t sx = (int16_t)bus_read(bus, 0xFE00 + i * 4 + 1) - 8;
         uint8_t tile = bus_read(bus, 0xFE00 + i * 4 + 2);
         uint8_t flags = bus_read(bus, 0xFE00 + i * 4 + 3);
 
@@ -265,7 +265,7 @@ static void ppu_render_sprites(PPU* ppu, Bus* bus)
 
     // Render sprites back-to-front (lower X = higher priority, lower OAM index = higher priority)
     for (int i = sprite_count - 1; i >= 0; i--) {
-        uint8_t sx = sprites[i].x;
+        int16_t sx = sprites[i].x;
         uint8_t tile = sprites[i].tile;
         uint8_t flags = sprites[i].flags;
 

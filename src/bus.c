@@ -15,6 +15,12 @@ static bool mbc_is_mbc2(uint8_t type)
     return type >= 0x05 && type <= 0x06;
 }
 
+static bool mbc_is_mbc3(uint8_t type)
+{
+    // Cartridge types 0x0F-0x13 are MBC3 (with/without Timer, RAM, Battery)
+    return type >= 0x0F && type <= 0x13;
+}
+
 static bool mbc_is_mbc5(uint8_t type)
 {
     // Cartridge types 0x19-0x1E are MBC5 (plain, +RAM, +RAM+BATTERY,
@@ -77,6 +83,11 @@ static uint8_t bus_read_rom(const Bus* bus, uint16_t addr)
         bank &= bus->rom_banks - 1;
         return bus->rom[bank * 0x4000 + (addr & 0x3FFF)];
     }
+    if (mbc_is_mbc3(bus->mbc_type)) {
+        if (addr < 0x4000) return bus->rom[addr];
+        bank = bus->mbc3_rom_bank & (bus->rom_banks - 1);
+        return bus->rom[bank * 0x4000 + (addr & 0x3FFF)];
+    }
     if (mbc_is_mbc5(bus->mbc_type)) {
         if (addr < 0x4000) return bus->rom[addr];
         // 9-bit bank number from ROMB0/ROMB1; bank 0 is valid (no substitution)
@@ -96,7 +107,27 @@ static uint8_t bus_read_sram(const Bus* bus, uint16_t addr)
         return 0xF0 | (bus->mbc2_ram[addr & 0x1FF] & 0x0F);
     }
     if (mbc_is_mbc1(bus->mbc_type) && !bus->mbc1_ram_enable) return 0xFF;
+    if (mbc_is_mbc3(bus->mbc_type) && !bus->mbc3_ram_enable) return 0xFF;
     if (mbc_is_mbc5(bus->mbc_type) && !bus->mbc5_ram_enable) return 0xFF;
+
+    // MBC3: RAM banks 0-3 or RTC registers $08-$0C
+    if (mbc_is_mbc3(bus->mbc_type)) {
+        if (bus->mbc3_ram_bank <= 3) {
+            uint16_t bank = bus->mbc3_ram_bank & (bus->sram_banks - 1);
+            return bus->sram[bank * 0x2000 + (addr - 0xA000)];
+        }
+        switch (bus->mbc3_ram_bank) {
+            case 0x08: return bus->mbc3_seconds;
+            case 0x09: return bus->mbc3_minutes;
+            case 0x0A: return bus->mbc3_hours;
+            case 0x0B: return bus->mbc3_day_counter & 0xFF;
+            case 0x0C: return (uint8_t)((bus->mbc3_day_counter >> 8) & 0x01)
+                              | (bus->mbc3_day_carry ? 0x80 : 0x00)
+                              | (bus->mbc3_timer_halt ? 0x40 : 0x00);
+        }
+        return 0xFF;
+    }
+
     uint16_t bank = 0;
     if (mbc_is_mbc1(bus->mbc_type) && bus->mbc1_mode) bank = bus->mbc1_ram_bank;
     if (mbc_is_mbc5(bus->mbc_type)) bank = bus->mbc5_ram_bank;
@@ -134,6 +165,31 @@ static void mbc2_write(Bus* bus, uint16_t addr, uint8_t value)
         // RAM enable: only lower nibble matters, 0x0A enables
         // (mooneye-verified on MBC2A)
         bus->mbc2_ram_enable = ((value & 0x0F) == 0x0A);
+    }
+}
+
+static void mbc3_write(Bus* bus, uint16_t addr, uint8_t value)
+{
+    if (addr < 0x2000) {
+        // RAM / RTC enable: $0A enables, anything else disables
+        bus->mbc3_ram_enable = ((value & 0x0F) == 0x0A);
+    } else if (addr < 0x4000) {
+        // ROM bank number (7 bits); bank 0 is substituted with bank 1
+        bus->mbc3_rom_bank = value & 0x7F;
+        if (bus->mbc3_rom_bank == 0) bus->mbc3_rom_bank = 1;
+    } else if (addr < 0x6000) {
+        // RAM bank (0-3) or RTC register select ($08-$0C)
+        bus->mbc3_ram_bank = value;
+    } else {
+        // Latch clock data: write $00 then $01 to latch
+        if (value == 0x01 && bus->mbc3_latch_state == 0x00) {
+            bus->mbc3_latch_state = 0x01;
+            // TODO: snapshot system time into RTC registers
+        } else if (value == 0x00 && bus->mbc3_latch_state == 0x01) {
+            bus->mbc3_latch_state = 0x00;
+        } else {
+            bus->mbc3_latch_state = value & 0x01;
+        }
     }
 }
 
@@ -201,6 +257,7 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
         // Cartridge ROM / MBC register region
         if (mbc_is_mbc1(bus->mbc_type)) mbc1_write(bus, addr, value);
         else if (mbc_is_mbc2(bus->mbc_type)) mbc2_write(bus, addr, value);
+        else if (mbc_is_mbc3(bus->mbc_type)) mbc3_write(bus, addr, value);
         else if (mbc_is_mbc5(bus->mbc_type)) mbc5_write(bus, addr, value);
         // ROM-only carts ignore writes
         return;
@@ -216,7 +273,29 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
             return;
         }
         if (mbc_is_mbc1(bus->mbc_type) && !bus->mbc1_ram_enable) return;
+        if (mbc_is_mbc3(bus->mbc_type) && !bus->mbc3_ram_enable) return;
         if (mbc_is_mbc5(bus->mbc_type) && !bus->mbc5_ram_enable) return;
+
+        // MBC3: write to RAM bank or RTC register
+        if (mbc_is_mbc3(bus->mbc_type)) {
+            if (bus->mbc3_ram_bank <= 3) {
+                uint16_t bank = bus->mbc3_ram_bank & (bus->sram_banks - 1);
+                bus->sram[bank * 0x2000 + (addr - 0xA000)] = value;
+            } else {
+                switch (bus->mbc3_ram_bank) {
+                    case 0x08: bus->mbc3_seconds = value % 60; break;
+                    case 0x09: bus->mbc3_minutes = value % 60; break;
+                    case 0x0A: bus->mbc3_hours = value % 24; break;
+                    case 0x0B: bus->mbc3_day_counter = (bus->mbc3_day_counter & 0x100) | value; break;
+                    case 0x0C: bus->mbc3_day_counter = (bus->mbc3_day_counter & 0x00FF) | ((value & 0x01) << 8);
+                               bus->mbc3_day_carry = (value & 0x80) != 0;
+                               bus->mbc3_timer_halt = (value & 0x40) != 0;
+                               break;
+                }
+            }
+            return;
+        }
+
         uint16_t bank = 0;
         if (mbc_is_mbc1(bus->mbc_type) && bus->mbc1_mode) bank = bus->mbc1_ram_bank;
         if (mbc_is_mbc5(bus->mbc_type)) bank = bus->mbc5_ram_bank;
@@ -347,9 +426,10 @@ size_t bus_load_rom(Bus* bus, const char* filepath)
         return 0;
     }
 
-    // Cartridge type (0x0147): MBC1, MBC2, and MBC5 carts are banked
+    // Cartridge type (0x0147): MBC1, MBC2, MBC3, and MBC5 carts are banked
     bus->mbc_type = (mbc_is_mbc1(bus->rom[0x147]) || mbc_is_mbc2(bus->rom[0x147]) ||
-                     mbc_is_mbc5(bus->rom[0x147])) ? bus->rom[0x147] : 0;
+                     mbc_is_mbc3(bus->rom[0x147]) || mbc_is_mbc5(bus->rom[0x147]))
+                    ? bus->rom[0x147] : 0;
 
     // MBC5 initial bank: the mooneye test harness copies library functions
     // (memcpy etc., located in bank 1) to WRAM at startup before any bank
@@ -358,6 +438,19 @@ size_t bus_load_rom(Bus* bus, const char* filepath)
     // selected to keep that memcpy call working.
     if (mbc_is_mbc5(bus->mbc_type)) {
         bus->mbc5_rom_bank_l = 1;
+    }
+
+    if (mbc_is_mbc3(bus->mbc_type)) {
+        bus->mbc3_rom_bank = 1;
+        bus->mbc3_ram_bank = 0;
+        bus->mbc3_ram_enable = false;
+        bus->mbc3_latch_state = 0;
+        bus->mbc3_seconds = 0;
+        bus->mbc3_minutes = 0;
+        bus->mbc3_hours = 0;
+        bus->mbc3_day_counter = 0;
+        bus->mbc3_day_carry = false;
+        bus->mbc3_timer_halt = true;
     }
 
     // MBC1M multicart detection: only 8Mbit multicarts exist; they can't be

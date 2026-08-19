@@ -139,6 +139,17 @@ struct Bus {
     bool    mbc2_ram_enable;   // MBC2: built-in RAM enable (A8-clear write of 0x0A)
     uint8_t mbc2_ram[0x200];   // MBC2: built-in 512x4-bit RAM (mirrored over 0xA000-0xBFFF)
 
+    uint8_t mbc3_rom_bank;     // MBC3: 7-bit ROM bank register ($2000-$3FFF); 0 -> 1 at write
+    uint8_t mbc3_ram_bank;     // MBC3: RAM bank (0-3) / RTC register select ($08-$0C)
+    bool    mbc3_ram_enable;   // MBC3: external RAM / RTC enable ($0000-$1FFF)
+    uint8_t mbc3_latch_state;  // MBC3: latch state machine ($6000-$7FFF)
+    uint8_t mbc3_seconds;      // MBC3 RTC: seconds (0-59)
+    uint8_t mbc3_minutes;      // MBC3 RTC: minutes (0-59)
+    uint8_t mbc3_hours;        // MBC3 RTC: hours (0-23)
+    uint16_t mbc3_day_counter; // MBC3 RTC: day counter (9-bit, 0-511)
+    bool    mbc3_day_carry;    // MBC3 RTC: day counter carry flag
+    bool    mbc3_timer_halt;   // MBC3 RTC: halt flag
+
     uint8_t mbc5_rom_bank_l;   // MBC5: ROM bank low 8 bits (0x2000-0x2FFF)
     uint8_t mbc5_rom_bank_h;   // MBC5: ROM bank bit 8 (0x3000-0x3FFF), bit 0 only
     uint8_t mbc5_ram_bank;     // MBC5: RAM bank select (0x4000-0x5FFF), low 4 bits
