@@ -7,15 +7,15 @@ int handle_interrupts(CPU* cpu, Bus* bus, PPU* ppu, Timer* timer)
     uint8_t if_reg = bus_read(bus, 0xFF0F);
     
     if (ppu->vblank_interrupt) {
-        if_reg |= (1 << 0); // VBlank Interrupt (Bit 0)
+        if_reg |= (1 << 0);
         ppu->vblank_interrupt = false;
     }
     if (ppu->stat_interrupt) {
-        if_reg |= (1 << 1); // STAT Interrupt (Bit 1)
+        if_reg |= (1 << 1);
         ppu->stat_interrupt = false;
     }
     if (timer->interrupt_requested) {
-        if_reg |= (1 << 2); // Timer Interrupt (Bit 2)
+        if_reg |= (1 << 2);
         timer->interrupt_requested = false;
     }
     

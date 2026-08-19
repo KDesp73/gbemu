@@ -1,54 +1,73 @@
 # Emulator Progress Assessment
 
-## Overall Completeness: ~65-70%
+## Overall Completeness: ~70%
 
-The core CPU and timer are complete and well-tested, MBC1/MBC2/MBC5 bank
-switching fully passes all mooneye tests, but the emulator cannot yet run most
-commercial games: no MBC3 support, no display output, no joypad, and no audio
-generation.
+The core CPU, timer, and PPU scanline renderer are complete and well-tested.
+MBC1/MBC2/MBC3/MBC5 bank switching is implemented. SDL3 display output,
+joypad input, and OAM DMA are working. Commercial games boot and are
+playable (Super Mario Land, Pokemon Blue), though timing edge cases remain.
+No audio output yet.
 
-### Test Suite Results (52 tests)
+### Test Suite Results
 
-- Passed: 44
-- Failed: 2
-- Partial/Timeout: 6
-- **Pass rate: ~85%**
+**mooneye-test-suite (97 tests)**
+
+| Suite | Passed | Total | Rate |
+|---|---|---|---|
+| MBC1 emulator-only | 8 | 13 | 62% |
+| MBC2 emulator-only | 7 | 7 | 100% |
+| MBC5 emulator-only | 9 | 9 | 100% |
+| Acceptance | 22 | 68 | 32% |
+| **Total** | **46** | **97** | **~47%** |
+
+**Blargg cpu_instrs: 9/9 pass**
 
 ## Subsystem Breakdown
 
 | Subsystem | Status | Completeness |
 |---|---|---|
-| CPU + instructions | All cpu_instrs, instr_timing, interrupt_time, halt_bug pass | ~98% |
-| Timer | instr_timing / interrupt_time tests pass | ~95% |
-| PPU / video | BG, window, sprites rendered to a buffer; **no display output** (`host_render_frame` commented out in `src/loop.c:46`); DMG palette only; no CGB VRAM banking (only 8KB) | ~60% |
-| MBC / cartridges | MBC1 (+ multicart, 11/11), MBC2 (7/7), MBC5 (9/9) fully passing; MBC3 and others not yet | ~65% |
-| Joypad / input | Not implemented | 0% |
-| APU / audio | "no wave generation" (`src/emu.h:315`) — length-counter state only; sweep/overflow/wave tests fail | ~30% |
-| Serial / interrupts | Serial intercepted for test ROMs, interrupts work | ~70% |
+| CPU + instructions | All cpu_instrs pass (9/9); halt bug implemented | ~98% |
+| Timer | Core TIMA/TMA/TAC/DIV pass basic tests; div_trigger, reload edge cases fail | ~80% |
+| PPU / video | BG, window, sprites rendered to scanline buffer; SDL3 display via frontend_vtable; DMG palette only; no CGB support | ~65% |
+| MBC / cartridges | MBC1 (8/13), MBC2 (7/7), MBC3 (implemented, RTC stub), MBC5 (9/9) | ~80% |
+| Joypad / input | P1 register (0xFF00) with select lines; SDL frontend maps arrows/Z/X/Backspace/Enter | 100% |
+| OAM DMA | Basic DMA transfer (0xFF46) implemented; timing and source validation not tested | ~40% |
+| APU / audio | Length-counter state only; no wave generation, no sweep, no envelope | ~30% |
+| Serial / interrupts | Serial intercepted for test ROMs; all interrupt sources working | ~80% |
+
+## Implemented Features
+
+- **Full SM83 instruction set** — 256 base + 256 CB-prefixed opcodes
+- **SDL3 display** — `frontend.h` vtable abstraction, `frontend_sdl.c` implementation
+- **Joypad** — P1 register with active-low buttons, SDL key mapping
+- **MBC1** — ROM/RAM banking, mode select, multicart detection
+- **MBC2** — ROM banking, internal 4-bit RAM
+- **MBC3** — ROM/RAM banking, RTC register stub (no clock source)
+- **MBC5** — 9-bit ROM bank, 4-bit RAM bank
+- **OAM DMA** — Transfer on write to 0xFF46
+- **Boot state** — IF=0x01, IE=0x01, CPU A=0x01 for DMG, timer TAC internal 0x00
+
+## MBC1 Failures
+
+5 of 13 MBC1 mooneye tests still fail: `bits_bank2`, `bits_mode`, `bits_ramg`,
+`ram_256kb`, `ram_64kb`. These test advanced MBC1 banking mode edge cases.
 
 ## Recommended Next Steps
 
-1. **MBC3 support** (highest value for game compatibility)
-   - MBC1, MBC2, and MBC5 are implemented. MBC3 (types 0x0F-0x13) is the
-     next most common mapper used by commercial games (e.g. Pokémon, Zelda).
-   - Needs: ROM bank select ($2000-$3FFF), RAM/RTC enable ($0000-$1FFF),
-     RAM bank select ($4000-$5FFF), clock counter ($6000-$7FFF), RTC registers.
+1. **Fix EI delay + HALT interaction** (1 failing SameSuite test; could break
+   interrupt-heavy commercial games)
 
-2. **SDL display**
-   - Hook `ppu.frame_buffer` to a window (`src/loop.c:46` is commented out)
-     to finally see output and watch games boot.
+2. **Fix MBC1 edge cases** (`bits_bank2`, `bits_mode`, `bits_ramg`, RAM tests)
+   — 5 passable tests remaining
 
-3. **Joypad**
-   - Read 0xFF00 (`P1`) so games become interactive.
+3. **PPU timing accuracy** — Many acceptance timing tests fail
+   (`intr_2_mode0_timing`, `lcdon_timing`, `stat_irq_blocking`, etc.).
+   The scanline renderer works for display but is not dot-accurate.
 
-4. **PPU timing fixes**
-   - The failing `mem_timing` / `oam_bug` suites are PPU/DMA timing edge
-     cases. Important for frame-accurate behavior, but only pay off once real
-     software runs.
+4. **Timer edge cases** — `div_trigger`, `tima_reload`, `tma_write_reloading`
+   tests fail; the falling-edge counter has subtle timing bugs.
 
-### Alternative: Continue Fixing Test Failures
+5. **Full APU implementation** — 70 SameSuite APU tests fail. Needed for
+   sound output.
 
-If preferred over the above, investigate the `mem_timing` suite (edge-rising
-timing for ops like `F0`/`FA` and the `CB` register ops), the `oam_bug` suite,
-and the 2 remaining MBC1 failures (`bits_bank2`, `bits_mode`). MBC3 remains the
-bigger win for commercial game compatibility.
+6. **CGB support** — Color palettes (BGPI/BGPD), GDMA/HDMA, double-speed mode.

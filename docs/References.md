@@ -7,4 +7,4 @@
 - [Instructions](https://rgbds.gbdev.io/docs/v1.0.2/gbz80.7)
 - [RGBDS](https://rgbds.gbdev.io/)
 - [Complete Technical Reference](https://gekkio.fi/files/gb-docs/gbctr.pdf)
-- [ROMS](https://vimm.net)
+- [ROMS](https://vimm.net/vault)
