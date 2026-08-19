@@ -5,96 +5,144 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EMU - Game Boy Emulator</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
+
         body {
-            background: #1a1a2e;
+            background: #0f1012;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            font-family: 'Courier New', monospace;
-            color: #e0e0e0;
+            font-family: 'Courier New', Courier, monospace;
+            color: #8b9bb4;
         }
+
         #container {
             text-align: center;
+            background: #181a20;
+            padding: 32px;
+            border: 2px solid #2e3440;
+            border-radius: 8px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
         }
+
         h1 {
-            font-size: 24px;
-            margin-bottom: 16px;
-            color: #9bcc50;
-            letter-spacing: 4px;
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #8bac0f;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            font-weight: bold;
         }
-        #screen {
-            border: 4px solid #333;
+
+        /* Outer frame around the screen for retro bezel aesthetic */
+        .screen-bezel {
+            background: #000;
+            padding: 16px;
+            border: 2px solid #2e3440;
             border-radius: 4px;
+            display: inline-block;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Upscaled 3x via CSS (160x144 -> 480x432) */
+        #screen {
+            width: 480px;
+            height: 432px;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
             background: #9bbc0f;
             display: block;
-            margin: 0 auto;
+            border: 1px solid #1e232a;
         }
+
         #controls {
-            margin-top: 12px;
-            font-size: 12px;
-            color: #666;
-            line-height: 1.8;
-        }
-        #controls kbd {
-            background: #333;
-            border: 1px solid #555;
-            border-radius: 3px;
-            padding: 1px 5px;
-            font-family: inherit;
+            margin-top: 24px;
             font-size: 11px;
-            color: #ccc;
+            color: #5e6b7c;
+            line-height: 2;
+            letter-spacing: 1px;
         }
+
+        #controls kbd {
+            background: #252a34;
+            border: 1px solid #3b4252;
+            border-radius: 3px;
+            padding: 3px 6px;
+            font-family: inherit;
+            font-size: 10px;
+            color: #e5e9f0;
+            box-shadow: 0 2px 0 #191c24;
+        }
+
         #rom-loader {
-            margin-top: 16px;
+            margin-top: 20px;
         }
+
         #rom-loader label {
             display: inline-block;
-            padding: 8px 16px;
-            background: #9bcc50;
-            color: #1a1a2e;
+            padding: 10px 20px;
+            background: transparent;
+            color: #8bac0f;
+            border: 2px solid #8bac0f;
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 13px;
-            transition: background 0.2s;
+            font-size: 12px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            transition: all 0.2s ease;
         }
+
         #rom-loader label:hover {
-            background: #aacd5e;
+            background: #8bac0f;
+            color: #0f1012;
+            box-shadow: 0 0 12px rgba(139, 172, 15, 0.3);
         }
+
         #rom-loader input[type="file"] {
             display: none;
         }
+
         #status {
-            margin-top: 8px;
-            font-size: 12px;
-            color: #9bcc50;
+            margin-top: 16px;
+            font-size: 11px;
+            color: #4c566a;
+            height: 16px;
+            letter-spacing: 1px;
         }
     </style>
 </head>
 <body>
     <div id="container">
         <h1>EMU</h1>
-        <canvas id="screen" width="160" height="144"></canvas>
-        <div id="controls">
-            <kbd>&larr;</kbd><kbd>&rarr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd> D-Pad &nbsp;&nbsp;
-            <kbd>Z</kbd> A &nbsp; <kbd>X</kbd> B &nbsp;
-            <kbd>Backspace</kbd> Select &nbsp; <kbd>Enter</kbd> Start
+        <div class="screen-bezel">
+            <!-- Native canvas buffer kept at 160x144, scaled to 480x432 via CSS -->
+            <canvas id="screen" width="160" height="144"></canvas>
         </div>
+        
+        <div id="controls">
+            <kbd>&larr;</kbd><kbd>&rarr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd> D-PAD &nbsp;&bull;&nbsp;
+            <kbd>Z</kbd> A &nbsp;&bull;&nbsp; <kbd>X</kbd> B &nbsp;&bull;&nbsp;
+            <kbd>BSPC</kbd> SELECT &nbsp;&bull;&nbsp; <kbd>ENTER</kbd> START
+        </div>
+
         <div id="rom-loader">
             <label for="rom-file">Load ROM (.gb)</label>
             <input type="file" id="rom-file" accept=".gb,.gbc">
         </div>
+
         <div id="status"></div>
     </div>
 
     <script>
         var Module = {
             onRuntimeInitialized: function() {
-                document.getElementById('status').textContent = 'Ready. Load a ROM to start.';
+                document.getElementById('status').textContent = 'READY. LOAD A ROM TO START.';
             },
             print: function(text) { console.log(text); },
             printErr: function(text) { console.error(text); }
@@ -124,7 +172,7 @@
             var file = e.target.files[0];
             if (!file) return;
 
-            document.getElementById('status').textContent = 'Loading ' + file.name + '...';
+            document.getElementById('status').textContent = 'LOADING ' + file.name.toUpperCase() + '...';
 
             var reader = new FileReader();
             reader.onload = function() {
@@ -133,11 +181,11 @@
 
                 if (Module._wasm_load_rom) {
                     Module._wasm_load_rom();
-                    document.getElementById('status').textContent = 'Running: ' + file.name;
+                    document.getElementById('status').textContent = 'RUNNING: ' + file.name.toUpperCase();
                 }
             };
             reader.onerror = function() {
-                document.getElementById('status').textContent = 'Failed to load ROM.';
+                document.getElementById('status').textContent = 'FAILED TO LOAD ROM.';
             };
             reader.readAsArrayBuffer(file);
         });

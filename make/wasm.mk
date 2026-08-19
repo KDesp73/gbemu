@@ -44,12 +44,12 @@ $(WASM_BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	@echo "[WASM] Compiling $<"
 	@$(EMCC) $(WASM_CFLAGS) -c -o $@ $<
 
-.PHONY: wasm-serve
-wasm-serve: wasm ## Start a local HTTP server for testing the WASM build
+.PHONY: wasm.serve
+wasm.serve: wasm ## Start a local HTTP server for testing the WASM build
 	@echo "Serving at http://localhost:8080"
 	@python3 -m http.server 8080 -d $(WASM_DIR)
 
-.PHONY: wasm-clean
-wasm-clean: ## Remove WASM build artifacts
+.PHONY: wasm.clean
+wasm.clean: ## Remove WASM build artifacts
 	@echo "[INFO] Cleaning WASM build."
 	@rm -rf $(WASM_BUILD_DIR) $(WASM_OUT).html $(WASM_OUT).js $(WASM_OUT).wasm $(WASM_OUT).data
