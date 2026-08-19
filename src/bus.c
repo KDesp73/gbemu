@@ -9,6 +9,19 @@ static bool mbc_is_mbc1(uint8_t type)
     return type >= 0x01 && type <= 0x03;
 }
 
+static bool mbc_is_mbc2(uint8_t type)
+{
+    // Cartridge types 0x05-0x06 are MBC2 (plain, +BATTERY)
+    return type >= 0x05 && type <= 0x06;
+}
+
+static bool mbc_is_mbc5(uint8_t type)
+{
+    // Cartridge types 0x19-0x1E are MBC5 (plain, +RAM, +RAM+BATTERY,
+    // +RUMBLE, +RUMBLE+SRAM, +RUMBLE+SRAM+BATTERY)
+    return type >= 0x19 && type <= 0x1E;
+}
+
 // CRC-32 (IEEE 802.3), used to spot the Nintendo logo when detecting MBC1M
 // multicart carts (same heuristic as mooneye-gb).
 static uint32_t crc32(const uint8_t* data, size_t len)
@@ -52,8 +65,23 @@ static uint16_t mbc1_bank_for_addr(const Bus* bus, uint16_t addr)
 
 static uint8_t bus_read_rom(const Bus* bus, uint16_t addr)
 {
+    uint16_t bank;
     if (mbc_is_mbc1(bus->mbc_type)) {
-        uint16_t bank = mbc1_bank_for_addr(bus, addr);
+        bank = mbc1_bank_for_addr(bus, addr);
+        return bus->rom[bank * 0x4000 + (addr & 0x3FFF)];
+    }
+    if (mbc_is_mbc2(bus->mbc_type)) {
+        if (addr < 0x4000) return bus->rom[addr];
+        // Bank 0 is substituted with bank 1, and banks wrap to the cart size
+        bank = bus->mbc2_rom_bank == 0 ? 1 : bus->mbc2_rom_bank;
+        bank &= bus->rom_banks - 1;
+        return bus->rom[bank * 0x4000 + (addr & 0x3FFF)];
+    }
+    if (mbc_is_mbc5(bus->mbc_type)) {
+        if (addr < 0x4000) return bus->rom[addr];
+        // 9-bit bank number from ROMB0/ROMB1; bank 0 is valid (no substitution)
+        bank = bus->mbc5_rom_bank_l | ((uint16_t)(bus->mbc5_rom_bank_h & 0x01) << 8);
+        bank &= bus->rom_banks - 1;
         return bus->rom[bank * 0x4000 + (addr & 0x3FFF)];
     }
     return bus->rom[addr];
@@ -61,9 +89,17 @@ static uint8_t bus_read_rom(const Bus* bus, uint16_t addr)
 
 static uint8_t bus_read_sram(const Bus* bus, uint16_t addr)
 {
+    if (mbc_is_mbc2(bus->mbc_type)) {
+        // Reads return the latched value of the RAM enable bit in the upper
+        // nibble plus the low nibble of the addressed nybble (mooneye-verified)
+        if (!bus->mbc2_ram_enable) return 0xFF;
+        return 0xF0 | (bus->mbc2_ram[addr & 0x1FF] & 0x0F);
+    }
     if (mbc_is_mbc1(bus->mbc_type) && !bus->mbc1_ram_enable) return 0xFF;
+    if (mbc_is_mbc5(bus->mbc_type) && !bus->mbc5_ram_enable) return 0xFF;
     uint16_t bank = 0;
     if (mbc_is_mbc1(bus->mbc_type) && bus->mbc1_mode) bank = bus->mbc1_ram_bank;
+    if (mbc_is_mbc5(bus->mbc_type)) bank = bus->mbc5_ram_bank;
     bank &= bus->sram_banks - 1;
     return bus->sram[bank * 0x2000 + (addr - 0xA000)];
 }
@@ -83,6 +119,40 @@ static void mbc1_write(Bus* bus, uint16_t addr, uint8_t value)
         // Banking mode select: 0 = ROM banking, 1 = RAM banking
         bus->mbc1_mode = value & 0x01;
     }
+}
+
+static void mbc2_write(Bus* bus, uint16_t addr, uint8_t value)
+{
+    // MBC2 registers only exist in $0000-$3FFF.  Writes to $4000-$7FFF are
+    // ignored on real MBC2A hardware (verified via mooneye bits_unused test).
+    if (addr >= 0x4000) return;
+
+    if (addr & 0x100) {
+        // ROM bank number: 4-bit register written when address bit 8 is set
+        bus->mbc2_rom_bank = value & 0x0F;
+    } else {
+        // RAM enable: only lower nibble matters, 0x0A enables
+        // (mooneye-verified on MBC2A)
+        bus->mbc2_ram_enable = ((value & 0x0F) == 0x0A);
+    }
+}
+
+static void mbc5_write(Bus* bus, uint16_t addr, uint8_t value)
+{
+    if (addr < 0x2000) {
+        // RAM enable: upper nibble must be 0x0A
+        bus->mbc5_ram_enable = ((value & 0x0F) == 0x0A);
+    } else if (addr < 0x3000) {
+        // ROM bank low 8 bits
+        bus->mbc5_rom_bank_l = value;
+    } else if (addr < 0x4000) {
+        // ROM bank bit 8 (only bit 0 is meaningful)
+        bus->mbc5_rom_bank_h = value & 0x01;
+    } else if (addr < 0x6000) {
+        // RAM bank select (low 4 bits)
+        bus->mbc5_ram_bank = value & 0x0F;
+    }
+    // 0x6000-0x7FFF: Rumble enable (ignored)
 }
 
 uint8_t bus_read(Bus *bus, uint16_t addr)
@@ -117,6 +187,8 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
     if (addr < 0x8000) {
         // Cartridge ROM / MBC register region
         if (mbc_is_mbc1(bus->mbc_type)) mbc1_write(bus, addr, value);
+        else if (mbc_is_mbc2(bus->mbc_type)) mbc2_write(bus, addr, value);
+        else if (mbc_is_mbc5(bus->mbc_type)) mbc5_write(bus, addr, value);
         // ROM-only carts ignore writes
         return;
     } 
@@ -124,9 +196,17 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
         bus->vram[addr - 0x8000] = value;
     } 
     else if (addr >= 0xA000 && addr < 0xC000) {
+        if (mbc_is_mbc2(bus->mbc_type)) {
+            // Only the low nibble is stored; mirrors the whole 0xA000-0xBFFF
+            if (!bus->mbc2_ram_enable) return;
+            bus->mbc2_ram[addr & 0x1FF] = value & 0x0F;
+            return;
+        }
         if (mbc_is_mbc1(bus->mbc_type) && !bus->mbc1_ram_enable) return;
+        if (mbc_is_mbc5(bus->mbc_type) && !bus->mbc5_ram_enable) return;
         uint16_t bank = 0;
         if (mbc_is_mbc1(bus->mbc_type) && bus->mbc1_mode) bank = bus->mbc1_ram_bank;
+        if (mbc_is_mbc5(bus->mbc_type)) bank = bus->mbc5_ram_bank;
         bank &= bus->sram_banks - 1;
         bus->sram[bank * 0x2000 + (addr - 0xA000)] = value;
         // Blargg and other test ROMs buffer serial output in SRAM at 0xA004+
@@ -248,14 +328,24 @@ size_t bus_load_rom(Bus* bus, const char* filepath)
         return 0;
     }
 
-    // Cartridge type (0x0147): only MBC1 variants (0x01-0x03) are banked for now
-    bus->mbc_type = mbc_is_mbc1(bus->rom[0x147]) ? bus->rom[0x147] : 0;
+    // Cartridge type (0x0147): MBC1, MBC2, and MBC5 carts are banked
+    bus->mbc_type = (mbc_is_mbc1(bus->rom[0x147]) || mbc_is_mbc2(bus->rom[0x147]) ||
+                     mbc_is_mbc5(bus->rom[0x147])) ? bus->rom[0x147] : 0;
+
+    // MBC5 initial bank: the mooneye test harness copies library functions
+    // (memcpy etc., located in bank 1) to WRAM at startup before any bank
+    // switching occurs.  Unlike MBC1/MBC2, MBC5 does not substitute bank 0
+    // with bank 1 in the switchable region, so we must power up with bank 1
+    // selected to keep that memcpy call working.
+    if (mbc_is_mbc5(bus->mbc_type)) {
+        bus->mbc5_rom_bank_l = 1;
+    }
 
     // MBC1M multicart detection: only 8Mbit multicarts exist; they can't be
     // told apart from normal carts by the header, so require the Nintendo
     // logo CRC in at least 3 of the 4 256KB pages (mooneye-gb heuristic).
     bus->mbc1_multicart = false;
-    if (bus->mbc_type != 0 && bus->rom_size == 0x100000) {
+    if (mbc_is_mbc1(bus->mbc_type) && bus->rom_size == 0x100000) {
         int logo_count = 0;
         for (int page = 0; page < 4; page++) {
             size_t start = (size_t)page * 0x40000 + 0x0104;

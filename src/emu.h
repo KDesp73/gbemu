@@ -120,13 +120,22 @@ struct Bus {
 
     bool double_speed;      // CGB double-speed mode (CPU T-cycle = 0.5 system cycle)
 
-    // MBC1 bank-switching state (active when mbc_type selects an MBC1 cart)
+    // MBC bank-switching state (active when mbc_type selects an MBC cart)
     uint8_t mbc_type;          // Cartridge type from header 0x0147 (0 = no MBC)
-    uint8_t mbc1_rom_bank;     // ROM bank register (0x2000-0x3FFF), low 5 bits
-    uint8_t mbc1_ram_bank;     // RAM bank / upper ROM bits (0x4000-0x5FFF), low 2 bits
-    bool    mbc1_mode;         // Banking mode (0x6000-0x7FFF): 0 = ROM, 1 = RAM
-    bool    mbc1_ram_enable;   // External RAM enable (0x0000-0x1FFF)
+    uint8_t mbc1_rom_bank;     // MBC1: ROM bank register (0x2000-0x3FFF), low 5 bits
+    uint8_t mbc1_ram_bank;     // MBC1: RAM bank / upper ROM bits (0x4000-0x5FFF), low 2 bits
+    bool    mbc1_mode;         // MBC1: banking mode (0x6000-0x7FFF): 0 = ROM, 1 = RAM
+    bool    mbc1_ram_enable;   // MBC1: external RAM enable (0x0000-0x1FFF)
     bool    mbc1_multicart;    // MBC1M multicart mode (1MB carts with multiple games)
+
+    uint8_t mbc2_rom_bank;     // MBC2: 4-bit ROM bank register (A8-set writes in 0x0000-0x3FFF)
+    bool    mbc2_ram_enable;   // MBC2: built-in RAM enable (A8-clear write of 0x0A)
+    uint8_t mbc2_ram[0x200];   // MBC2: built-in 512x4-bit RAM (mirrored over 0xA000-0xBFFF)
+
+    uint8_t mbc5_rom_bank_l;   // MBC5: ROM bank low 8 bits (0x2000-0x2FFF)
+    uint8_t mbc5_rom_bank_h;   // MBC5: ROM bank bit 8 (0x3000-0x3FFF), bit 0 only
+    uint8_t mbc5_ram_bank;     // MBC5: RAM bank select (0x4000-0x5FFF), low 4 bits
+    bool    mbc5_ram_enable;   // MBC5: external RAM enable (0x0000-0x1FFF)
 };
 
 //@func bus_read
