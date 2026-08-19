@@ -1,17 +1,18 @@
 # Emulator Progress Assessment
 
-## Overall Completeness: ~60-65%
+## Overall Completeness: ~65-70%
 
 The core CPU and timer are complete and well-tested, MBC1/MBC2/MBC5 bank
-switching works, but the emulator cannot yet run most commercial games: no MBC3
-support, no display output, no joypad, and no audio generation.
+switching fully passes all mooneye tests, but the emulator cannot yet run most
+commercial games: no MBC3 support, no display output, no joypad, and no audio
+generation.
 
 ### Test Suite Results (52 tests)
 
-- Passed: 28
-- Failed: 18
+- Passed: 44
+- Failed: 2
 - Partial/Timeout: 6
-- **Pass rate: ~54%**
+- **Pass rate: ~85%**
 
 ## Subsystem Breakdown
 
@@ -20,7 +21,7 @@ support, no display output, no joypad, and no audio generation.
 | CPU + instructions | All cpu_instrs, instr_timing, interrupt_time, halt_bug pass | ~98% |
 | Timer | instr_timing / interrupt_time tests pass | ~95% |
 | PPU / video | BG, window, sprites rendered to a buffer; **no display output** (`host_render_frame` commented out in `src/loop.c:46`); DMG palette only; no CGB VRAM banking (only 8KB) | ~60% |
-| MBC / cartridges | MBC1 (+ multicart), MBC2, MBC5 implemented; MBC3 and others not yet | ~55% |
+| MBC / cartridges | MBC1 (+ multicart, 11/11), MBC2 (7/7), MBC5 (9/9) fully passing; MBC3 and others not yet | ~65% |
 | Joypad / input | Not implemented | 0% |
 | APU / audio | "no wave generation" (`src/emu.h:315`) — length-counter state only; sweep/overflow/wave tests fail | ~30% |
 | Serial / interrupts | Serial intercepted for test ROMs, interrupts work | ~70% |
@@ -47,7 +48,7 @@ support, no display output, no joypad, and no audio generation.
 
 ### Alternative: Continue Fixing Test Failures
 
-If preferred over the above, investigate remaining mooneye MBC2 failures
-(`bits_ramg`, `ram`, `bits_unused`) and MBC5 timeout issues. Also consider
-the `mem_timing` suite (edge-rising timing for ops like `F0`/`FA` and the `CB`
-register ops). MBC3 remains the bigger win for commercial game compatibility.
+If preferred over the above, investigate the `mem_timing` suite (edge-rising
+timing for ops like `F0`/`FA` and the `CB` register ops), the `oam_bug` suite,
+and the 2 remaining MBC1 failures (`bits_bank2`, `bits_mode`). MBC3 remains the
+bigger win for commercial game compatibility.

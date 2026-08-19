@@ -1,0 +1,20 @@
+#ifndef FRONTEND_H
+#define FRONTEND_H
+
+#include <stdbool.h>
+#include <stdint.h>
+
+typedef struct Frontend Frontend;
+
+struct Frontend {
+    void* priv;
+
+    bool (*init)(Frontend* fe, int width, int height);
+    void (*render)(Frontend* fe, const uint32_t* buffer, int width, int height);
+    void (*poll_events)(Frontend* fe, bool* running);
+    void (*destroy)(Frontend* fe);
+};
+
+Frontend* frontend_sdl_create(void);
+
+#endif // FRONTEND_H

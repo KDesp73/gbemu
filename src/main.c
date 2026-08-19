@@ -26,7 +26,11 @@ int main(int argc, char** argv)
 
     if (!bus_load_rom(&bus, rom_path)) return 1;
 
-    loop(&cpu, &bus, &timer, &ppu, &apu);
+    Frontend* fe = frontend_sdl_create();
+    if (!fe->init(fe, SCREEN_WIDTH, SCREEN_HEIGHT)) return 1;
 
+    loop(&cpu, &bus, &timer, &ppu, &apu, fe);
+
+    fe->destroy(fe);
     return 0;
 }

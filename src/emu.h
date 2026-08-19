@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include "frontend.h"
 
 //@module cpu
 
@@ -395,6 +396,7 @@ int cpu_step(CPU* cpu, Bus* bus);
 //@param timer Timer state to advance
 //@param ppu PPU state to advance
 //@param apu APU state to advance
-void loop(CPU* cpu, Bus* bus, Timer* timer, PPU* ppu, APU* apu);
+//@param fe Frontend for display and input
+void loop(CPU* cpu, Bus* bus, Timer* timer, PPU* ppu, APU* apu, Frontend* fe);
 
 #endif // EMU_H

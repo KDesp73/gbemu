@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-void loop(CPU* cpu, Bus* bus, Timer* timer, PPU* ppu, APU* apu)
+void loop(CPU* cpu, Bus* bus, Timer* timer, PPU* ppu, APU* apu, Frontend* fe)
 {
     bool running = true;
 
@@ -12,8 +12,6 @@ void loop(CPU* cpu, Bus* bus, Timer* timer, PPU* ppu, APU* apu)
         int frame_cycles = 0;
 
         while (frame_cycles < CYCLES_PER_FRAME) {
-            // if (cpu.pc == 0xC106) fprintf(stderr, "[CRC] byte=0x%02X\n", cpu.a);
-            // if (cpu.pc == 0xC293) fprintf(stderr, "[CHECK] crc=%02X%02X%02X%02X\n", bus_read(&bus,0xFF80), bus_read(&bus,0xFF81), bus_read(&bus,0xFF82), bus_read(&bus,0xFF83));
             int cycles = cpu_step(cpu, bus);
 
             // On CGB the dot clock is fixed at 8.39 MHz: at normal speed the
@@ -43,9 +41,11 @@ void loop(CPU* cpu, Bus* bus, Timer* timer, PPU* ppu, APU* apu)
         }
 
         if (ppu->frame_ready) {
-            // host_render_frame(ppu.frame_buffer);
+            fe->render(fe, &ppu->frame_buffer[0][0], SCREEN_WIDTH, SCREEN_HEIGHT);
             ppu->frame_ready = false;
         }
+
+        fe->poll_events(fe, &running);
 
         uint64_t frame_duration = get_time_ns() - frame_start_time;
         if (!getenv("EMU_NOSLEEP") && frame_duration < FRAME_TIME_NS) {

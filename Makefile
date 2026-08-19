@@ -1,7 +1,7 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -Wall -Iinclude -fPIC
-LDFLAGS =
+CFLAGS = -Wall -Iinclude -fPIC $(shell sdl2-config --cflags)
+LDFLAGS = $(shell sdl2-config --libs)
 
 # Directories
 SRC_DIR = src
@@ -31,8 +31,9 @@ else
 endif
 
 # Source and object files
-SRC_FILES := $(shell find $(SRC_DIR) -name '*.c' ! -name 'main.c')
+SRC_FILES := $(shell find $(SRC_DIR) -name '*.c' ! -name 'main.c' ! -name 'frontend_sdl.c')
 OBJ_FILES = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRC_FILES))
+FRONTEND_SRC = $(SRC_DIR)/frontend_sdl.c
 
 # Default target
 .DEFAULT_GOAL := help
@@ -65,7 +66,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c ## Compile source files with progress
 
 $(TARGET): $(BUILD_DIR) static ## Build executable using static library
 	@echo "[INFO] Building executable: $(TARGET)"
-	@$(CC) src/main.c -o $(TARGET) -L. $(A_NAME) $(LDFLAGS)
+	@$(CC) src/main.c $(FRONTEND_SRC) -o $(TARGET) -L. $(A_NAME) $(CFLAGS) $(LDFLAGS)
 
 .PHONY: shared
 shared: $(BUILD_DIR) $(OBJ_FILES) ## Build shared library
