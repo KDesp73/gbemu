@@ -108,8 +108,7 @@ docs: ## Generate docs using tinydocs
 		--ignore .gitignore \
 		-o docs \
 		--comment-style "//" \
-		--name $(LIBRARY_NAME) \
-		--generate
+		--name $(LIBRARY_NAME)
 
 .PHONY: install
 install: ## Install emulator system-wide (run with sudo)
