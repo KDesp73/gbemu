@@ -53,6 +53,7 @@ void wasm_load_rom(void)
 
     if (!bus_load_rom(&bus, "/rom.gb")) {
         fprintf(stderr, "Failed to load ROM\n");
+        emu_running = false;
         return;
     }
 
@@ -65,6 +66,12 @@ void wasm_load_rom(void)
         cpu.a = 0x01;
 
     emu_running = true;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int wasm_is_running(void)
+{
+    return emu_running ? 1 : 0;
 }
 
 static void main_loop(void)

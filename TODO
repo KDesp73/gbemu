@@ -17,4 +17,5 @@ TODO: Test suites central service [A test suite dashboard and db which will disp
 TODO: Implement SGB MULTI request (MLT_REQ) [No SGB support exists, so sgb/command_mlt_req and sgb/command_mlt_req_1_incrementing fail. Add P15 write handling for SGB commands (at minimum the MLT_REQ MULTI controller layout command) or filter SGB tests from the samesuite run]
 TODO: Audio interface [An audio module to generate sound from the instructions]
 TODO: Esp32 frontend [An eps32 implementation of all frontend interfaces]
-TODO: WASM [Wasm compilation target and website]
+DONE: WASM [Wasm compilation target and website]
+TODO: Saves [Figure out how to actually save progress for each rom]
