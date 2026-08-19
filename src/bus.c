@@ -351,6 +351,13 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
 
         // Route to PPU hardware (0xFF40-0xFF4B)
         if (addr >= 0xFF40 && addr <= 0xFF4B) {
+            // OAM DMA: writing to 0xFF46 copies 160 bytes from 0xXX00-0xXX9F to OAM
+            if (addr == 0xFF46) {
+                uint16_t src = (uint16_t)value << 8;
+                for (int i = 0; i < 0xA0; i++)
+                    bus->oam[i] = bus_read(bus, src + i);
+                return;
+            }
             if (bus->ppu) ppu_write(bus->ppu, addr, value);
             return;
         }
