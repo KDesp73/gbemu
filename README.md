@@ -2,6 +2,8 @@
 
 A Game Boy / Game Boy Color emulator written in C.
 
+![recording](./assets/supermarioland-record.gif)
+
 ## Building
 
 ### Prerequisites

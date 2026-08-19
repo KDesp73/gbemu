@@ -9,3 +9,4 @@ emu-cli
 test-report*.txt
 
 roms
+.DS_Store
