@@ -1,6 +1,6 @@
-#include "frontend.h"
+#include "emu.h"
 #include <stdlib.h>
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 typedef struct {
     SDL_Window* window;
@@ -13,7 +13,7 @@ static bool sdl_init(Frontend* fe, int width, int height)
 {
     SDLPriv* priv = fe->priv;
 
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
         fprintf(stderr, "[ERR] SDL_Init: %s\n", SDL_GetError());
         return false;
     }
@@ -24,17 +24,15 @@ static bool sdl_init(Frontend* fe, int width, int height)
 
     priv->window = SDL_CreateWindow(
         "EMU",
-        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         width * priv->scale, height * priv->scale,
-        SDL_WINDOW_SHOWN
+        0
     );
     if (!priv->window) {
         fprintf(stderr, "[ERR] SDL_CreateWindow: %s\n", SDL_GetError());
         return false;
     }
 
-    priv->renderer = SDL_CreateRenderer(priv->window, -1,
-        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    priv->renderer = SDL_CreateRenderer(priv->window, NULL);
     if (!priv->renderer) {
         fprintf(stderr, "[ERR] SDL_CreateRenderer: %s\n", SDL_GetError());
         return false;
@@ -57,37 +55,35 @@ static void sdl_render(Frontend* fe, const uint32_t* buffer,
     SDLPriv* priv = fe->priv;
 
     SDL_UpdateTexture(priv->texture, NULL, buffer, width * sizeof(uint32_t));
-    SDL_RenderCopy(priv->renderer, priv->texture, NULL, NULL);
+    SDL_RenderTexture(priv->renderer, priv->texture, NULL, NULL);
     SDL_RenderPresent(priv->renderer);
 }
 
-static void sdl_poll_events(Frontend* fe, bool* running)
+static void sdl_poll_events(Frontend* fe, Bus* bus, bool* running)
 {
-    (void)fe;
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
-        case SDL_QUIT:
+        case SDL_EVENT_QUIT:
             *running = false;
             break;
-        case SDL_WINDOWEVENT:
-            if (event.window.event == SDL_WINDOWEVENT_CLOSE)
-                *running = false;
+        case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+            *running = false;
             break;
-        case SDL_KEYDOWN:
-        case SDL_KEYUP: {
-            bool pressed = (event.type == SDL_KEYDOWN);
-            switch (event.key.keysym.sym) {
-            // Row 1: Down, Up, Left, Right
-            case SDLK_DOWN:    (void)pressed; break;
-            case SDLK_UP:      (void)pressed; break;
-            case SDLK_LEFT:    (void)pressed; break;
-            case SDLK_RIGHT:   (void)pressed; break;
-            // Row 2: Z, X, Backspace, Enter
-            case SDLK_z:       (void)pressed; break;
-            case SDLK_x:       (void)pressed; break;
-            case SDLK_BACKSPACE: (void)pressed; break;
-            case SDLK_RETURN:  (void)pressed; break;
+        case SDL_EVENT_KEY_DOWN:
+        case SDL_EVENT_KEY_UP: {
+            bool pressed = (event.type == SDL_EVENT_KEY_DOWN);
+            switch (event.key.key) {
+            // D-pad: bits 3-0 of joypad_dpad (active-low)
+            case SDLK_RIGHT: bus->joypad_dpad = pressed ? (bus->joypad_dpad & ~0x01) : (bus->joypad_dpad | 0x01); break;
+            case SDLK_LEFT:  bus->joypad_dpad = pressed ? (bus->joypad_dpad & ~0x02) : (bus->joypad_dpad | 0x02); break;
+            case SDLK_UP:    bus->joypad_dpad = pressed ? (bus->joypad_dpad & ~0x04) : (bus->joypad_dpad | 0x04); break;
+            case SDLK_DOWN:  bus->joypad_dpad = pressed ? (bus->joypad_dpad & ~0x08) : (bus->joypad_dpad | 0x08); break;
+            // Face buttons: bits 3-0 of joypad_buttons (active-low)
+            case SDLK_Z:       bus->joypad_buttons = pressed ? (bus->joypad_buttons & ~0x01) : (bus->joypad_buttons | 0x01); break; // A
+            case SDLK_X:       bus->joypad_buttons = pressed ? (bus->joypad_buttons & ~0x02) : (bus->joypad_buttons | 0x02); break; // B
+            case SDLK_BACKSPACE: bus->joypad_buttons = pressed ? (bus->joypad_buttons & ~0x04) : (bus->joypad_buttons | 0x04); break; // Select
+            case SDLK_RETURN:  bus->joypad_buttons = pressed ? (bus->joypad_buttons & ~0x08) : (bus->joypad_buttons | 0x08); break; // Start
             default: break;
             }
             break;

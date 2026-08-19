@@ -121,6 +121,12 @@ struct Bus {
 
     bool double_speed;      // CGB double-speed mode (CPU T-cycle = 0.5 system cycle)
 
+    // Joypad state (active-low: 0 = pressed)
+    // Bit layout: bit 7 = Start, 6 = Select, 5 = B, 4 = A
+    //             bit 3 = Down, 2 = Up, 1 = Left, 0 = Right
+    uint8_t joypad_buttons; // Face buttons + Start/Select (active-low)
+    uint8_t joypad_dpad;    // D-pad buttons (active-low)
+
     // MBC bank-switching state (active when mbc_type selects an MBC cart)
     uint8_t mbc_type;          // Cartridge type from header 0x0147 (0 = no MBC)
     uint8_t mbc1_rom_bank;     // MBC1: ROM bank register (0x2000-0x3FFF), low 5 bits

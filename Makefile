@@ -1,7 +1,7 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -Wall -Iinclude -fPIC $(shell sdl2-config --cflags)
-LDFLAGS = $(shell sdl2-config --libs)
+CFLAGS = -Wall -Iinclude -fPIC $(shell PKG_CONFIG_PATH=/opt/homebrew/lib/pkgconfig pkg-config --cflags sdl3)
+LDFLAGS = $(shell PKG_CONFIG_PATH=/opt/homebrew/lib/pkgconfig pkg-config --libs sdl3)
 
 # Directories
 SRC_DIR = src

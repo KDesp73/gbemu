@@ -45,7 +45,7 @@ void loop(CPU* cpu, Bus* bus, Timer* timer, PPU* ppu, APU* apu, Frontend* fe)
             ppu->frame_ready = false;
         }
 
-        fe->poll_events(fe, &running);
+        fe->poll_events(fe, bus, &running);
 
         uint64_t frame_duration = get_time_ns() - frame_start_time;
         if (!getenv("EMU_NOSLEEP") && frame_duration < FRAME_TIME_NS) {

@@ -164,6 +164,19 @@ uint8_t bus_read(Bus *bus, uint16_t addr)
     if (addr >= 0xE000 && addr < 0xFE00) return bus->wram[addr - 0xE000];
     if (addr >= 0xFE00 && addr < 0xFEA0) return bus->oam[addr - 0xFE00];
     if (addr >= 0xFF00 && addr < 0xFF80) {
+        // Joypad (0xFF00): bits 5-4 are select, bits 3-0 are button state
+        if (addr == 0xFF00) {
+            uint8_t select = bus->io[0x00] & 0x30;
+            uint8_t result = 0xC0 | select; // Bits 7-6 always 1
+
+            // When a select line is LOW, that group's buttons are active
+            if (!(select & 0x10)) // Direction keys selected (bit 4 = 0)
+                result |= bus->joypad_dpad & 0x0F;
+            if (!(select & 0x20)) // Face buttons selected (bit 5 = 0)
+                result |= bus->joypad_buttons & 0x0F;
+
+            return result;
+        }
         if (addr >= 0xFF04 && addr <= 0xFF07 && bus->timer)
             return timer_read(bus->timer, addr);
         if (addr >= 0xFF10 && addr <= 0xFF3F && bus->apu)
@@ -260,6 +273,12 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
         // Route to PPU hardware (0xFF40-0xFF4B)
         if (addr >= 0xFF40 && addr <= 0xFF4B) {
             if (bus->ppu) ppu_write(bus->ppu, addr, value);
+            return;
+        }
+
+        // Joypad (0xFF00): only bits 5-4 are writable (select lines)
+        if (addr == 0xFF00) {
+            bus->io[0x00] = value & 0x30;
             return;
         }
 

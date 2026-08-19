@@ -13,7 +13,7 @@ void timer_init(Timer* timer)
     timer->internal_counter = 0xABCC; // Default post-boot value
     timer->tima = 0x00;
     timer->tma = 0x00;
-    timer->tac = 0xF8; // High 5 bits always read 1
+    timer->tac = 0x00; // Timer disabled; 0xF8 mask applied on read
     timer->interrupt_requested = false;
 }
 

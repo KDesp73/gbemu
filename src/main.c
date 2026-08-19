@@ -26,6 +26,16 @@ int main(int argc, char** argv)
 
     if (!bus_load_rom(&bus, rom_path)) return 1;
 
+    // Post-boot register state
+    bus.io[0x0F] = 0x01; // IF: VBlank pending from last scanline of boot ROM
+    bus.ie = 0x01;        // IE: VBlank interrupt enabled
+    bus.joypad_buttons = 0x0F; // All face buttons released (active-low)
+    bus.joypad_dpad = 0x0F;    // All D-pad buttons released (active-low)
+
+    // Set CPU mode based on ROM header
+    if (bus.rom[0x143] != 0x80 && bus.rom[0x143] != 0xC0)
+        cpu.a = 0x01; // DMG mode
+
     Frontend* fe = frontend_sdl_create();
     if (!fe->init(fe, SCREEN_WIDTH, SCREEN_HEIGHT)) return 1;
 
