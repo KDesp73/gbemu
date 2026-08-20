@@ -32,6 +32,6 @@ else
 endif
 
 # Source and object files
-SRC_FILES := $(shell find $(SRC_DIR) -name '*.c' ! -name 'main.c' ! -name 'frontend_sdl.c')
+SRC_FILES := $(shell find $(SRC_DIR) -name '*.c' ! -name 'main.c' ! -name 'frontend_sdl.c' ! -name 'main_wasm.c' ! -name 'frontend_wasm.c')
 OBJ_FILES = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRC_FILES))
 FRONTEND_SRC = $(SRC_DIR)/frontend_sdl.c
