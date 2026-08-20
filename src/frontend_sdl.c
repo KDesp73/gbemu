@@ -7,13 +7,33 @@ typedef struct {
     SDL_Renderer* renderer;
     SDL_Texture* texture;
     int scale;
+    APU* apu;
+    SDL_AudioStream* audio_stream;
 } SDLPriv;
+
+static void SDLCALL audio_callback(void* userdata, SDL_AudioStream* stream,
+                                   int additional_amount, int total_amount)
+{
+    (void)total_amount;
+    SDLPriv* priv = userdata;
+    int samples_needed = additional_amount / sizeof(float);
+    float buf[1024];
+    int filled = 0;
+    while (filled < samples_needed) {
+        int chunk = samples_needed - filled;
+        if (chunk > 1024) chunk = 1024;
+        for (int i = 0; i < chunk; i++)
+            buf[i] = apu_buf_pop(priv->apu);
+        SDL_PutAudioStreamData(stream, buf, chunk * sizeof(float));
+        filled += chunk;
+    }
+}
 
 static bool sdl_init(Frontend* fe, int width, int height)
 {
     SDLPriv* priv = fe->priv;
 
-    if (!SDL_Init(SDL_INIT_VIDEO)) {
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
         fprintf(stderr, "[ERR] SDL_Init: %s\n", SDL_GetError());
         return false;
     }
@@ -45,6 +65,20 @@ static bool sdl_init(Frontend* fe, int width, int height)
         fprintf(stderr, "[ERR] SDL_CreateTexture: %s\n", SDL_GetError());
         return false;
     }
+
+    // --- Audio ---
+    SDL_AudioSpec spec = {
+        .freq     = APU_SAMPLE_RATE,
+        .format   = SDL_AUDIO_F32,
+        .channels = 1,
+    };
+    priv->audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
+                                                   &spec, audio_callback, priv);
+    if (!priv->audio_stream) {
+        fprintf(stderr, "[ERR] SDL_OpenAudioDeviceStream: %s\n", SDL_GetError());
+        return false;
+    }
+    SDL_ResumeAudioStreamDevice(priv->audio_stream);
 
     return true;
 }
@@ -95,6 +129,9 @@ static void sdl_poll_events(Frontend* fe, Bus* bus, bool* running)
 static void sdl_destroy(Frontend* fe)
 {
     SDLPriv* priv = fe->priv;
+    if (priv->audio_stream) {
+        SDL_DestroyAudioStream(priv->audio_stream);
+    }
     if (priv->texture)  SDL_DestroyTexture(priv->texture);
     if (priv->renderer) SDL_DestroyRenderer(priv->renderer);
     if (priv->window)   SDL_DestroyWindow(priv->window);
@@ -102,10 +139,11 @@ static void sdl_destroy(Frontend* fe)
     free(priv);
 }
 
-Frontend* frontend_sdl_create(void)
+Frontend* frontend_sdl_create(APU* apu)
 {
     Frontend* fe = calloc(1, sizeof(Frontend));
     SDLPriv* priv = calloc(1, sizeof(SDLPriv));
+    priv->apu = apu;
 
     fe->priv = priv;
     fe->init = sdl_init;

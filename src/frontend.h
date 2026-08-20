@@ -6,6 +6,7 @@
 
 typedef struct Frontend Frontend;
 typedef struct Bus Bus;
+typedef struct APU APU;
 
 struct Frontend {
     void* priv;
@@ -16,7 +17,7 @@ struct Frontend {
     void (*destroy)(Frontend* fe);
 };
 
-Frontend* frontend_sdl_create(void);
+Frontend* frontend_sdl_create(APU* apu);
 Frontend* frontend_wasm_create(void);
 
 #endif // FRONTEND_H

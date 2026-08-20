@@ -338,8 +338,15 @@ int handle_interrupts(CPU* cpu, Bus* bus, PPU* ppu, Timer* timer);
 
 //@module apu
 
+// Audio ring buffer capacity (must be power of two)
+#define APU_BUF_SIZE 4096
+#define APU_BUF_MASK (APU_BUF_SIZE - 1)
+
+// Sample rate for audio output
+#define APU_SAMPLE_RATE 44100
+
 //@type APU
-//@desc Minimal audio unit: channel power/length-counter state for NR52 (no wave generation)
+//@desc Game Boy APU with full 4-channel waveform synthesis
 //@ref https://gbdev.io/pandocs/Audio.html
 typedef struct APU {
     uint8_t regs[0x30];     // Sound registers FF10-FF3F
@@ -349,7 +356,37 @@ typedef struct APU {
     uint16_t length[4];     // Length counter (max 64 for square/noise, 256 for wave)
     uint16_t length_load[4]; // Length counter reload value
     bool length_enable[4];  // NRx4 bit 6 (length counter enable)
-    uint16_t frame_accum;   // System-cycle accumulator (length clock ticks every 16384)
+
+    // Per-channel synthesis state
+    int freq_timer[4];       // Frequency period countdown (T-cycles)
+    uint8_t duty_pos[2];     // Duty cycle position (0-7) for CH1/CH2
+    uint8_t wave_pos;        // Wave table position (0-31) for CH3
+    uint16_t lfsr;           // 15-bit LFSR for CH4 (noise)
+    uint8_t vol[3];          // Current volume for CH1, CH2, CH4 (0-15)
+    uint8_t env_period[3];   // Envelope period (from NRx2 low 3 bits) for CH1/CH2/CH4
+    uint8_t env_counter[3];  // Envelope step counter for CH1/CH2/CH4
+    bool env_dir[3];         // Envelope direction: false=down, true=up for CH1/CH2/CH4
+    bool env_loop[3];        // Envelope loop flag for CH1/CH2/CH4
+
+    // CH1 sweep state
+    uint16_t sweep_freq;     // Shadow frequency register
+    uint8_t sweep_period;    // Sweep counter (reload from NR10 bits 6-4)
+    uint8_t sweep_counter;   // Sweep step countdown
+    bool sweep_enabled;      // Sweep active (turned on by trigger)
+    bool sweep_negate;       // Sweep negate from NR10 bit 3
+    bool sweep_negate_used;  // Whether negate has been used (blocks re-negate)
+
+    // Frame sequencer (512 Hz, 8 steps, 2048 T-cycles/step)
+    uint8_t frame_step;      // Current step (0-7)
+    uint16_t frame_div;      // T-cycle divider for frame sequencer
+
+    // Audio output ring buffer (SPSC, float mono)
+    float audio_buf[APU_BUF_SIZE];
+    volatile uint32_t buf_write; // Write index (producer: apu_step)
+    volatile uint32_t buf_read;  // Read index (consumer: SDL callback)
+
+    // Downsampling accumulator (dot clock -> sample rate)
+    uint32_t sample_accum;   // Dots accumulated since last sample
 } APU;
 
 //@func apu_init
@@ -376,6 +413,12 @@ uint8_t apu_read(const APU* apu, uint16_t addr);
 //@param addr Register address (0xFF10-0xFF3F)
 //@param value Byte value to write
 void apu_write(APU* apu, uint16_t addr, uint8_t value);
+
+//@func apu_buf_pop
+//@desc Pop a single float sample from the APU audio ring buffer (called from audio callback)
+//@param apu APU state to read from
+//@returns Audio sample in range [-1.0, 1.0], or 0.0 if buffer empty
+float apu_buf_pop(APU* apu);
 
 //@module exec
 
