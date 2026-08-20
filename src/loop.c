@@ -20,15 +20,13 @@ void loop(CPU* cpu, Bus* bus, Timer* timer, PPU* ppu, APU* apu, Frontend* fe)
             int scale = bus->double_speed ? 1 : 2;
             int sys_cycles = cycles * scale;
 
-            // The timer is now advanced per-M-cycle inside bus_read/bus_write
-            // (4 T-cycles per access), so we no longer advance it here.
-            // The PPU and APU are dot-clock derived and advanced in bulk.
+            timer_step(timer, cycles);
             ppu_step(ppu, bus, sys_cycles);
             apu_step(apu, sys_cycles);
 
             int int_cycles = handle_interrupts(cpu, bus, ppu, timer);
             if (int_cycles > 0) {
-                // Timer already advanced inside handle_interrupts via bus_read/bus_write.
+                timer_step(timer, int_cycles);
                 ppu_step(ppu, bus, int_cycles * scale);
                 sys_cycles += int_cycles * scale;
             }

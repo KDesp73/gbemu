@@ -11,6 +11,7 @@ all: check_tools $(BUILD_DIR) static shared $(TARGET)## Build the project
 $(BUILD_DIR): ## Create the build directory if it doesn't exist
 	@echo "[INFO] Creating build directory"
 	mkdir -p $(BUILD_DIR)
+	mkdir -p $(BUILD_DIR)/frontend
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c ## Compile source files with progress
 	$(eval counter=$(shell echo $$(($(counter)+1))))

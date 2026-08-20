@@ -17,9 +17,9 @@ else
 	WASM_LDFLAGS += -s ASSERTIONS=2
 endif
 
-WASM_SRC_FILES := $(shell find $(SRC_DIR) -name '*.c' ! -name 'main.c' ! -name 'main_wasm.c' ! -name 'frontend_sdl.c' ! -name 'frontend_wasm.c' ! -name 'loop.c')
+WASM_SRC_FILES := $(shell find $(SRC_DIR) -name '*.c' ! -name 'main.c' ! -name 'main_wasm.c' ! -path '*/frontend/*' ! -name 'loop.c')
 WASM_OBJ_FILES = $(patsubst $(SRC_DIR)/%.c,$(WASM_BUILD_DIR)/%.o,$(WASM_SRC_FILES))
-WASM_FRONTEND_SRC = $(SRC_DIR)/frontend_wasm.c
+WASM_FRONTEND_SRC = $(SRC_DIR)/frontend/wasm.c
 WASM_MAIN_SRC = $(SRC_DIR)/main_wasm.c
 
 ifdef WASM_ROM

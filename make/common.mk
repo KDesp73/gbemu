@@ -1,6 +1,6 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -Wall -Iinclude -fPIC
+CFLAGS = -Wall -Isrc -fPIC
 LDFLAGS =
 
 # Headless mode: skip SDL entirely
@@ -38,12 +38,12 @@ else
 endif
 
 # Source and object files
-SRC_FILES := $(shell find $(SRC_DIR) -name '*.c' ! -name 'main.c' ! -name 'frontend_sdl.c' ! -name 'frontend_headless.c' ! -name 'main_wasm.c' ! -name 'frontend_wasm.c')
+SRC_FILES := $(shell find $(SRC_DIR) -name '*.c' ! -name 'main.c' ! -name 'main_wasm.c' ! -path '*/frontend/*')
 OBJ_FILES = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRC_FILES))
 
 ifeq ($(HEADLESS),1)
     CFLAGS  += -DEMU_HEADLESS
-    FRONTEND_SRC = $(SRC_DIR)/frontend_headless.c
+    FRONTEND_SRC = $(SRC_DIR)/frontend/headless.c
 else
-    FRONTEND_SRC = $(SRC_DIR)/frontend_sdl.c
+    FRONTEND_SRC = $(SRC_DIR)/frontend/sdl.c
 endif

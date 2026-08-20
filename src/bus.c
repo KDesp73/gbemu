@@ -256,7 +256,6 @@ uint8_t bus_read(Bus *bus, uint16_t addr)
         result = 0xFF;
     }
 
-    if (bus->timer) timer_step(bus->timer, 4);
     return result;
 }
 
@@ -267,20 +266,20 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
         else if (mbc_is_mbc2(bus->mbc_type)) mbc2_write(bus, addr, value);
         else if (mbc_is_mbc3(bus->mbc_type)) mbc3_write(bus, addr, value);
         else if (mbc_is_mbc5(bus->mbc_type)) mbc5_write(bus, addr, value);
-        goto done;
+        return;
     }
     else if (addr >= 0x8000 && addr < 0xA000) {
         bus->vram[addr - 0x8000] = value;
     }
     else if (addr >= 0xA000 && addr < 0xC000) {
         if (mbc_is_mbc2(bus->mbc_type)) {
-            if (!bus->mbc2_ram_enable) goto done;
+            if (!bus->mbc2_ram_enable) return;
             bus->mbc2_ram[addr & 0x1FF] = value & 0x0F;
-            goto done;
+            return;
         }
-        if (mbc_is_mbc1(bus->mbc_type) && !bus->mbc1_ram_enable) goto done;
-        if (mbc_is_mbc3(bus->mbc_type) && !bus->mbc3_ram_enable) goto done;
-        if (mbc_is_mbc5(bus->mbc_type) && !bus->mbc5_ram_enable) goto done;
+        if (mbc_is_mbc1(bus->mbc_type) && !bus->mbc1_ram_enable) return;
+        if (mbc_is_mbc3(bus->mbc_type) && !bus->mbc3_ram_enable) return;
+        if (mbc_is_mbc5(bus->mbc_type) && !bus->mbc5_ram_enable) return;
 
         if (mbc_is_mbc3(bus->mbc_type)) {
             if (bus->mbc3_ram_bank <= 3) {
@@ -295,10 +294,10 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
                     case 0x0C: bus->mbc3_day_counter = (bus->mbc3_day_counter & 0x00FF) | ((value & 0x01) << 8);
                                bus->mbc3_day_carry = (value & 0x80) != 0;
                                bus->mbc3_timer_halt = (value & 0x40) != 0;
-                               break;
+                                break;
                 }
             }
-            goto done;
+            return;
         }
 
         uint16_t bank = 0;
@@ -331,34 +330,34 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
         bus->oam[addr - 0xFE00] = value;
     }
     else if (addr >= 0xFEA0 && addr < 0xFF00) {
-        goto done;
+        return;
     }
     else if (addr >= 0xFF00 && addr < 0xFF80) {
         if (addr >= 0xFF04 && addr <= 0xFF07) {
             if (bus->timer) timer_write(bus->timer, addr, value);
-            goto done;
+            return;
         }
         if (addr >= 0xFF10 && addr <= 0xFF3F) {
             if (bus->apu) apu_write(bus->apu, addr, value);
-            goto done;
+            return;
         }
         if (addr >= 0xFF40 && addr <= 0xFF4B) {
             if (addr == 0xFF46) {
                 uint16_t src = (uint16_t)value << 8;
                 for (int i = 0; i < 0xA0; i++)
                     bus->oam[i] = bus_read(bus, src + i);
-                goto done;
+                return;
             }
             if (bus->ppu) ppu_write(bus->ppu, addr, value);
-            goto done;
+            return;
         }
         if (addr == 0xFF00) {
             bus->io[0x00] = value & 0x30;
-            goto done;
+            return;
         }
         if (addr == 0xFF4D) {
             bus->io[0x4D] = value & 0x01;
-            goto done;
+            return;
         }
         if (addr == 0xFF02 && value == 0x81) {
             char c = (char)bus->io[0x01];
@@ -378,8 +377,6 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
         bus->ie = value;
     }
 
-done:
-    if (bus->timer) timer_step(bus->timer, 4);
 }
 
 size_t bus_load_rom(Bus* bus, const char* filepath)
