@@ -1,4 +1,4 @@
-# emu
+# gbemu
 
 A Game Boy / Game Boy Color emulator written in C.
 
@@ -22,9 +22,9 @@ This produces:
 
 | Artifact | Description |
 |---|---|
-| `emu-cli` | Executable |
-| `libemu.a` | Static library (frontend-agnostic) |
-| `libemu.so` | Shared library |
+| `gbemu-cli` | Executable |
+| `libgbemu.a` | Static library (frontend-agnostic) |
+| `libgbemu.so` | Shared library |
 
 A debug build with sanitizers:
 

@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <emscripten.h>
 
+Frontend* frontend_wasm_create(void);
+
 static CPU cpu;
 static Bus bus;
 static Timer timer;
