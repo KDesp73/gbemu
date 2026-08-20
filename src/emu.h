@@ -5,6 +5,40 @@
 //@author Konstantinos Despoinidis (KDesp73)
 //@license MIT
 
+//@const VERSION_MAJOR
+//@desc Major version number (incremented on breaking changes)
+#define VERSION_MAJOR 0
+
+//@const VERSION_MINOR
+//@desc Minor version number (incremented on new features, backward-compatible)
+#define VERSION_MINOR 1
+
+//@const VERSION_PATCH
+//@desc Patch version number (incremented on bug fixes)
+#define VERSION_PATCH 0
+
+#define STR(x) #x
+#define TOSTRING(x) STR(x)
+
+//@macro VERSION_STRING
+//@desc Human-readable version string in "MAJOR.MINOR.PATCH" format
+#define VERSION_STRING TOSTRING(VERSION_MAJOR) "." TOSTRING(VERSION_MINOR) "." TOSTRING(VERSION_PATCH)
+
+//@macro VERSION_HEX
+//@desc Compact numeric version: MAJOR * 10000 + MINOR * 100 + PATCH
+#define VERSION_HEX ((VERSION_MAJOR * 10000) + (VERSION_MINOR * 100) + VERSION_PATCH)
+
+//@func version
+//@desc Get the current library version as individual components
+//@param major Pointer to receive the major version (may be NULL)
+//@param minor Pointer to receive the minor version (may be NULL)
+//@param patch Pointer to receive the patch version (may be NULL)
+static inline void version(int* major, int* minor, int* patch) {
+    if (major) *major = VERSION_MAJOR;
+    if (minor) *minor = VERSION_MINOR;
+    if (patch) *patch = VERSION_PATCH;
+}
+
 
 #include <stdint.h>
 #include <stdbool.h>
