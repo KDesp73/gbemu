@@ -4,8 +4,8 @@ compile_commands.json
 
 *.o
 
-libemu*
-emu-cli
+libgbemu*
+gbemu-cli
 test-report*.txt
 
 roms
