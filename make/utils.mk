@@ -17,7 +17,7 @@ distclean: clean ## Perform a full clean, including backup and temporary files
 dist: $(SRC_FILES) ## Create a tarball of the project
 	@echo "[INFO] Creating a tarball for version $(VERSION)"
 	mkdir -p $(DIST_DIR)
-	tar -czvf $(DIST_DIR)/$(TARGET)-$(VERSION).tar.gz $(SRC_DIR) Makefile README.md
+	tar -czvf $(DIST_DIR)/$(TARGET).tar.gz $(SRC_DIR) $(FRONTEND_DIR) $(APPS_DIR) Makefile README.md
 
 .PHONY: compile_commands.json
 compile_commands.json: $(SRC_FILES) ## Generate compile_commands.json
