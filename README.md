@@ -121,36 +121,6 @@ Run the full test suite:
 ./scripts/test gb        # blargg only
 ```
 
-## What's Missing
-
-- **APU / Audio** — Length counters only; no sweep, envelope, or wave generation
-- **CGB support** — Color palettes, WRAM banking, double-speed mode registers
-- **M-cycle timing** — Instructions execute atomically; memory access timing within instructions is not dot-accurate
-- **OAM DMA / GDMA / HDMA** — No DMA transfer support
-- **OAM scan corruption** — Mode 2 OAM buffer not modeled
-- **MBC3 RTC clock** — Latch mechanism works but doesn't read system time
-- **Debugger** — No step-by-step or breakpoint support yet
-
-## Project Structure
-
-```
-src/
-  emu.h          All types and declarations (single header)
-  main.c         Entry point
-  loop.c         Main emulation loop (60 Hz frame pacing)
-  cpu.c          CPU initialization and step
-  instr.c        Full opcode implementation
-  bus.c          Memory bus, ROM loading, MBC1/2/3/5
-  ppu.c          PPU state machine and scanline renderer
-  timer.c        Timer hardware
-  apu.c          Audio (minimal)
-  inter.c        Interrupt handler
-  memops.c       fetch8/fetch16 helpers
-  frontend.h     Frontend interface (vtable)
-  frontend_sdl.c SDL3 display and input
-  opcodes.h      Auto-generated opcode tables
-```
-
 ## License
 
-MIT
+[MIT](./LICENSE)
