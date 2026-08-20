@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+# Run tests at full speed with no display
+export EMU_NOSLEEP=1
+export EMU_HEADLESS=1
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 EMU_CLI="$PROJECT_DIR/emu-cli"
@@ -69,10 +73,10 @@ if ! command -v gtimeout &>/dev/null; then
 fi
 
 # Build release version
-echo "Building emulator..."
+echo "Building emulator (headless)..."
 cd "$PROJECT_DIR"
 make clean 2>&1 > /dev/null
-make all type=RELEASE 2>&1 | tail -1
+make all type=RELEASE HEADLESS=1 2>&1 | tail -1
 echo ""
 
 # Build SameSuite ROMs if needed

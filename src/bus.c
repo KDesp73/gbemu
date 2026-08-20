@@ -213,70 +213,75 @@ static void mbc5_write(Bus* bus, uint16_t addr, uint8_t value)
 
 uint8_t bus_read(Bus *bus, uint16_t addr)
 {
-    if (addr < 0x8000) return bus_read_rom(bus, addr);
-    if (addr >= 0x8000 && addr < 0xA000) return bus->vram[addr - 0x8000];
-    if (addr >= 0xA000 && addr < 0xC000) return bus_read_sram(bus, addr);
-    if (addr >= 0xC000 && addr < 0xE000) return bus->wram[addr - 0xC000];
-    if (addr >= 0xE000 && addr < 0xFE00) return bus->wram[addr - 0xE000];
-    if (addr >= 0xFE00 && addr < 0xFEA0) return bus->oam[addr - 0xFE00];
-    if (addr >= 0xFF00 && addr < 0xFF80) {
-        // Joypad (0xFF00): bits 5-4 are select, bits 3-0 are button state
+    uint8_t result;
+
+    if (addr < 0x8000) {
+        result = bus_read_rom(bus, addr);
+    } else if (addr >= 0x8000 && addr < 0xA000) {
+        result = bus->vram[addr - 0x8000];
+    } else if (addr >= 0xA000 && addr < 0xC000) {
+        result = bus_read_sram(bus, addr);
+    } else if (addr >= 0xC000 && addr < 0xE000) {
+        result = bus->wram[addr - 0xC000];
+    } else if (addr >= 0xE000 && addr < 0xFE00) {
+        result = bus->wram[addr - 0xE000];
+    } else if (addr >= 0xFE00 && addr < 0xFEA0) {
+        result = bus->oam[addr - 0xFE00];
+    } else if (addr >= 0xFF00 && addr < 0xFF80) {
         if (addr == 0xFF00) {
             uint8_t select = bus->io[0x00] & 0x30;
-            uint8_t result = 0xC0 | select; // Bits 7-6 always 1
-
-            // When a select line is LOW, that group's buttons are active
-            if (!(select & 0x10)) // Direction keys selected (bit 4 = 0)
+            result = 0xC0 | select;
+            if (!(select & 0x10))
                 result |= bus->joypad_dpad & 0x0F;
-            if (!(select & 0x20)) // Face buttons selected (bit 5 = 0)
+            if (!(select & 0x20))
                 result |= bus->joypad_buttons & 0x0F;
-
-            return result;
+        } else if (addr >= 0xFF04 && addr <= 0xFF07 && bus->timer) {
+            result = timer_read(bus->timer, addr);
+        } else if (addr >= 0xFF10 && addr <= 0xFF3F && bus->apu) {
+            result = apu_read(bus->apu, addr);
+        } else if (addr >= 0xFF40 && addr <= 0xFF4B && bus->ppu) {
+            result = ppu_read(bus->ppu, addr);
+        } else if (addr == 0xFF4D) {
+            result = (bus->double_speed ? 0x80 : 0x00) | (bus->io[0x4D] & 0x01);
+        } else if (addr == 0xFF0F) {
+            result = bus->io[0x0F] | 0xE0;
+        } else {
+            result = bus->io[addr - 0xFF00];
         }
-        if (addr >= 0xFF04 && addr <= 0xFF07 && bus->timer)
-            return timer_read(bus->timer, addr);
-        if (addr >= 0xFF10 && addr <= 0xFF3F && bus->apu)
-            return apu_read(bus->apu, addr);
-        if (addr >= 0xFF40 && addr <= 0xFF4B && bus->ppu)
-            return ppu_read(bus->ppu, addr);
-        if (addr == 0xFF4D) // KEY1
-            return (bus->double_speed ? 0x80 : 0x00) | (bus->io[0x4D] & 0x01);
-        // IF (0xFF0F): bits 5-7 always read as 1
-        if (addr == 0xFF0F)
-            return bus->io[0x0F] | 0xE0;
-        return bus->io[addr - 0xFF00];
+    } else if (addr >= 0xFF80 && addr < 0xFFFF) {
+        result = bus->hram[addr - 0xFF80];
+    } else if (addr == 0xFFFF) {
+        result = bus->ie;
+    } else {
+        result = 0xFF;
     }
-    if (addr >= 0xFF80 && addr < 0xFFFF) return bus->hram[addr - 0xFF80];
-    if (addr == 0xFFFF) return bus->ie;
-    return 0xFF; // Unmapped reads return 0xFF
+
+    if (bus->timer) timer_step(bus->timer, 4);
+    return result;
 }
 
 void bus_write(Bus *bus, uint16_t addr, uint8_t value)
 {
     if (addr < 0x8000) {
-        // Cartridge ROM / MBC register region
         if (mbc_is_mbc1(bus->mbc_type)) mbc1_write(bus, addr, value);
         else if (mbc_is_mbc2(bus->mbc_type)) mbc2_write(bus, addr, value);
         else if (mbc_is_mbc3(bus->mbc_type)) mbc3_write(bus, addr, value);
         else if (mbc_is_mbc5(bus->mbc_type)) mbc5_write(bus, addr, value);
-        // ROM-only carts ignore writes
-        return;
-    } 
+        goto done;
+    }
     else if (addr >= 0x8000 && addr < 0xA000) {
         bus->vram[addr - 0x8000] = value;
-    } 
+    }
     else if (addr >= 0xA000 && addr < 0xC000) {
         if (mbc_is_mbc2(bus->mbc_type)) {
-            // Only the low nibble is stored; mirrors the whole 0xA000-0xBFFF
-            if (!bus->mbc2_ram_enable) return;
+            if (!bus->mbc2_ram_enable) goto done;
             bus->mbc2_ram[addr & 0x1FF] = value & 0x0F;
-            return;
+            goto done;
         }
-        if (mbc_is_mbc1(bus->mbc_type) && !bus->mbc1_ram_enable) return;
-        if (mbc_is_mbc3(bus->mbc_type) && !bus->mbc3_ram_enable) return;
-        if (mbc_is_mbc5(bus->mbc_type) && !bus->mbc5_ram_enable) return;
+        if (mbc_is_mbc1(bus->mbc_type) && !bus->mbc1_ram_enable) goto done;
+        if (mbc_is_mbc3(bus->mbc_type) && !bus->mbc3_ram_enable) goto done;
+        if (mbc_is_mbc5(bus->mbc_type) && !bus->mbc5_ram_enable) goto done;
 
-        // MBC3: write to RAM bank or RTC register
         if (mbc_is_mbc3(bus->mbc_type)) {
             if (bus->mbc3_ram_bank <= 3) {
                 uint16_t bank = bus->mbc3_ram_bank & (bus->sram_banks - 1);
@@ -293,7 +298,7 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
                                break;
                 }
             }
-            return;
+            goto done;
         }
 
         uint16_t bank = 0;
@@ -301,8 +306,6 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
         if (mbc_is_mbc5(bus->mbc_type)) bank = bus->mbc5_ram_bank;
         bank &= bus->sram_banks - 1;
         bus->sram[bank * 0x2000 + (addr - 0xA000)] = value;
-        // Blargg and other test ROMs buffer serial output in SRAM at 0xA004+
-        // Intercept printable chars to stdout when no serial port is used
         if (addr >= 0xA004) {
             static FILE* ftrace = NULL;
             if (!ftrace) {
@@ -317,84 +320,66 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
                 fflush(stdout);
             }
         }
-    } 
+    }
     else if (addr >= 0xC000 && addr < 0xE000) {
         bus->wram[addr - 0xC000] = value;
-    } 
+    }
     else if (addr >= 0xE000 && addr < 0xFE00) {
-        // Echo RAM: Standard Game Boy mirrors writes to WRAM (addr - 0x2000)
         bus->wram[addr - 0xE000] = value;
-    } 
+    }
     else if (addr >= 0xFE00 && addr < 0xFEA0) {
         bus->oam[addr - 0xFE00] = value;
-    } 
+    }
     else if (addr >= 0xFEA0 && addr < 0xFF00) {
-        // Unusable memory area (Not usable on real hardware)
-        return;
-    } 
+        goto done;
+    }
     else if (addr >= 0xFF00 && addr < 0xFF80) {
-        // ----------------------------------------------------
-        // I/O Registers Region (0xFF00 - 0xFF7F)
-        // ----------------------------------------------------
-        
-        // Route to Timer hardware (0xFF04-0xFF07)
         if (addr >= 0xFF04 && addr <= 0xFF07) {
             if (bus->timer) timer_write(bus->timer, addr, value);
-            return;
+            goto done;
         }
-
-        // Route to Sound hardware (0xFF10-0xFF3F)
         if (addr >= 0xFF10 && addr <= 0xFF3F) {
             if (bus->apu) apu_write(bus->apu, addr, value);
-            return;
+            goto done;
         }
-
-        // Route to PPU hardware (0xFF40-0xFF4B)
         if (addr >= 0xFF40 && addr <= 0xFF4B) {
-            // OAM DMA: writing to 0xFF46 copies 160 bytes from 0xXX00-0xXX9F to OAM
             if (addr == 0xFF46) {
                 uint16_t src = (uint16_t)value << 8;
                 for (int i = 0; i < 0xA0; i++)
                     bus->oam[i] = bus_read(bus, src + i);
-                return;
+                goto done;
             }
             if (bus->ppu) ppu_write(bus->ppu, addr, value);
-            return;
+            goto done;
         }
-
-        // Joypad (0xFF00): only bits 5-4 are writable (select lines)
         if (addr == 0xFF00) {
             bus->io[0x00] = value & 0x30;
-            return;
+            goto done;
         }
-
-        // KEY1 (0xFF4D): only bit 0 (speed switch request) is writable
         if (addr == 0xFF4D) {
             bus->io[0x4D] = value & 0x01;
-            return;
+            goto done;
         }
-
-        // Serial Port Intercept for Blargg's Test ROMs
         if (addr == 0xFF02 && value == 0x81) {
-            char c = (char)bus->io[0x01]; // Read character from SB (0xFF01)
+            char c = (char)bus->io[0x01];
             putchar(c);
-            fflush(stdout); // Instantly output to console
-            // Clear bit 7 (transfer complete) and bit 0 (clock source) immediately
+            fflush(stdout);
             bus->io[addr - 0xFF00] = 0x01;
         } else if (addr == 0xFF0F) {
-            // IF: only bits 0-4 are writable
             bus->io[0x0F] = value & 0x1F;
         } else {
-            // Store value in I/O array
             bus->io[addr - 0xFF00] = value;
         }
-    } 
+    }
     else if (addr >= 0xFF80 && addr < 0xFFFF) {
         bus->hram[addr - 0xFF80] = value;
-    } 
+    }
     else if (addr == 0xFFFF) {
         bus->ie = value;
     }
+
+done:
+    if (bus->timer) timer_step(bus->timer, 4);
 }
 
 size_t bus_load_rom(Bus* bus, const char* filepath)

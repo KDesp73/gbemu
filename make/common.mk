@@ -1,7 +1,13 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -Wall -Iinclude -fPIC $(shell PKG_CONFIG_PATH=/opt/homebrew/lib/pkgconfig pkg-config --cflags sdl3)
-LDFLAGS = $(shell PKG_CONFIG_PATH=/opt/homebrew/lib/pkgconfig pkg-config --libs sdl3)
+CFLAGS = -Wall -Iinclude -fPIC
+LDFLAGS =
+
+# Headless mode: skip SDL entirely
+ifneq ($(HEADLESS),1)
+    CFLAGS  += $(shell PKG_CONFIG_PATH=/opt/homebrew/lib/pkgconfig pkg-config --cflags sdl3)
+    LDFLAGS += $(shell PKG_CONFIG_PATH=/opt/homebrew/lib/pkgconfig pkg-config --libs sdl3)
+endif
 
 # Directories
 SRC_DIR = src
@@ -32,6 +38,12 @@ else
 endif
 
 # Source and object files
-SRC_FILES := $(shell find $(SRC_DIR) -name '*.c' ! -name 'main.c' ! -name 'frontend_sdl.c' ! -name 'main_wasm.c' ! -name 'frontend_wasm.c')
+SRC_FILES := $(shell find $(SRC_DIR) -name '*.c' ! -name 'main.c' ! -name 'frontend_sdl.c' ! -name 'frontend_headless.c' ! -name 'main_wasm.c' ! -name 'frontend_wasm.c')
 OBJ_FILES = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRC_FILES))
-FRONTEND_SRC = $(SRC_DIR)/frontend_sdl.c
+
+ifeq ($(HEADLESS),1)
+    CFLAGS  += -DEMU_HEADLESS
+    FRONTEND_SRC = $(SRC_DIR)/frontend_headless.c
+else
+    FRONTEND_SRC = $(SRC_DIR)/frontend_sdl.c
+endif

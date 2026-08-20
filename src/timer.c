@@ -15,6 +15,7 @@ void timer_init(Timer* timer)
     timer->tma = 0x00;
     timer->tac = 0x00; // Timer disabled; 0xF8 mask applied on read
     timer->interrupt_requested = false;
+    timer->tima_reload_pending = false;
 }
 
 // Map TAC bits 0-1 to the bit index of the internal 16-bit counter
@@ -42,6 +43,13 @@ static bool get_timer_bit(const Timer* timer)
 void timer_step(Timer* timer, int cycles)
 {
     for (int i = 0; i < cycles; i++) {
+        // If TIMA overflowed on the previous cycle, reload from TMA now
+        // (1-cycle delay before reload, per mooneye timer/tima_reload)
+        if (timer->tima_reload_pending) {
+            timer->tima = timer->tma;
+            timer->tima_reload_pending = false;
+        }
+
         bool bit_before = get_timer_bit(timer);
 
         timer->internal_counter++;
@@ -51,8 +59,9 @@ void timer_step(Timer* timer, int cycles)
         // Falling edge detector: when the clock bit goes from 1 to 0, TIMA increments!
         if (bit_before && !bit_after) {
             if (timer->tima == 0xFF) {
-                timer->tima = timer->tma;             // Reload modulo
-                timer->interrupt_requested = true;    // Request TIMER interrupt (bit 2 of IF)
+                timer->tima = 0x00;                    // TIMA becomes 0 for one cycle
+                timer->tima_reload_pending = true;     // Reload from TMA next cycle
+                timer->interrupt_requested = true;     // Request TIMER interrupt (bit 2 of IF)
             } else {
                 timer->tima++;
             }
@@ -80,10 +89,29 @@ void timer_write(Timer* timer, uint16_t addr, uint8_t value)
 {
     switch (addr) {
         case 0xFF04: // Writing ANY value to DIV resets internal counter to 0!
-            timer->internal_counter = 0;
+            // If the selected bit was 1 before reset, that constitutes a
+            // falling edge and should increment TIMA (mooneye div_write
+            // and div_trigger tests).
+            if (timer->tac & 0x04) {
+                bool bit_before = get_timer_bit(timer);
+                timer->internal_counter = 0;
+                bool bit_after = get_timer_bit(timer);
+                if (bit_before && !bit_after) {
+                    if (timer->tima == 0xFF) {
+                        timer->tima = 0x00;
+                        timer->tima_reload_pending = true;
+                        timer->interrupt_requested = true;
+                    } else {
+                        timer->tima++;
+                    }
+                }
+            } else {
+                timer->internal_counter = 0;
+            }
             break;
         case 0xFF05: // TIMA
             timer->tima = value;
+            timer->tima_reload_pending = false; // Writing TIMA cancels pending reload
             break;
         case 0xFF06: // TMA
             timer->tma = value;

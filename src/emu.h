@@ -222,6 +222,7 @@ typedef struct Timer {
     uint8_t tac;  // 0xFF07
 
     bool interrupt_requested; // Set to true when TIMA overflows
+    bool tima_reload_pending; // TIMA overflow reload is delayed by 1 cycle
 } Timer;
 
 //@func timer_init

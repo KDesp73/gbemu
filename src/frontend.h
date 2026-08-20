@@ -18,6 +18,7 @@ struct Frontend {
 };
 
 Frontend* frontend_sdl_create(APU* apu);
+Frontend* frontend_headless_create(void);
 Frontend* frontend_wasm_create(void);
 
 #endif // FRONTEND_H

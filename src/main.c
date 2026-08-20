@@ -1,4 +1,5 @@
 #include "emu.h"
+#include <stdlib.h>
 
 int main(int argc, char** argv)
 {
@@ -36,7 +37,13 @@ int main(int argc, char** argv)
     if (bus.rom[0x143] != 0x80 && bus.rom[0x143] != 0xC0)
         cpu.a = 0x01; // DMG mode
 
-    Frontend* fe = frontend_sdl_create(&apu);
+    Frontend* fe;
+#ifdef EMU_HEADLESS
+    fe = frontend_headless_create();
+#else
+    fe = frontend_sdl_create(&apu);
+#endif
+
     if (!fe->init(fe, SCREEN_WIDTH, SCREEN_HEIGHT)) return 1;
 
     loop(&cpu, &bus, &timer, &ppu, &apu, fe);
