@@ -1,6 +1,8 @@
 #include "emu.h"
 #include "opcodes.h"
 #include <stdint.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 
 static bool instr_8bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
@@ -127,8 +129,10 @@ static bool instr_8bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         // DEC [HL]
         // Cycles: 3 | Bytes: 1 | Flags: Z 1 H -
         case OP_DEC_HL_IND: {
+            machine_tick(bus, 4);
             uint8_t value = bus_read(bus, cpu->hl);
             uint8_t result = value - 1;
+            machine_tick(bus, 4);
             bus_write(bus, cpu->hl, result);
             flag_set(cpu, FLAG_Z, result == 0);
             flag_set(cpu, FLAG_N, true);
@@ -158,8 +162,10 @@ static bool instr_8bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         // INC [HL]
         // Cycles: 3 | Bytes: 1 | Flags: Z 0 H -
         case OP_INC_HL_IND: {
+            machine_tick(bus, 4);
             uint8_t value = bus_read(bus, cpu->hl);
             uint8_t result = value + 1;
+            machine_tick(bus, 4);
             bus_write(bus, cpu->hl, result);
             flag_set(cpu, FLAG_Z, result == 0);
             flag_set(cpu, FLAG_N, false);
@@ -347,6 +353,7 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_LD_HL_IND_A: {
             uint8_t src = opcode & 0x07;
             uint8_t value = get_reg_by_index(cpu, bus, src);
+            machine_tick(bus, 4);
             bus_write(bus, cpu->hl, value);
             break;
         }
@@ -355,6 +362,7 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // Cycles: 3 | Bytes: 2 | Flags: -
         case OP_LD_HL_IND_n8: {
             uint8_t value = fetch8(cpu, bus);
+            machine_tick(bus, 4);
             bus_write(bus, cpu->hl, value);
             break;
         }
@@ -369,6 +377,7 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_LD_L_HL_IND:
         case OP_LD_A_HL_IND: {
             uint8_t dest = (opcode >> 3) & 0x07;
+            machine_tick(bus, 4);
             uint8_t value = bus_read(bus, cpu->hl);
             set_reg_by_index(cpu, bus, dest, value);
             break;
@@ -377,10 +386,12 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // LD [r16], A
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_LD_BC_IND_A: {
+            machine_tick(bus, 4);
             bus_write(bus, cpu->bc, cpu->a);
             break;
         }
         case OP_LD_DE_IND_A: {
+            machine_tick(bus, 4);
             bus_write(bus, cpu->de, cpu->a);
             break;
         }
@@ -389,6 +400,7 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // Cycles: 4 | Bytes: 3 | Flags: -
         case OP_LD_a16_IND_A: {
             uint16_t addr = fetch16(cpu, bus);
+            machine_tick(bus, 4);
             bus_write(bus, addr, cpu->a);
             break;
         }
@@ -397,6 +409,7 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // Cycles: 3 | Bytes: 2 | Flags: -
         case OP_LDH_a8_IND_A: {
             uint8_t a8 = fetch8(cpu, bus);
+            machine_tick(bus, 4);
             bus_write(bus, 0xFF00 + a8, cpu->a);
             break;
         }
@@ -404,6 +417,7 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // LDH [C], A
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_LDH_C_IND_A: {
+            machine_tick(bus, 4);
             bus_write(bus, 0xFF00 + cpu->c, cpu->a);
             break;
         }
@@ -411,10 +425,12 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // LD A, [r16]
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_LD_A_BC_IND: {
+            machine_tick(bus, 4);
             cpu->a = bus_read(bus, cpu->bc);
             break;
         }
         case OP_LD_A_DE_IND: {
+            machine_tick(bus, 4);
             cpu->a = bus_read(bus, cpu->de);
             break;
         }
@@ -423,6 +439,7 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // Cycles: 4 | Bytes: 3 | Flags: -
         case OP_LD_A_a16_IND: {
             uint16_t addr = fetch16(cpu, bus);
+            machine_tick(bus, 4);
             cpu->a = bus_read(bus, addr);
             break;
         }
@@ -431,6 +448,7 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // Cycles: 3 | Bytes: 2 | Flags: -
         case OP_LDH_A_a8_IND: {
             uint8_t a8 = fetch8(cpu, bus);
+            machine_tick(bus, 4);
             cpu->a = bus_read(bus, 0xFF00 + a8);
             break;
         }
@@ -438,6 +456,7 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // LDH A, [C]
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_LDH_A_C_IND: {
+            machine_tick(bus, 4);
             cpu->a = bus_read(bus, 0xFF00 + cpu->c);
             break;
         }
@@ -445,6 +464,7 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // LD [HLI], A
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_LD_HL_INC_A: {
+            machine_tick(bus, 4);
             bus_write(bus, cpu->hl, cpu->a);
             cpu->hl++;
             break;
@@ -453,6 +473,7 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // LD [HLD], A
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_LD_HL_DEC_A: {
+            machine_tick(bus, 4);
             bus_write(bus, cpu->hl, cpu->a);
             cpu->hl--;
             break;
@@ -461,6 +482,7 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // LD A, [HLI]
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_LD_A_HL_INC: {
+            machine_tick(bus, 4);
             cpu->a = bus_read(bus, cpu->hl);
             cpu->hl++;
             break;
@@ -469,6 +491,7 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // LD A, [HLD]
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_LD_A_HL_DEC: {
+            machine_tick(bus, 4);
             cpu->a = bus_read(bus, cpu->hl);
             cpu->hl--;
             break;
@@ -478,7 +501,9 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // Cycles: 5 | Bytes: 3 | Flags: -
         case OP_LD_a16_IND_SP: {
             uint16_t addr = fetch16(cpu, bus);
+            machine_tick(bus, 4);
             bus_write(bus, addr, cpu->sp & 0xFF);
+            machine_tick(bus, 4);
             bus_write(bus, addr + 1, cpu->sp >> 8);
             break;
         }
@@ -487,6 +512,7 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // Cycles: 3 | Bytes: 2 | Flags: 0 0 H C
         case OP_LD_HL_SP_e8: {
             int8_t e8 = (int8_t)fetch8(cpu, bus);
+            machine_tick(bus, 4); // internal cycle
             uint16_t result = cpu->sp + e8;
             flag_set(cpu, FLAG_Z, false);
             flag_set(cpu, FLAG_N, false);
@@ -499,6 +525,7 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // LD SP, HL
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_LD_SP_HL: {
+            machine_tick(bus, 4); // internal cycle
             cpu->sp = cpu->hl;
             break;
         }
@@ -515,6 +542,7 @@ static bool instr_16bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         // ADD HL, r16
         // Cycles: 2 | Bytes: 1 | Flags: - 0 H C
         case OP_ADD_HL_BC: {
+            machine_tick(bus, 4); // internal cycle
             uint32_t result = cpu->hl + cpu->bc;
             flag_set(cpu, FLAG_N, false);
             flag_set(cpu, FLAG_H, ((cpu->hl & 0x0FFF) + (cpu->bc & 0x0FFF)) > 0x0FFF);
@@ -523,6 +551,7 @@ static bool instr_16bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
             break;
         }
         case OP_ADD_HL_DE: {
+            machine_tick(bus, 4); // internal cycle
             uint32_t result = cpu->hl + cpu->de;
             flag_set(cpu, FLAG_N, false);
             flag_set(cpu, FLAG_H, ((cpu->hl & 0x0FFF) + (cpu->de & 0x0FFF)) > 0x0FFF);
@@ -531,6 +560,7 @@ static bool instr_16bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
             break;
         }
         case OP_ADD_HL_HL: {
+            machine_tick(bus, 4); // internal cycle
             uint32_t result = cpu->hl + cpu->hl;
             flag_set(cpu, FLAG_N, false);
             flag_set(cpu, FLAG_H, ((cpu->hl & 0x0FFF) + (cpu->hl & 0x0FFF)) > 0x0FFF);
@@ -542,6 +572,7 @@ static bool instr_16bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         // ADD HL, SP
         // Cycles: 2 | Bytes: 1 | Flags: - 0 H C
         case OP_ADD_HL_SP: {
+            machine_tick(bus, 4); // internal cycle
             uint32_t result = cpu->hl + cpu->sp;
             flag_set(cpu, FLAG_N, false);
             flag_set(cpu, FLAG_H, ((cpu->hl & 0x0FFF) + (cpu->sp & 0x0FFF)) > 0x0FFF);
@@ -554,6 +585,8 @@ static bool instr_16bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         // Cycles: 4 | Bytes: 2 | Flags: 0 0 H C
         case OP_ADD_SP_e8: {
             int8_t e8 = (int8_t)fetch8(cpu, bus);
+            machine_tick(bus, 4); // two internal cycles
+            machine_tick(bus, 4);
             flag_set(cpu, FLAG_Z, false);
             flag_set(cpu, FLAG_N, false);
             flag_set(cpu, FLAG_H, ((cpu->sp & 0x0F) + (e8 & 0x0F)) > 0x0F);
@@ -565,14 +598,17 @@ static bool instr_16bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         // DEC r16
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_DEC_BC: {
+            machine_tick(bus, 4); // internal cycle
             cpu->bc--;
             break;
         }
         case OP_DEC_DE: {
+            machine_tick(bus, 4); // internal cycle
             cpu->de--;
             break;
         }
         case OP_DEC_HL: {
+            machine_tick(bus, 4); // internal cycle
             cpu->hl--;
             break;
         }
@@ -580,6 +616,7 @@ static bool instr_16bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         // DEC SP
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_DEC_SP: {
+            machine_tick(bus, 4); // internal cycle
             cpu->sp--;
             break;
         }
@@ -587,14 +624,17 @@ static bool instr_16bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         // INC r16
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_INC_BC: {
+            machine_tick(bus, 4); // internal cycle
             cpu->bc++;
             break;
         }
         case OP_INC_DE: {
+            machine_tick(bus, 4); // internal cycle
             cpu->de++;
             break;
         }
         case OP_INC_HL: {
+            machine_tick(bus, 4); // internal cycle
             cpu->hl++;
             break;
         }
@@ -602,6 +642,7 @@ static bool instr_16bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         // INC SP
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_INC_SP: {
+            machine_tick(bus, 4); // internal cycle
             cpu->sp++;
             break;
         }
@@ -798,6 +839,7 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         // Cycles: 4 | Bytes: 3 | Flags: -
         case OP_JP_a16: {
             cpu->pc = fetch16(cpu, bus);
+            machine_tick(bus, 4); // internal cycle
             break;
         }
 
@@ -805,22 +847,34 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         // Cycles: 4 taken / 3 untaken | Bytes: 3 | Flags: -
         case OP_JP_NZ_a16: {
             uint16_t addr = fetch16(cpu, bus);
-            if (!flag_get(cpu, FLAG_Z)) cpu->pc = addr;
+            if (!flag_get(cpu, FLAG_Z)) {
+                machine_tick(bus, 4); // internal cycle when taken
+                cpu->pc = addr;
+            }
             break;
         }
         case OP_JP_Z_a16: {
             uint16_t addr = fetch16(cpu, bus);
-            if (flag_get(cpu, FLAG_Z)) cpu->pc = addr;
+            if (flag_get(cpu, FLAG_Z)) {
+                machine_tick(bus, 4); // internal cycle when taken
+                cpu->pc = addr;
+            }
             break;
         }
         case OP_JP_NC_a16: {
             uint16_t addr = fetch16(cpu, bus);
-            if (!flag_get(cpu, FLAG_C)) cpu->pc = addr;
+            if (!flag_get(cpu, FLAG_C)) {
+                machine_tick(bus, 4); // internal cycle when taken
+                cpu->pc = addr;
+            }
             break;
         }
         case OP_JP_C_a16: {
             uint16_t addr = fetch16(cpu, bus);
-            if (flag_get(cpu, FLAG_C)) cpu->pc = addr;
+            if (flag_get(cpu, FLAG_C)) {
+                machine_tick(bus, 4); // internal cycle when taken
+                cpu->pc = addr;
+            }
             break;
         }
 
@@ -835,6 +889,7 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         // Cycles: 3 | Bytes: 2 | Flags: -
         case OP_JR_e8: {
             int8_t e8 = (int8_t)fetch8(cpu, bus);
+            machine_tick(bus, 4); // internal cycle
             cpu->pc += e8;
             break;
         }
@@ -843,22 +898,34 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         // Cycles: 3 taken / 2 untaken | Bytes: 2 | Flags: -
         case OP_JR_NZ_e8: {
             int8_t e8 = (int8_t)fetch8(cpu, bus);
-            if (!flag_get(cpu, FLAG_Z)) cpu->pc += e8;
+            if (!flag_get(cpu, FLAG_Z)) {
+                machine_tick(bus, 4); // internal cycle when taken
+                cpu->pc += e8;
+            }
             break;
         }
         case OP_JR_Z_e8: {
             int8_t e8 = (int8_t)fetch8(cpu, bus);
-            if (flag_get(cpu, FLAG_Z)) cpu->pc += e8;
+            if (flag_get(cpu, FLAG_Z)) {
+                machine_tick(bus, 4); // internal cycle when taken
+                cpu->pc += e8;
+            }
             break;
         }
         case OP_JR_NC_e8: {
             int8_t e8 = (int8_t)fetch8(cpu, bus);
-            if (!flag_get(cpu, FLAG_C)) cpu->pc += e8;
+            if (!flag_get(cpu, FLAG_C)) {
+                machine_tick(bus, 4); // internal cycle when taken
+                cpu->pc += e8;
+            }
             break;
         }
         case OP_JR_C_e8: {
             int8_t e8 = (int8_t)fetch8(cpu, bus);
-            if (flag_get(cpu, FLAG_C)) cpu->pc += e8;
+            if (flag_get(cpu, FLAG_C)) {
+                machine_tick(bus, 4); // internal cycle when taken
+                cpu->pc += e8;
+            }
             break;
         }
 
@@ -866,9 +933,12 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         // Cycles: 6 | Bytes: 3 | Flags: -
         case OP_CALL_a16: {
             uint16_t addr = fetch16(cpu, bus);
+            machine_tick(bus, 4); // internal cycle
             cpu->sp -= 2;
+            machine_tick(bus, 4);
+            bus_write(bus, cpu->sp + 1, cpu->pc >> 8); // high byte first
+            machine_tick(bus, 4);
             bus_write(bus, cpu->sp, cpu->pc & 0xFF);
-            bus_write(bus, cpu->sp + 1, cpu->pc >> 8);
             cpu->pc = addr;
             break;
         }
@@ -878,9 +948,12 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_CALL_NZ_a16: {
             uint16_t addr = fetch16(cpu, bus);
             if (!flag_get(cpu, FLAG_Z)) {
+                machine_tick(bus, 4); // internal cycle when taken
                 cpu->sp -= 2;
+                machine_tick(bus, 4);
+                bus_write(bus, cpu->sp + 1, cpu->pc >> 8); // high byte first
+                machine_tick(bus, 4);
                 bus_write(bus, cpu->sp, cpu->pc & 0xFF);
-                bus_write(bus, cpu->sp + 1, cpu->pc >> 8);
                 cpu->pc = addr;
             }
             break;
@@ -888,9 +961,12 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_CALL_Z_a16: {
             uint16_t addr = fetch16(cpu, bus);
             if (flag_get(cpu, FLAG_Z)) {
+                machine_tick(bus, 4); // internal cycle when taken
                 cpu->sp -= 2;
+                machine_tick(bus, 4);
+                bus_write(bus, cpu->sp + 1, cpu->pc >> 8); // high byte first
+                machine_tick(bus, 4);
                 bus_write(bus, cpu->sp, cpu->pc & 0xFF);
-                bus_write(bus, cpu->sp + 1, cpu->pc >> 8);
                 cpu->pc = addr;
             }
             break;
@@ -898,9 +974,12 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_CALL_NC_a16: {
             uint16_t addr = fetch16(cpu, bus);
             if (!flag_get(cpu, FLAG_C)) {
+                machine_tick(bus, 4); // internal cycle when taken
                 cpu->sp -= 2;
+                machine_tick(bus, 4);
+                bus_write(bus, cpu->sp + 1, cpu->pc >> 8); // high byte first
+                machine_tick(bus, 4);
                 bus_write(bus, cpu->sp, cpu->pc & 0xFF);
-                bus_write(bus, cpu->sp + 1, cpu->pc >> 8);
                 cpu->pc = addr;
             }
             break;
@@ -908,9 +987,12 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_CALL_C_a16: {
             uint16_t addr = fetch16(cpu, bus);
             if (flag_get(cpu, FLAG_C)) {
+                machine_tick(bus, 4); // internal cycle when taken
                 cpu->sp -= 2;
+                machine_tick(bus, 4);
+                bus_write(bus, cpu->sp + 1, cpu->pc >> 8); // high byte first
+                machine_tick(bus, 4);
                 bus_write(bus, cpu->sp, cpu->pc & 0xFF);
-                bus_write(bus, cpu->sp + 1, cpu->pc >> 8);
                 cpu->pc = addr;
             }
             break;
@@ -919,10 +1001,13 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         // RET
         // Cycles: 4 | Bytes: 1 | Flags: -
         case OP_RET: {
+            machine_tick(bus, 4);
             uint8_t lo = bus_read(bus, cpu->sp);
+            machine_tick(bus, 4);
             uint8_t hi = bus_read(bus, cpu->sp + 1);
             cpu->sp += 2;
             cpu->pc = (hi << 8) | lo;
+            machine_tick(bus, 4); // internal cycle
             break;
         }
 
@@ -930,37 +1015,61 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         // Cycles: 5 taken / 2 untaken | Bytes: 1 | Flags: -
         case OP_RET_NZ: {
             if (!flag_get(cpu, FLAG_Z)) {
+                machine_tick(bus, 4); // internal cycle when taken
+                machine_tick(bus, 4);
                 uint8_t lo = bus_read(bus, cpu->sp);
+                machine_tick(bus, 4);
                 uint8_t hi = bus_read(bus, cpu->sp + 1);
                 cpu->sp += 2;
                 cpu->pc = (hi << 8) | lo;
+                machine_tick(bus, 4); // internal cycle
+            } else {
+                machine_tick(bus, 4); // untaken: fetch + internal cycle
             }
             break;
         }
         case OP_RET_Z: {
             if (flag_get(cpu, FLAG_Z)) {
+                machine_tick(bus, 4); // internal cycle when taken
+                machine_tick(bus, 4);
                 uint8_t lo = bus_read(bus, cpu->sp);
+                machine_tick(bus, 4);
                 uint8_t hi = bus_read(bus, cpu->sp + 1);
                 cpu->sp += 2;
                 cpu->pc = (hi << 8) | lo;
+                machine_tick(bus, 4); // internal cycle
+            } else {
+                machine_tick(bus, 4); // untaken: fetch + internal cycle
             }
             break;
         }
         case OP_RET_NC: {
             if (!flag_get(cpu, FLAG_C)) {
+                machine_tick(bus, 4); // internal cycle when taken
+                machine_tick(bus, 4);
                 uint8_t lo = bus_read(bus, cpu->sp);
+                machine_tick(bus, 4);
                 uint8_t hi = bus_read(bus, cpu->sp + 1);
                 cpu->sp += 2;
                 cpu->pc = (hi << 8) | lo;
+                machine_tick(bus, 4); // internal cycle
+            } else {
+                machine_tick(bus, 4); // untaken: fetch + internal cycle
             }
             break;
         }
         case OP_RET_C: {
             if (flag_get(cpu, FLAG_C)) {
+                machine_tick(bus, 4); // internal cycle when taken
+                machine_tick(bus, 4);
                 uint8_t lo = bus_read(bus, cpu->sp);
+                machine_tick(bus, 4);
                 uint8_t hi = bus_read(bus, cpu->sp + 1);
                 cpu->sp += 2;
                 cpu->pc = (hi << 8) | lo;
+                machine_tick(bus, 4); // internal cycle
+            } else {
+                machine_tick(bus, 4); // untaken: fetch + internal cycle
             }
             break;
         }
@@ -968,11 +1077,14 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         // RETI
         // Cycles: 4 | Bytes: 1 | Flags: -
         case OP_RETI: {
+            machine_tick(bus, 4);
             uint8_t lo = bus_read(bus, cpu->sp);
+            machine_tick(bus, 4);
             uint8_t hi = bus_read(bus, cpu->sp + 1);
             cpu->sp += 2;
             cpu->pc = (hi << 8) | lo;
-            cpu->ime_scheduled = true; // RETI enables IME after 1 instruction (like EI)
+            machine_tick(bus, 4); // internal cycle
+            cpu->ime = true; // RETI enables IME immediately (unlike EI)
             break;
         }
 
@@ -987,9 +1099,12 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_RST_S30:
         case OP_RST_S38: {
             uint16_t vec = opcode & 0x38;
+            machine_tick(bus, 4); // internal cycle
             cpu->sp -= 2;
+            machine_tick(bus, 4);
+            bus_write(bus, cpu->sp + 1, cpu->pc >> 8); // high byte first
+            machine_tick(bus, 4);
             bus_write(bus, cpu->sp, cpu->pc & 0xFF);
-            bus_write(bus, cpu->sp + 1, cpu->pc >> 8);
             cpu->pc = vec;
             break;
         }
@@ -1033,25 +1148,33 @@ static bool instr_stack(CPU* cpu, Bus* bus, uint8_t opcode)
         // POP r16
         // Cycles: 3 | Bytes: 1 | Flags: - (POP AF sets Z N H C)
         case OP_POP_BC: {
+            machine_tick(bus, 4);
             uint8_t lo = bus_read(bus, cpu->sp++);
+            machine_tick(bus, 4);
             uint8_t hi = bus_read(bus, cpu->sp++);
             cpu->bc = (hi << 8) | lo;
             break;
         }
         case OP_POP_DE: {
+            machine_tick(bus, 4);
             uint8_t lo = bus_read(bus, cpu->sp++);
+            machine_tick(bus, 4);
             uint8_t hi = bus_read(bus, cpu->sp++);
             cpu->de = (hi << 8) | lo;
             break;
         }
         case OP_POP_HL: {
+            machine_tick(bus, 4);
             uint8_t lo = bus_read(bus, cpu->sp++);
+            machine_tick(bus, 4);
             uint8_t hi = bus_read(bus, cpu->sp++);
             cpu->hl = (hi << 8) | lo;
             break;
         }
         case OP_POP_AF: {
+            machine_tick(bus, 4);
             uint8_t lo = bus_read(bus, cpu->sp++);
+            machine_tick(bus, 4);
             uint8_t hi = bus_read(bus, cpu->sp++);
             cpu->af = (hi << 8) | (lo & 0xF0);
             break;
@@ -1060,27 +1183,39 @@ static bool instr_stack(CPU* cpu, Bus* bus, uint8_t opcode)
         // PUSH r16
         // Cycles: 4 | Bytes: 1 | Flags: -
         case OP_PUSH_BC: {
+            machine_tick(bus, 4); // internal cycle
             cpu->sp -= 2;
+            machine_tick(bus, 4);
+            bus_write(bus, cpu->sp + 1, cpu->bc >> 8); // high byte first
+            machine_tick(bus, 4);
             bus_write(bus, cpu->sp, cpu->bc & 0xFF);
-            bus_write(bus, cpu->sp + 1, cpu->bc >> 8);
             break;
         }
         case OP_PUSH_DE: {
+            machine_tick(bus, 4); // internal cycle
             cpu->sp -= 2;
+            machine_tick(bus, 4);
+            bus_write(bus, cpu->sp + 1, cpu->de >> 8); // high byte first
+            machine_tick(bus, 4);
             bus_write(bus, cpu->sp, cpu->de & 0xFF);
-            bus_write(bus, cpu->sp + 1, cpu->de >> 8);
             break;
         }
         case OP_PUSH_HL: {
+            machine_tick(bus, 4); // internal cycle
             cpu->sp -= 2;
+            machine_tick(bus, 4);
+            bus_write(bus, cpu->sp + 1, cpu->hl >> 8); // high byte first
+            machine_tick(bus, 4);
             bus_write(bus, cpu->sp, cpu->hl & 0xFF);
-            bus_write(bus, cpu->sp + 1, cpu->hl >> 8);
             break;
         }
         case OP_PUSH_AF: {
+            machine_tick(bus, 4); // internal cycle
             cpu->sp -= 2;
+            machine_tick(bus, 4);
+            bus_write(bus, cpu->sp + 1, cpu->af >> 8); // high byte first
+            machine_tick(bus, 4);
             bus_write(bus, cpu->sp, cpu->af & 0xFF);
-            bus_write(bus, cpu->sp + 1, cpu->af >> 8);
             break;
         }
 
@@ -1202,7 +1337,7 @@ static instrfn instr_handlers[] = {
 
 static int instr_cb(CPU* cpu, Bus* bus)
 {
-    uint8_t cb_opcode = bus_read(bus, cpu->pc++);
+    uint8_t cb_opcode = fetch8(cpu, bus); // CB prefix byte occupies one M-cycle
     int cycles = get_cb_opcode_cycles(cb_opcode);
 
     uint8_t reg_idx = cb_opcode & 0x07;

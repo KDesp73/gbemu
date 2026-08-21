@@ -226,7 +226,9 @@ uint8_t bus_read(Bus *bus, uint16_t addr)
     } else if (addr >= 0xE000 && addr < 0xFE00) {
         result = bus->wram[addr - 0xE000];
     } else if (addr >= 0xFE00 && addr < 0xFEA0) {
-        result = bus->oam[addr - 0xFE00];
+        // OAM is inaccessible while an OAM DMA transfer copies bytes
+        // (but still accessible during the 2-cycle start delay)
+        result = (bus->dma_active && bus->dma_start_delay == 0) ? 0xFF : bus->oam[addr - 0xFE00];
     } else if (addr >= 0xFF00 && addr < 0xFF80) {
         if (addr == 0xFF00) {
             uint8_t select = bus->io[0x00] & 0x30;
@@ -327,7 +329,8 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
         bus->wram[addr - 0xE000] = value;
     }
     else if (addr >= 0xFE00 && addr < 0xFEA0) {
-        bus->oam[addr - 0xFE00] = value;
+        // OAM writes are ignored while an OAM DMA transfer copies bytes
+        if (!(bus->dma_active && bus->dma_start_delay == 0)) bus->oam[addr - 0xFE00] = value;
     }
     else if (addr >= 0xFEA0 && addr < 0xFF00) {
         return;
@@ -343,9 +346,21 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
         }
         if (addr >= 0xFF40 && addr <= 0xFF4B) {
             if (addr == 0xFF46) {
-                uint16_t src = (uint16_t)value << 8;
-                for (int i = 0; i < 0xA0; i++)
-                    bus->oam[i] = bus_read(bus, src + i);
+                // Start OAM DMA. If a transfer is already copying bytes,
+                // the new one is queued and takes over after 2 M-cycles;
+                // otherwise it starts fresh (2-cycle delay before the
+                // first byte, OAM accessible until then).
+                if (bus->dma_active && bus->dma_offset > 0 && !bus->dma_pending) {
+                    bus->dma_pending = true;
+                    bus->dma_pend_delay = 2;
+                    bus->dma_pend_src = value;
+                } else {
+                    bus->dma_active = true;
+                    bus->dma_pending = false;
+                    bus->dma_start_delay = 2; // consumes 2 ticks; blocking begins when it hits 0
+                    bus->dma_offset = 0;
+                    bus->dma_src_high = value;
+                }
                 return;
             }
             if (bus->ppu) ppu_write(bus->ppu, addr, value);
@@ -377,6 +392,34 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
         bus->ie = value;
     }
 
+}
+
+void bus_tick(Bus* bus)
+{
+    // A queued restart takes over from the running transfer after 2 cycles
+    // (the previous DMA keeps running until then).
+    if (bus->dma_pending && --bus->dma_pend_delay <= 0) {
+        bus->dma_pending = false;
+        bus->dma_src_high = bus->dma_pend_src;
+        bus->dma_offset = 0;
+        bus->dma_start_delay = 0; // new transfer starts copying immediately
+    }
+
+    if (!bus->dma_active) return;
+
+    // Fresh DMA: OAM stays accessible for 2 M-cycles after the write,
+    // then 160 bytes are copied one per M-cycle (mooneye oam_dma_start).
+    if (bus->dma_start_delay > 0 && --bus->dma_start_delay > 0) {
+        return;
+    }
+
+    if (bus->dma_offset < 0xA0) {
+        uint16_t src = ((uint16_t)bus->dma_src_high << 8) | (bus->dma_offset & 0xFF);
+        bus->oam[bus->dma_offset] = bus_read(bus, src);
+        bus->dma_offset++;
+    } else {
+        bus->dma_active = false;
+    }
 }
 
 size_t bus_load_rom(Bus* bus, const char* filepath)

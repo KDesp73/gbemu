@@ -32,7 +32,7 @@ int main(int argc, char** argv)
 
     // Post-boot register state
     bus.io[0x0F] = 0x01; // IF: VBlank pending from last scanline of boot ROM
-    bus.ie = 0x01;        // IE: VBlank interrupt enabled
+    bus.ie = 0x00;        // IE: no interrupt sources enabled after boot
     bus.joypad_buttons = 0x0F; // All face buttons released (active-low)
     bus.joypad_dpad = 0x0F;    // All D-pad buttons released (active-low)
 

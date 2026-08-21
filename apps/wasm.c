@@ -60,7 +60,7 @@ void wasm_load_rom(void)
     }
 
     bus.io[0x0F] = 0x01;
-    bus.ie = 0x01;
+    bus.ie = 0x00;
     bus.joypad_buttons = 0x0F;
     bus.joypad_dpad = 0x0F;
 
@@ -82,18 +82,14 @@ static void main_loop(void)
 
     int frame_cycles = 0;
     while (frame_cycles < CYCLES_PER_FRAME) {
+        // cpu_step and handle_interrupts advance the timer/PPU/APU
+        // themselves at each M-cycle boundary (via machine_tick).
         int cycles = cpu_step(&cpu, &bus);
         int scale = bus.double_speed ? 1 : 2;
         int sys_cycles = cycles * scale;
 
-        timer_step(&timer, cycles);
-        ppu_step(&ppu, &bus, sys_cycles);
-        apu_step(&apu, sys_cycles);
-
         int int_cycles = handle_interrupts(&cpu, &bus, &ppu, &timer);
         if (int_cycles > 0) {
-            timer_step(&timer, int_cycles);
-            ppu_step(&ppu, &bus, int_cycles * scale);
             sys_cycles += int_cycles * scale;
         }
 

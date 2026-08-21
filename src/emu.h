@@ -149,6 +149,15 @@ struct Bus {
     uint8_t hram[0x7F];     // High RAM
     uint8_t ie;             // Interrupt Enable Register
 
+    // OAM DMA state (transfer of 160 bytes to OAM, one byte per M-cycle)
+    bool dma_active;        // DMA transfer in progress (OAM is inaccessible)
+    int dma_start_delay;    // M-cycles remaining before the first byte copies
+    uint8_t dma_src_high;   // Source page (value written to 0xFF46)
+    uint16_t dma_offset;    // Bytes transferred so far (0-160)
+    bool dma_pending;       // Restart queued while a transfer is running
+    int dma_pend_delay;     // M-cycles until the queued restart takes over
+    uint8_t dma_pend_src;   // Source page of the queued restart
+
     struct Timer* timer;    // For routing timer register reads/writes
     struct PPU* ppu;        // For routing PPU register reads/writes
     struct APU* apu;        // For routing sound register reads/writes
@@ -203,6 +212,11 @@ uint8_t bus_read(Bus* bus, uint16_t addr);
 //@param addr 16-bit address to write
 //@param value Byte value to write
 void bus_write(Bus* bus, uint16_t addr, uint8_t value);
+
+//@func bus_tick
+//@desc Advance the bus by one M-cycle (drives the OAM DMA transfer)
+//@param bus Memory bus to advance
+void bus_tick(Bus* bus);
 
 //@func bus_load_rom
 //@desc Load a cartridge ROM file into the bus (allocating all ROM banks), set up MBC1 bank switching and SRAM from the cartridge header, and set CGB mode
@@ -476,6 +490,12 @@ float apu_buf_pop(APU* apu);
 //@param opcode The opcode byte to execute
 //@returns Number of T-cycles the instruction consumed
 int instr(CPU* cpu, Bus* bus, uint8_t opcode);
+
+//@func machine_tick
+//@desc Advance every component except the CPU (timer, PPU, APU) by the given number of T-cycles. Called at each M-cycle boundary during instruction execution so bus accesses land on their exact hardware cycle slots.
+//@param bus Memory bus providing access to the timer, PPU and APU
+//@param t_cycles Number of T-cycles to advance the machine by
+void machine_tick(Bus* bus, int t_cycles);
 
 //@func cpu_step
 //@desc Execute one full CPU step (fetch + decode + execute)

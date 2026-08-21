@@ -2,6 +2,21 @@
 #include <stdlib.h>
 #include <time.h>
 
+void machine_tick(Bus* bus, int t_cycles)
+{
+    // The timer is CPU-clock derived: it runs at the same rate in
+    // T-cycles regardless of speed mode (so DIV/TIMA frequencies
+    // double in real time in double-speed mode). The PPU and APU
+    // are dot-clock derived: they advance at the fixed 8.39 MHz
+    // CGB dot rate, so one T-cycle = two dots at normal speed and
+    // one dot in double-speed mode.
+    int scale = bus->double_speed ? 1 : 2;
+    bus_tick(bus); // OAM DMA advances one byte per M-cycle
+    if (bus->timer) timer_step(bus->timer, t_cycles);
+    if (bus->ppu) ppu_step(bus->ppu, bus, t_cycles * scale);
+    if (bus->apu) apu_step(bus->apu, t_cycles * scale);
+}
+
 void loop(CPU* cpu, Bus* bus, Timer* timer, PPU* ppu, APU* apu, Frontend* fe)
 {
     bool running = true;
@@ -12,28 +27,17 @@ void loop(CPU* cpu, Bus* bus, Timer* timer, PPU* ppu, APU* apu, Frontend* fe)
         int frame_cycles = 0;
 
         while (frame_cycles < CYCLES_PER_FRAME) {
+            // cpu_step advances the timer/PPU/APU itself at each M-cycle
+            // boundary (via machine_tick), so bus accesses made by an
+            // instruction land on their exact hardware cycle slots.
             int cycles = cpu_step(cpu, bus);
 
-            // On CGB the dot clock is fixed at 8.39 MHz: at normal speed the
-            // CPU runs at half that (2 dots per T-cycle), at double speed the
-            // CPU runs at the dot clock (1 dot per T-cycle).
             int scale = bus->double_speed ? 1 : 2;
             int sys_cycles = cycles * scale;
 
-            // The timer is CPU-clock derived: it runs at the same rate in
-            // T-cycles regardless of speed mode (so DIV/TIMA frequencies
-            // double in real time in double-speed mode). The PPU and APU
-            // are dot-clock derived: they advance at the fixed 8.39 MHz
-            // CGB dot rate, so one T-cycle = two dots at normal speed and
-            // one dot in double-speed mode.
-            timer_step(timer, cycles);
-            ppu_step(ppu, bus, sys_cycles);
-            apu_step(apu, sys_cycles);
-
+            // Interrupt dispatch advances the machine for its own M-cycles.
             int int_cycles = handle_interrupts(cpu, bus, ppu, timer);
             if (int_cycles > 0) {
-                timer_step(timer, int_cycles);
-                ppu_step(ppu, bus, int_cycles * scale);
                 sys_cycles += int_cycles * scale;
             }
 

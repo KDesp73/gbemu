@@ -36,7 +36,7 @@ uint8_t get_reg_by_index(CPU* cpu, Bus* bus, uint8_t index)
         case 3: return cpu->e;
         case 4: return cpu->h;
         case 5: return cpu->l;
-        case 6: return bus_read(bus, cpu->hl); // Memory access at address [HL]
+        case 6: machine_tick(bus, 4); return bus_read(bus, cpu->hl); // Memory access at address [HL]
         case 7: return cpu->a;
         default: return 0; // Unreachable
     }
@@ -51,7 +51,7 @@ void set_reg_by_index(CPU* cpu, Bus* bus, uint8_t index, uint8_t value)
         case 3: cpu->e = value; break;
         case 4: cpu->h = value; break;
         case 5: cpu->l = value; break;
-        case 6: bus_write(bus, cpu->hl, value); break; // Memory write at address [HL]
+        case 6: machine_tick(bus, 4); bus_write(bus, cpu->hl, value); break; // Memory write at address [HL]
         case 7: cpu->a = value; break;
     }
 }
@@ -79,11 +79,15 @@ int cpu_step(CPU* cpu, Bus* bus)
     }
 
     if (cpu->halted) {
-        return 4; // CPU sleeps for 1 M-cycle (4 T-cycles)
+        machine_tick(bus, 4); // CPU sleeps for 1 M-cycle (4 T-cycles)
+        return 4;
     }
 
     // Halt bug: the byte after a buggy HALT is read twice, so the opcode
     // fetch below does not advance PC (operand reads shift back one byte).
+    // Every bus access consumes one M-cycle: advance the machine first,
+    // then fetch (the fetch logically completes at the end of its M-cycle).
+    machine_tick(bus, 4);
     uint8_t opcode = bus_read(bus, cpu->pc);
     if (cpu->halt_bug) {
         cpu->halt_bug = false;
