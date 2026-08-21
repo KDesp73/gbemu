@@ -277,6 +277,7 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
         if (mbc_is_mbc2(bus->mbc_type)) {
             if (!bus->mbc2_ram_enable) return;
             bus->mbc2_ram[addr & 0x1FF] = value & 0x0F;
+            bus->sram_dirty = true;
             return;
         }
         if (mbc_is_mbc1(bus->mbc_type) && !bus->mbc1_ram_enable) return;
@@ -299,6 +300,7 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
                                 break;
                 }
             }
+            bus->sram_dirty = true; // SRAM banks and RTC registers both persist
             return;
         }
 
@@ -307,6 +309,7 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
         if (mbc_is_mbc5(bus->mbc_type)) bank = bus->mbc5_ram_bank;
         bank &= bus->sram_banks - 1;
         bus->sram[bank * 0x2000 + (addr - 0xA000)] = value;
+        bus->sram_dirty = true;
         if (addr >= 0xA004) {
             static FILE* ftrace = NULL;
             if (!ftrace) {

@@ -4,6 +4,29 @@
 Frontend* frontend_sdl_create(APU* apu);
 Frontend* frontend_headless_create(void);
 
+// State the hotkey handler needs access to
+typedef struct {
+    CPU* cpu;
+    Bus* bus;
+    Timer* timer;
+    PPU* ppu;
+    APU* apu;
+    const char* rom_path;
+} EmuContext;
+
+static void on_hotkey(void* userdata, Hotkey key)
+{
+    EmuContext* ctx = userdata;
+    switch (key) {
+    case HOTKEY_SAVE_STATE:
+        save_state(ctx->cpu, ctx->bus, ctx->timer, ctx->ppu, ctx->apu, ctx->rom_path);
+        break;
+    case HOTKEY_LOAD_STATE:
+        load_state(ctx->cpu, ctx->bus, ctx->timer, ctx->ppu, ctx->apu, ctx->rom_path);
+        break;
+    }
+}
+
 int main(int argc, char** argv)
 {
     if (argc < 2) {
@@ -30,6 +53,9 @@ int main(int argc, char** argv)
 
     if (!bus_load_rom(&bus, rom_path)) return 1;
 
+    // Restore cartridge RAM from a previous session (<rom>.sav)
+    battery_load(&bus, rom_path);
+
     // Post-boot register state
     bus.io[0x0F] = 0x01; // IF: VBlank pending from last scanline of boot ROM
     bus.ie = 0x00;        // IE: no interrupt sources enabled after boot
@@ -49,7 +75,21 @@ int main(int argc, char** argv)
 
     if (!fe->init(fe, SCREEN_WIDTH, SCREEN_HEIGHT)) return 1;
 
+    EmuContext ctx = {
+        .cpu = &cpu,
+        .bus = &bus,
+        .timer = &timer,
+        .ppu = &ppu,
+        .apu = &apu,
+        .rom_path = rom_path,
+    };
+    fe->hotkey_ctx = &ctx;
+    fe->on_hotkey = on_hotkey;
+
     loop(&cpu, &bus, &timer, &ppu, &apu, fe);
+
+    // Persist cartridge RAM for the next session (<rom>.sav)
+    battery_save(&bus, rom_path);
 
     fe->destroy(fe);
     return 0;

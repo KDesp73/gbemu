@@ -118,6 +118,9 @@ static void sdl_poll_events(Frontend* fe, Bus* bus, bool* running)
             case SDLK_X:       bus->joypad_buttons = pressed ? (bus->joypad_buttons & ~0x02) : (bus->joypad_buttons | 0x02); break; // B
             case SDLK_BACKSPACE: bus->joypad_buttons = pressed ? (bus->joypad_buttons & ~0x04) : (bus->joypad_buttons | 0x04); break; // Select
             case SDLK_RETURN:  bus->joypad_buttons = pressed ? (bus->joypad_buttons & ~0x08) : (bus->joypad_buttons | 0x08); break; // Start
+            // Host hotkeys (fire on press only)
+            case SDLK_F5: if (pressed && fe->on_hotkey) fe->on_hotkey(fe->hotkey_ctx, HOTKEY_SAVE_STATE); break;
+            case SDLK_F9: if (pressed && fe->on_hotkey) fe->on_hotkey(fe->hotkey_ctx, HOTKEY_LOAD_STATE); break;
             default: break;
             }
             break;

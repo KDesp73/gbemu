@@ -54,8 +54,17 @@ make all
 | X | B |
 | Backspace | Select |
 | Enter | Start |
+| F5 | Save state |
+| F9 | Load state |
 
 Close the window or press the window close button to quit.
+
+## Saves
+
+| Type | File | Behavior |
+|---|---|---|
+| Battery save | `<rom>.sav` | Cartridge RAM persisted automatically on exit and restored on launch, for carts whose header declares a battery. MBC3 timer carts also persist the RTC registers; MBC2 carts persist the built-in 512x4-bit RAM |
+| Save state | `<rom>.state` | Full machine snapshot (CPU, bus, timer, PPU, APU) via F5/F9. Versioned and ROM-hash-checked; states are invalidated when the emulator version or ROM changes |
 
 ## Features
 
@@ -95,6 +104,12 @@ Close the window or press the window close button to quit.
 ### Serial
 
 - Serial output intercepted for test ROM diagnostics (Blargg, SameSuite, mooneye)
+
+### Saves
+
+- Battery-backed cartridge RAM persistence (`.sav`) for MBC1/MBC2/MBC3/MBC5 carts
+- MBC3 RTC register persistence (standard 5-byte trailer)
+- Full-machine save states (`.state`) with version + ROM hash validation (F5/F9)
 
 ## Test Results
 

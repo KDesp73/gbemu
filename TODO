@@ -18,5 +18,6 @@ TODO: Implement SGB MULTI request (MLT_REQ) [No SGB support exists, so sgb/comma
 DONE: Audio interface [An audio module to generate sound from the instructions]
 TODO: Esp32 frontend [An eps32 implementation of all frontend interfaces]
 DONE: WASM [Wasm compilation target and website]
-TODO: Saves [Figure out how to actually save progress for each rom]
+DONE: Saves [Battery saves (<rom>.sav: SRAM + MBC3 RTC + MBC2 built-in RAM, auto-loaded/saved for battery carts) and full-machine save states (<rom>.state, F5/F9, versioned + ROM-hash-checked) in src/save.c]
+TODO: RTC clock source [MBC3 timer registers are a stub: latch does not snapshot system time and the clock never ticks. Wire mbc3_seconds/minutes/hours/day_counter to real elapsed time so battery saves advance the clock like hardware]
 TODO: Support Gameboy Color []

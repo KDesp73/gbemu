@@ -12,6 +12,10 @@ roms
 .DS_Store
 *.dSYM
 
+# Cartridge battery saves and save states (derived from ROMs)
+*.sav
+*.state
+
 web/emu-wasm.html
 web/emu-wasm.js
 web/emu-wasm.wasm

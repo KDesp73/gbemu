@@ -143,6 +143,7 @@ struct Bus {
     uint8_t* sram;          // Dynamically allocated cartridge SRAM (0xA000-0xBFFF)
     size_t sram_size;       // Total allocated SRAM size in bytes
     uint16_t sram_banks;    // Number of 8KB SRAM banks
+    bool sram_dirty;        // Set once the cart writes to SRAM/RTC (battery save hint)
 
     uint8_t oam[0xA0];      // Sprite Attribute Table
     uint8_t io[0x80];       // Input/Output Registers
@@ -344,10 +345,14 @@ typedef struct PPU {
     bool first_line_after_enable; // Shortened first scanline after LCD on
 
     // Output Interfaces
-    uint32_t frame_buffer[SCREEN_HEIGHT][SCREEN_WIDTH]; // Pixel buffer for SDL
     bool frame_ready;        // Set to true at VBlank, signals SDL to render
     bool vblank_interrupt;   // Set to true to request INT 0x40
     bool stat_interrupt;     // Set to true to request INT 0x48
+
+    // Pixel buffer for SDL. Kept last so save states can serialize the whole
+    // register/state prefix with offsetof(PPU, frame_buffer); the pixels are
+    // redrawn within one frame after a restore.
+    uint32_t frame_buffer[SCREEN_HEIGHT][SCREEN_WIDTH];
 } PPU;
 
 //@func ppu_init
@@ -429,13 +434,14 @@ typedef struct APU {
     uint8_t frame_step;      // Current step (0-7)
     uint16_t frame_div;      // T-cycle divider for frame sequencer
 
-    // Audio output ring buffer (SPSC, float mono)
+    // Downsampling accumulator (dot clock -> sample rate)
+    uint32_t sample_accum;   // Dots accumulated since last sample
+
+    // Audio output ring buffer (SPSC, float mono). Not serialized: the
+    // indices are reset on save-state load.
     float audio_buf[APU_BUF_SIZE];
     volatile uint32_t buf_write; // Write index (producer: apu_step)
     volatile uint32_t buf_read;  // Read index (consumer: SDL callback)
-
-    // Downsampling accumulator (dot clock -> sample rate)
-    uint32_t sample_accum;   // Dots accumulated since last sample
 } APU;
 
 //@func apu_init
@@ -513,5 +519,45 @@ int cpu_step(CPU* cpu, Bus* bus);
 //@param apu APU state to advance
 //@param fe Frontend for display and input
 void loop(CPU* cpu, Bus* bus, Timer* timer, PPU* ppu, APU* apu, Frontend* fe);
+
+//@module saves
+
+//@func battery_load
+//@desc Restore cartridge RAM from the battery save file next to the ROM (<rom>.sav). MBC2 carts restore the built-in 512x4-bit RAM; MBC3 timer carts also restore the RTC registers appended after the SRAM block
+//@param bus Memory bus whose SRAM is restored (bus_load_rom must have run)
+//@param rom_path Path to the ROM file (the .sav path is derived from it)
+//@returns true if a save file was found and loaded, false otherwise
+bool battery_load(Bus* bus, const char* rom_path);
+
+//@func battery_save
+//@desc Write cartridge RAM to the battery save file next to the ROM (<rom>.sav), but only for cartridges whose header declares a battery. MBC3 timer carts append the 5 RTC register bytes after the SRAM block
+//@param bus Memory bus whose SRAM is written out
+//@param rom_path Path to the ROM file (the .sav path is derived from it)
+//@returns true if the save file was written, false otherwise
+bool battery_save(const Bus* bus, const char* rom_path);
+
+//@func save_state
+//@desc Snapshot the full machine state (CPU, Bus, Timer, PPU, APU) into <rom>.state with a versioned header containing an FNV-1a hash of the loaded ROM
+//@param cpu CPU state to serialize
+//@param bus Memory bus to serialize (ROM/SRAM buffers by content, not pointer)
+//@param timer Timer state to serialize
+//@param ppu PPU state to serialize (frame buffer excluded)
+//@param apu APU state to serialize (audio ring buffer excluded)
+//@param rom_path Path to the ROM file (the .state path is derived from it)
+//@returns true on success, false if the file could not be written
+bool save_state(const CPU* cpu, const Bus* bus, const Timer* timer,
+                const PPU* ppu, const APU* apu, const char* rom_path);
+
+//@func load_state
+//@desc Restore a machine snapshot previously written by save_state. The same ROM must be loaded (hash-checked) and bus_load_rom must have run so the SRAM buffer exists; the APU ring buffer is reset to empty
+//@param cpu CPU state to restore into
+//@param bus Memory bus to restore into
+//@param timer Timer state to restore into
+//@param ppu PPU state to restore into
+//@param apu APU state to restore into
+//@param rom_path Path to the ROM file (the .state path is derived from it)
+//@returns true on success, false if the file is missing or incompatible
+bool load_state(CPU* cpu, Bus* bus, Timer* timer,
+                PPU* ppu, APU* apu, const char* rom_path);
 
 #endif // EMU_H
