@@ -304,6 +304,11 @@ void timer_write(Timer* timer, uint16_t addr, uint8_t value);
 //@returns Monotonic time in nanoseconds since an arbitrary epoch
 uint64_t get_time_ns(void);
 
+//@func sleep_ns
+//@desc Suspend execution for at least the given duration. On RTOS targets (ESP-IDF) this yields to the scheduler; on POSIX hosts it maps to nanosleep(2)
+//@param ns Sleep duration in nanoseconds
+void sleep_ns(uint64_t ns);
+
 //@module ppu
 
 //@macro SCREEN_WIDTH

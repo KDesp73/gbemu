@@ -311,6 +311,8 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
         bus->sram[bank * 0x2000 + (addr - 0xA000)] = value;
         bus->sram_dirty = true;
         if (addr >= 0xA004) {
+#ifndef ESP_PLATFORM
+            // Host-only raw trace of the serial byte stream
             static FILE* ftrace = NULL;
             if (!ftrace) {
                 ftrace = fopen("/tmp/blargg_raw.bin", "wb");
@@ -319,6 +321,9 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
                 fputc(value, ftrace);
                 fflush(ftrace);
             }
+#endif
+            // Console/UART output: lets test ROMs report results on embedded
+            // targets too (visible via idf.py monitor)
             if ((value >= 0x20 && value <= 0x7E) || value == '\n' || value == '\r' || value == '\t') {
                 putchar(value);
                 fflush(stdout);

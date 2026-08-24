@@ -52,11 +52,13 @@ void loop(CPU* cpu, Bus* bus, Timer* timer, PPU* ppu, APU* apu, Frontend* fe)
         fe->poll_events(fe, bus, &running);
 
         uint64_t frame_duration = get_time_ns() - frame_start_time;
-        if (!getenv("EMU_NOSLEEP") && frame_duration < FRAME_TIME_NS) {
-            struct timespec sleep_time;
-            sleep_time.tv_sec = 0;
-            sleep_time.tv_nsec = (long)(FRAME_TIME_NS - frame_duration);
-            nanosleep(&sleep_time, NULL);
+#ifdef ESP_PLATFORM
+        bool nosleep = false; // no host environment on embedded targets
+#else
+        bool nosleep = getenv("EMU_NOSLEEP") != NULL;
+#endif
+        if (!nosleep && frame_duration < FRAME_TIME_NS) {
+            sleep_ns(FRAME_TIME_NS - frame_duration);
         }
     }
 }

@@ -1,11 +1,37 @@
 #include "emu.h"
 #include <time.h>
 
+// ESP-IDF builds yield to the FreeRTOS scheduler instead of busy-waiting in
+// nanosleep. The __has_include probe keeps the core library compilable both
+// inside an ESP-IDF project (FreeRTOS headers visible) and as a bare
+// cross-compiled artifact (falls back to newlib's nanosleep).
+#if defined(__has_include)
+#  if __has_include(<freertos/FreeRTOS.h>)
+#    define EMU_HAS_FREERTOS 1
+#    include <freertos/FreeRTOS.h>
+#    include <freertos/task.h>
+#  endif
+#endif
+
 uint64_t get_time_ns(void)
 {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)ts.tv_sec * 1000000000L + (uint64_t)ts.tv_nsec;
+}
+
+void sleep_ns(uint64_t ns)
+{
+#ifdef EMU_HAS_FREERTOS
+    TickType_t ticks = pdMS_TO_TICKS((ns + 999999ULL) / 1000000ULL);
+    if (ticks > 0) vTaskDelay(ticks); // sub-tick remainders are skipped
+#else
+    struct timespec ts = {
+        .tv_sec  = (time_t)(ns / 1000000000ULL),
+        .tv_nsec = (long)(ns % 1000000000ULL),
+    };
+    nanosleep(&ts, NULL);
+#endif
 }
 
 void timer_init(Timer* timer)
