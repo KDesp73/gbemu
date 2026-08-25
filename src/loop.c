@@ -2,21 +2,6 @@
 #include <stdlib.h>
 #include <time.h>
 
-void machine_tick(Bus* bus, int t_cycles)
-{
-    // The timer is CPU-clock derived: it runs at the same rate in
-    // T-cycles regardless of speed mode (so DIV/TIMA frequencies
-    // double in real time in double-speed mode). The PPU and APU
-    // are dot-clock derived: they advance at the fixed 8.39 MHz
-    // CGB dot rate, so one T-cycle = two dots at normal speed and
-    // one dot in double-speed mode.
-    int scale = bus->double_speed ? 1 : 2;
-    bus_tick(bus); // OAM DMA advances one byte per M-cycle
-    if (bus->timer) timer_step(bus->timer, t_cycles);
-    if (bus->ppu) ppu_step(bus->ppu, bus, t_cycles * scale);
-    if (bus->apu) apu_step(bus->apu, t_cycles * scale);
-}
-
 void loop(CPU* cpu, Bus* bus, Timer* timer, PPU* ppu, APU* apu, Frontend* fe)
 {
     bool running = true;

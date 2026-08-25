@@ -16,7 +16,7 @@ TODO: Debugger [Debug mode which will allow the user to break and proceed step b
 TODO: Test suites central service [A test suite dashboard and db which will display the test status with timestamps and commit hashes]
 TODO: Implement SGB MULTI request (MLT_REQ) [No SGB support exists, so sgb/command_mlt_req and sgb/command_mlt_req_1_incrementing fail. Add P15 write handling for SGB commands (at minimum the MLT_REQ MULTI controller layout command) or filter SGB tests from the samesuite run]
 DONE: Audio interface [An audio module to generate sound from the instructions]
-TODO: Esp32 frontend [An eps32 implementation of all frontend interfaces]
+TEST: Esp32 frontend [An eps32 implementation of all frontend interfaces]
 DONE: WASM [Wasm compilation target and website]
 DONE: Saves [Figure out how to actually save progress for each rom]
 TODO: Support Gameboy Color []

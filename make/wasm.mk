@@ -6,7 +6,7 @@ WASM_CFLAGS = -Wall -Isrc
 WASM_LDFLAGS = \
 	-s ALLOW_MEMORY_GROWTH \
 	-s INITIAL_MEMORY=16777216 \
-	-s EXPORTED_RUNTIME_METHODS='["FS"]' \
+	-s EXPORTED_RUNTIME_METHODS='["FS","HEAPU8"]' \
 	-s EXPORTED_FUNCTIONS='["_main","_wasm_set_key","_wasm_load_rom","_wasm_is_running"]' \
 	--shell-file $(WASM_DIR)/shell.html
 
