@@ -3,6 +3,7 @@
 
 Frontend* frontend_sdl_create(APU* apu);
 Frontend* frontend_headless_create(void);
+Frontend* frontend_terminal_create(void);
 
 // State the hotkey handler needs access to
 typedef struct {
@@ -67,7 +68,9 @@ int main(int argc, char** argv)
         cpu.a = 0x01; // DMG mode
 
     Frontend* fe;
-#ifdef EMU_HEADLESS
+#ifdef EMU_TERM
+    fe = frontend_terminal_create();
+#elif defined(EMU_HEADLESS)
     fe = frontend_headless_create();
 #else
     fe = frontend_sdl_create(&apu);
