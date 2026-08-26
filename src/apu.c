@@ -120,8 +120,8 @@ static void fs_step_sweep(APU* apu)
         apu->sweep_counter = apu->sweep_period;
         if (apu->sweep_enabled && apu->sweep_period != 0) {
             uint16_t new_freq = apu->sweep_freq + (apu->sweep_negate
-                ? -(apu->sweep_freq >> apu->regs[0x10])
-                : (apu->sweep_freq >> apu->regs[0x10]));
+                ? -(apu->sweep_freq >> (apu->regs[0x10] & 0x07))
+                : (apu->sweep_freq >> (apu->regs[0x10] & 0x07)));
             if (new_freq > 2047) {
                 apu->ch_on[0] = false;
                 apu->sweep_enabled = false;
@@ -132,8 +132,8 @@ static void fs_step_sweep(APU* apu)
                 apu->sweep_freq = new_freq;
                 // Second overflow check after rewrite
                 new_freq = apu->sweep_freq + (apu->sweep_negate
-                    ? -(apu->sweep_freq >> apu->regs[0x10])
-                    : (apu->sweep_freq >> apu->regs[0x10]));
+                    ? -(apu->sweep_freq >> (apu->regs[0x10] & 0x07))
+                    : (apu->sweep_freq >> (apu->regs[0x10] & 0x07)));
                 if (new_freq > 2047)
                     apu->ch_on[0] = false;
             }
@@ -308,7 +308,7 @@ static void apu_power_off(APU* apu)
             apu->length_load[i] = 0;
         }
         apu->freq_timer[i] = 0;
-        apu->duty_pos[i] = 0;
+        if (i < 2) apu->duty_pos[i] = 0;
     }
     apu->wave_pos = 0;
     apu->lfsr = 0x7FFF;
@@ -325,10 +325,13 @@ static void trigger_channel(APU* apu, int ch)
     apu->freq_timer[ch] = freq_timer_reload(apu, ch);
 
     // Reload envelope volume
-    apu->vol[ch] = (apu->regs[ch == 0 ? 0x02 : ch == 1 ? 0x07 : 0x11] >> 4) & 0x0F;
+    if (ch != 2) apu->vol[ch == 3 ? 2 : ch] = (apu->regs[ch == 0 ? 0x02 : ch == 1 ? 0x07 : 0x11] >> 4) & 0x0F;
 
     // Reset envelope counter
-    apu->env_counter[ch == 2 ? 0 : (ch == 3 ? 2 : ch)] = apu->env_period[ch == 2 ? 0 : (ch == 3 ? 2 : ch)];
+    if (ch != 2) {
+        int ei = ch == 3 ? 2 : ch;
+        apu->env_counter[ei] = apu->env_period[ei];
+    }
 
     switch (ch) {
     case 0: // Square 1: reset sweep state
