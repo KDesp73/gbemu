@@ -28,6 +28,7 @@ void wasm_set_key(int key, int pressed)
     case  8: bus.joypad_buttons = p ? (bus.joypad_buttons & ~0x04) : (bus.joypad_buttons | 0x04); break;
     case 13: bus.joypad_buttons = p ? (bus.joypad_buttons & ~0x08) : (bus.joypad_buttons | 0x08); break;
     }
+    if (p) bus.joypad_interrupt = true;
 }
 
 static void init_emu(void)

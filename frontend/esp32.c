@@ -301,6 +301,9 @@ static void esp32_poll_events(Frontend* fe, Bus* bus, bool* running)
     ESPPriv* priv = fe->priv;
     (void)running;
 
+    uint8_t old_dpad = bus->joypad_dpad;
+    uint8_t old_buttons = bus->joypad_buttons;
+
     // Same active-low bit layout as frontend/sdl.c:
     // dpad bits 3-0: Down Up Left Right; buttons bits 3-0: Start Select B A
     bus->joypad_dpad = (bus->joypad_dpad & ~0x0F)
@@ -314,6 +317,10 @@ static void esp32_poll_events(Frontend* fe, Bus* bus, bool* running)
         | (btn_down(EMU_BTN_B)      ? 0x00 : 0x02)
         | (btn_down(EMU_BTN_SELECT) ? 0x00 : 0x04)
         | (btn_down(EMU_BTN_START)  ? 0x00 : 0x08);
+
+    // Raise joypad interrupt on button press (bit transition from 1 to 0)
+    if ((old_dpad & ~bus->joypad_dpad & 0x0F) || (old_buttons & ~bus->joypad_buttons & 0x0F))
+        bus->joypad_interrupt = true;
 
     if (fe->on_hotkey) {
         bool combo = btn_down(EMU_BTN_START) && btn_down(EMU_BTN_SELECT);

@@ -123,6 +123,7 @@ static void sdl_poll_events(Frontend* fe, Bus* bus, bool* running)
             case SDLK_F9: if (pressed && fe->on_hotkey) fe->on_hotkey(fe->hotkey_ctx, HOTKEY_LOAD_STATE); break;
             default: break;
             }
+            if (pressed) bus->joypad_interrupt = true;
             break;
         }
         }

@@ -170,6 +170,7 @@ struct Bus {
     //             bit 3 = Down, 2 = Up, 1 = Left, 0 = Right
     uint8_t joypad_buttons; // Face buttons + Start/Select (active-low)
     uint8_t joypad_dpad;    // D-pad buttons (active-low)
+    bool joypad_interrupt;  // Joypad interrupt pending (IF bit 4)
 
     // MBC bank-switching state (active when mbc_type selects an MBC cart)
     uint8_t mbc_type;          // Cartridge type from header 0x0147 (0 = no MBC)

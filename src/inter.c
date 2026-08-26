@@ -18,6 +18,10 @@ int handle_interrupts(CPU* cpu, Bus* bus, PPU* ppu, Timer* timer)
         if_reg |= (1 << 2);
         timer->interrupt_requested = false;
     }
+    if (bus->joypad_interrupt) {
+        if_reg |= (1 << 4);
+        bus->joypad_interrupt = false;
+    }
 
     bus_write(bus, 0xFF0F, if_reg);
 

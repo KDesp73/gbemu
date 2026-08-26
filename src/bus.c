@@ -233,10 +233,12 @@ uint8_t bus_read(Bus *bus, uint16_t addr)
         if (addr == 0xFF00) {
             uint8_t select = bus->io[0x00] & 0x30;
             result = 0xC0 | select;
+            uint8_t nibble = 0x0F;
             if (!(select & 0x10))
-                result |= bus->joypad_dpad & 0x0F;
+                nibble &= bus->joypad_dpad & 0x0F;
             if (!(select & 0x20))
-                result |= bus->joypad_buttons & 0x0F;
+                nibble &= bus->joypad_buttons & 0x0F;
+            result |= nibble;
         } else if (addr >= 0xFF04 && addr <= 0xFF07 && bus->timer) {
             result = timer_read(bus->timer, addr);
         } else if (addr >= 0xFF10 && addr <= 0xFF3F && bus->apu) {
@@ -375,7 +377,11 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
             return;
         }
         if (addr == 0xFF00) {
-            bus->io[0x00] = value & 0x30;
+            uint8_t select = value & 0x30;
+            bus->io[0x00] = select;
+            if ((!(select & 0x10) && (bus->joypad_dpad & 0x0F) != 0x0F)
+             || (!(select & 0x20) && (bus->joypad_buttons & 0x0F) != 0x0F))
+                bus->joypad_interrupt = true;
             return;
         }
         if (addr == 0xFF4D) {
