@@ -1,4 +1,4 @@
-#include "emu.h"
+#include "gbemu.h"
 #include <stdlib.h>
 #include <time.h>
 

@@ -9,7 +9,7 @@
 // adapted to any board without touching the logic below. Defaults target a
 // generic ESP32 DevKit + 240x240 ST7789 SPI panel + I2S DAC.
 
-#include "emu.h"
+#include "gbemu.h"
 
 #include <stdlib.h>
 #include <string.h>

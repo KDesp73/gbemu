@@ -1,4 +1,4 @@
-#include "emu.h"
+#include "gbemu.h"
 #include <string.h>
 
 // Game Boy APU: full 4-channel waveform synthesis

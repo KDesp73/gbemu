@@ -1,4 +1,4 @@
-#include "emu.h"
+#include "gbemu.h"
 
 uint8_t fetch8(CPU* cpu, Bus* bus)
 {

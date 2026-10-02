@@ -1,5 +1,5 @@
-#ifndef EMU_H
-#define EMU_H
+#ifndef GBEMU_H
+#define GBEMU_H
 
 //@module emu
 //@author Konstantinos Despoinidis (KDesp73)
@@ -566,4 +566,4 @@ bool save_state(const CPU* cpu, const Bus* bus, const Timer* timer,
 bool load_state(CPU* cpu, Bus* bus, Timer* timer,
                 PPU* ppu, APU* apu, const char* rom_path);
 
-#endif // EMU_H
+#endif // GBEMU_H

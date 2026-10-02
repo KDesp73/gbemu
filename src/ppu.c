@@ -1,4 +1,4 @@
-#include "emu.h"
+#include "gbemu.h"
 
 // 1. Clock Management & Mode Transitions
 static void ppu_change_mode(PPU* ppu, PPUMode new_mode);

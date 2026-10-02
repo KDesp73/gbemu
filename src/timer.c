@@ -1,4 +1,4 @@
-#include "emu.h"
+#include "gbemu.h"
 #include <time.h>
 
 // ESP-IDF builds yield to the FreeRTOS scheduler instead of busy-waiting in

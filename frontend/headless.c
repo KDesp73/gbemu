@@ -1,4 +1,4 @@
-#include "emu.h"
+#include "gbemu.h"
 #include <stdlib.h>
 
 static bool headless_init(Frontend* fe, int width, int height)

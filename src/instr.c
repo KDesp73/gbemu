@@ -1,4 +1,4 @@
-#include "emu.h"
+#include "gbemu.h"
 #include "opcodes.h"
 #include <stdint.h>
 #include <stdlib.h>

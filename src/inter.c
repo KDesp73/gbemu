@@ -1,4 +1,4 @@
-#include "emu.h"
+#include "gbemu.h"
 
 // Service hardware interrupts and return cycles consumed (0 if none serviced)
 int handle_interrupts(CPU* cpu, Bus* bus, PPU* ppu, Timer* timer)
