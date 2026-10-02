@@ -13,14 +13,14 @@
 #  endif
 #endif
 
-uint64_t get_time_ns(void)
+uint64_t gb_get_time_ns(void)
 {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)ts.tv_sec * 1000000000L + (uint64_t)ts.tv_nsec;
 }
 
-void sleep_ns(uint64_t ns)
+void gb_sleep_ns(uint64_t ns)
 {
 #ifdef EMU_HAS_FREERTOS
     TickType_t ticks = pdMS_TO_TICKS((ns + 999999ULL) / 1000000ULL);
@@ -34,7 +34,7 @@ void sleep_ns(uint64_t ns)
 #endif
 }
 
-void timer_init(Timer* timer)
+void gb_timer_init(gb_timer* timer)
 {
     timer->internal_counter = 0xABCC; // Default post-boot value
     timer->tima = 0x00;
@@ -45,7 +45,7 @@ void timer_init(Timer* timer)
 }
 
 // Map TAC bits 0-1 to the bit index of the internal 16-bit counter
-static bool get_timer_bit(const Timer* timer)
+static bool get_timer_bit(const gb_timer* timer)
 {
     // TAC Bit 2: Timer Enable
     if (!(timer->tac & 0x04)) {
@@ -66,7 +66,7 @@ static bool get_timer_bit(const Timer* timer)
     }
 }
 
-void timer_step(Timer* timer, int cycles)
+void gb_timer_step(gb_timer* timer, int cycles)
 {
     for (int i = 0; i < cycles; i++) {
         // If TIMA overflowed on the previous cycle, reload from TMA now
@@ -95,7 +95,7 @@ void timer_step(Timer* timer, int cycles)
     }
 }
 
-uint8_t timer_read(const Timer* timer, uint16_t addr)
+uint8_t gb_timer_read(const gb_timer* timer, uint16_t addr)
 {
     switch (addr) {
         case 0xFF04: // DIV
@@ -111,7 +111,7 @@ uint8_t timer_read(const Timer* timer, uint16_t addr)
     }
 }
 
-void timer_write(Timer* timer, uint16_t addr, uint8_t value)
+void gb_timer_write(gb_timer* timer, uint16_t addr, uint8_t value)
 {
     switch (addr) {
         case 0xFF04: // Writing ANY value to DIV resets internal counter to 0!

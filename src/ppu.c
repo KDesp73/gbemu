@@ -1,20 +1,20 @@
 #include "gbemu.h"
 
 // 1. Clock Management & Mode Transitions
-static void ppu_change_mode(PPU* ppu, PPUMode new_mode);
-static void check_lyc_stat_interrupt(PPU* ppu);
+static void ppu_change_mode(gb_ppu* ppu, gb_ppu_mode new_mode);
+static void check_lyc_stat_interrupt(gb_ppu* ppu);
 
 // 2. Scanline Rendering Helpers (Executed during Mode 3 -> Mode 0 transition)
-static void ppu_render_scanline(PPU* ppu, Bus* bus);
-static void ppu_render_bg(PPU* ppu, Bus* bus);
-static void ppu_render_window(PPU* ppu, Bus* bus);
-static void ppu_render_sprites(PPU* ppu, Bus* bus);
+static void ppu_render_scanline(gb_ppu* ppu, gb_bus* bus);
+static void ppu_render_bg(gb_ppu* ppu, gb_bus* bus);
+static void ppu_render_window(gb_ppu* ppu, gb_bus* bus);
+static void ppu_render_sprites(gb_ppu* ppu, gb_bus* bus);
 
 // 3. Palette Conversion
 // Converts a 2-bit Game Boy color index (0-3) via BGP/OBP registers to RGBA8888
 static uint32_t ppu_get_color(uint8_t palette_reg, uint8_t color_index);
 
-void ppu_init(PPU* ppu)
+void gb_ppu_init(gb_ppu* ppu)
 {
     ppu->lcdc = 0x91;
     ppu->stat = 0;
@@ -32,12 +32,12 @@ void ppu_init(PPU* ppu)
     ppu->frame_ready = false;
     ppu->vblank_interrupt = false;
     ppu->stat_interrupt = false;
-    for (int y = 0; y < SCREEN_HEIGHT; y++)
-        for (int x = 0; x < SCREEN_WIDTH; x++)
+    for (int y = 0; y < GB_SCREEN_HEIGHT; y++)
+        for (int x = 0; x < GB_SCREEN_WIDTH; x++)
             ppu->frame_buffer[y][x] = 0;
 }
 
-void ppu_step(PPU* ppu, Bus* bus, int cycles)
+void gb_ppu_step(gb_ppu* ppu, gb_bus* bus, int cycles)
 {
     // LCD off: frozen (state set by ppu_write on the off edge)
     if (!(ppu->lcdc & 0x80)) {
@@ -53,50 +53,50 @@ void ppu_step(PPU* ppu, Bus* bus, int cycles)
             ppu->dots -= 900;
             ppu->ly = 1;
             ppu->first_line_after_enable = false;
-            ppu_change_mode(ppu, PPU_MODE_OAM);
+            ppu_change_mode(ppu, GB_PPU_MODE_OAM);
             check_lyc_stat_interrupt(ppu);
         }
         return;
     }
 
-    switch ((PPUMode)(ppu->stat & 0x03)) {
-        case PPU_MODE_OAM:
+    switch ((gb_ppu_mode)(ppu->stat & 0x03)) {
+        case GB_PPU_MODE_OAM:
             if (ppu->dots >= 160) {
-                ppu_change_mode(ppu, PPU_MODE_XFER);
+                ppu_change_mode(ppu, GB_PPU_MODE_XFER);
             }
             break;
 
-        case PPU_MODE_XFER:
+        case GB_PPU_MODE_XFER:
             if (ppu->dots >= 504) { // 160 + 344
                 ppu_render_scanline(ppu, bus); // Draw current line LY to frame_buffer
-                ppu_change_mode(ppu, PPU_MODE_HBLANK);
+                ppu_change_mode(ppu, GB_PPU_MODE_HBLANK);
             }
             break;
 
-        case PPU_MODE_HBLANK:
+        case GB_PPU_MODE_HBLANK:
             if (ppu->dots >= 912) {
                 ppu->dots -= 912;
                 ppu->ly++;
 
                 if (ppu->ly == 144) {
-                    ppu_change_mode(ppu, PPU_MODE_VBLANK);
+                    ppu_change_mode(ppu, GB_PPU_MODE_VBLANK);
                     ppu->frame_ready = true;
                     ppu->vblank_interrupt = true; // Request INT 0x40
                 } else {
-                    ppu_change_mode(ppu, PPU_MODE_OAM);
+                    ppu_change_mode(ppu, GB_PPU_MODE_OAM);
                 }
                 check_lyc_stat_interrupt(ppu);
             }
             break;
 
-        case PPU_MODE_VBLANK:
+        case GB_PPU_MODE_VBLANK:
             if (ppu->dots >= 912) {
                 ppu->dots -= 912;
                 ppu->ly++;
 
                 if (ppu->ly > 153) { // End of VBlank, restart frame
                     ppu->ly = 0;
-                    ppu_change_mode(ppu, PPU_MODE_OAM);
+                    ppu_change_mode(ppu, GB_PPU_MODE_OAM);
                 }
                 check_lyc_stat_interrupt(ppu);
             }
@@ -104,7 +104,7 @@ void ppu_step(PPU* ppu, Bus* bus, int cycles)
     }
 }
 
-uint8_t ppu_read(const PPU* ppu, uint16_t addr)
+uint8_t gb_ppu_read(const gb_ppu* ppu, uint16_t addr)
 {
     switch (addr) {
         case 0xFF40: return ppu->lcdc;
@@ -122,7 +122,7 @@ uint8_t ppu_read(const PPU* ppu, uint16_t addr)
     }
 }
 
-void ppu_write(PPU* ppu, uint16_t addr, uint8_t value)
+void gb_ppu_write(gb_ppu* ppu, uint16_t addr, uint8_t value)
 {
     switch (addr) {
         case 0xFF40: {
@@ -133,13 +133,13 @@ void ppu_write(PPU* ppu, uint16_t addr, uint8_t value)
                 // LCD off: freeze PPU
                 ppu->ly = 0;
                 ppu->dots = 0;
-                ppu->stat = (ppu->stat & ~0x03) | PPU_MODE_HBLANK;
+                ppu->stat = (ppu->stat & ~0x03) | GB_PPU_MODE_HBLANK;
                 ppu->first_line_after_enable = false;
             } else if (!was_on && now_on) {
                 // LCD on: start shortened first scanline
                 ppu->ly = 0;
                 ppu->dots = 0;
-                ppu->stat = (ppu->stat & ~0x03) | PPU_MODE_HBLANK;
+                ppu->stat = (ppu->stat & ~0x03) | GB_PPU_MODE_HBLANK;
                 ppu->first_line_after_enable = true;
             }
             break;
@@ -158,7 +158,7 @@ void ppu_write(PPU* ppu, uint16_t addr, uint8_t value)
     }
 }
 
-static void ppu_render_bg(PPU* ppu, Bus* bus)
+static void ppu_render_bg(gb_ppu* ppu, gb_bus* bus)
 {
     // Determine tile map location from LCDC (Bit 3)
     // 0x9800 or 0x9C00
@@ -171,13 +171,13 @@ static void ppu_render_bg(PPU* ppu, Bus* bus)
     uint8_t line_y = ppu->ly + ppu->scy;
     uint16_t tile_row = (line_y / 8) * 32;
 
-    for (int x = 0; x < SCREEN_WIDTH; x++) {
+    for (int x = 0; x < GB_SCREEN_WIDTH; x++) {
         uint8_t line_x = x + ppu->scx;
         uint16_t tile_col = line_x / 8;
 
         // Fetch tile index directly from Bus VRAM (0x8000 - 0x9FFF)
         uint16_t map_addr = tile_map_base + tile_row + tile_col;
-        uint8_t tile_index = bus_read(bus, map_addr);
+        uint8_t tile_index = gb_bus_read(bus, map_addr);
 
         // Fetch low and high color plane bytes for the 8x8 tile line
         uint16_t tile_addr;
@@ -188,8 +188,8 @@ static void ppu_render_bg(PPU* ppu, Bus* bus)
             tile_addr = 0x9000 + (signed_index * 16) + ((line_y % 8) * 2);
         }
 
-        uint8_t byte1 = bus_read(bus, tile_addr);
-        uint8_t byte2 = bus_read(bus, tile_addr + 1);
+        uint8_t byte1 = gb_bus_read(bus, tile_addr);
+        uint8_t byte2 = gb_bus_read(bus, tile_addr + 1);
 
         // Calculate pixel bit (7 - bit_position)
         int bit = 7 - (line_x % 8);
@@ -200,7 +200,7 @@ static void ppu_render_bg(PPU* ppu, Bus* bus)
     }
 }
 
-static void ppu_render_window(PPU* ppu, Bus* bus)
+static void ppu_render_window(gb_ppu* ppu, gb_bus* bus)
 {
     if (!(ppu->lcdc & 0x20)) return; // Window disabled (LCDC bit 5)
     if (ppu->wy > ppu->ly) return;   // Window not yet visible on this scanline
@@ -212,7 +212,7 @@ static void ppu_render_window(PPU* ppu, Bus* bus)
     uint8_t window_line = ppu->ly - ppu->wy;
     uint16_t tile_row = (window_line / 8) * 32;
 
-    for (int x = 0; x < SCREEN_WIDTH; x++) {
+    for (int x = 0; x < GB_SCREEN_WIDTH; x++) {
         int16_t wx = ppu->wx - 7;
         if (x < wx) continue; // Pixels before window start
 
@@ -220,7 +220,7 @@ static void ppu_render_window(PPU* ppu, Bus* bus)
         uint16_t tile_col = line_x / 8;
 
         uint16_t map_addr = tile_map_base + tile_row + tile_col;
-        uint8_t tile_index = bus_read(bus, map_addr);
+        uint8_t tile_index = gb_bus_read(bus, map_addr);
 
         uint16_t tile_addr;
         if (unsigned_addressing) {
@@ -230,8 +230,8 @@ static void ppu_render_window(PPU* ppu, Bus* bus)
             tile_addr = 0x9000 + (signed_index * 16) + ((window_line % 8) * 2);
         }
 
-        uint8_t byte1 = bus_read(bus, tile_addr);
-        uint8_t byte2 = bus_read(bus, tile_addr + 1);
+        uint8_t byte1 = gb_bus_read(bus, tile_addr);
+        uint8_t byte2 = gb_bus_read(bus, tile_addr + 1);
 
         int bit = 7 - (line_x % 8);
         uint8_t color_idx = (((byte2 >> bit) & 1) << 1) | ((byte1 >> bit) & 1);
@@ -240,7 +240,7 @@ static void ppu_render_window(PPU* ppu, Bus* bus)
     }
 }
 
-static void ppu_render_sprites(PPU* ppu, Bus* bus)
+static void ppu_render_sprites(gb_ppu* ppu, gb_bus* bus)
 {
     if (!(ppu->lcdc & 0x02)) return; // Sprites disabled (LCDC bit 1)
 
@@ -252,10 +252,10 @@ static void ppu_render_sprites(PPU* ppu, Bus* bus)
     Sprite sprites[10];
 
     for (int i = 0; i < 40 && sprite_count < 10; i++) {
-        int16_t sy = (int16_t)bus_read(bus, 0xFE00 + i * 4) - 16;
-        int16_t sx = (int16_t)bus_read(bus, 0xFE00 + i * 4 + 1) - 8;
-        uint8_t tile = bus_read(bus, 0xFE00 + i * 4 + 2);
-        uint8_t flags = bus_read(bus, 0xFE00 + i * 4 + 3);
+        int16_t sy = (int16_t)gb_bus_read(bus, 0xFE00 + i * 4) - 16;
+        int16_t sx = (int16_t)gb_bus_read(bus, 0xFE00 + i * 4 + 1) - 8;
+        uint8_t tile = gb_bus_read(bus, 0xFE00 + i * 4 + 2);
+        uint8_t flags = gb_bus_read(bus, 0xFE00 + i * 4 + 3);
 
         int16_t screen_y = (int16_t)ppu->ly - (int16_t)sy;
         if (screen_y >= 0 && screen_y < sprite_height) {
@@ -280,14 +280,14 @@ static void ppu_render_sprites(PPU* ppu, Bus* bus)
         if (sprite_height == 16) tile &= 0xFE; // In 8x16 mode, bit 0 ignored
 
         uint16_t tile_addr = 0x8000 + (tile * 16) + (tile_y * 2);
-        uint8_t byte1 = bus_read(bus, tile_addr);
-        uint8_t byte2 = bus_read(bus, tile_addr + 1);
+        uint8_t byte1 = gb_bus_read(bus, tile_addr);
+        uint8_t byte2 = gb_bus_read(bus, tile_addr + 1);
 
         uint8_t pal_reg = palette ? ppu->obp1 : ppu->obp0;
 
         for (int px = 0; px < 8; px++) {
             int16_t screen_x = (int16_t)sx + px;
-            if (screen_x < 0 || screen_x >= SCREEN_WIDTH) continue;
+            if (screen_x < 0 || screen_x >= GB_SCREEN_WIDTH) continue;
 
             int bit = x_flip ? px : (7 - px);
             uint8_t color_idx = (((byte2 >> bit) & 1) << 1) | ((byte1 >> bit) & 1);
@@ -305,7 +305,7 @@ static void ppu_render_sprites(PPU* ppu, Bus* bus)
     }
 }
 
-static void ppu_render_scanline(PPU* ppu, Bus* bus)
+static void ppu_render_scanline(gb_ppu* ppu, gb_bus* bus)
 {
     ppu_render_bg(ppu, bus);
     ppu_render_window(ppu, bus);
@@ -327,7 +327,7 @@ static uint32_t ppu_get_color(uint8_t palette_reg, uint8_t color_index)
     return colors[shade];
 }
 
-static void ppu_change_mode(PPU* ppu, PPUMode new_mode)
+static void ppu_change_mode(gb_ppu* ppu, gb_ppu_mode new_mode)
 {
     ppu->stat = (ppu->stat & 0xFC) | (new_mode & 0x03);
 
@@ -337,9 +337,9 @@ static void ppu_change_mode(PPU* ppu, PPUMode new_mode)
     // Bit 5 = Mode 2 (OAM) interrupt enable
     bool interrupt = false;
     switch (new_mode) {
-        case PPU_MODE_HBLANK: interrupt = ppu->stat & 0x08; break;
-        case PPU_MODE_VBLANK: interrupt = ppu->stat & 0x10; break;
-        case PPU_MODE_OAM:    interrupt = ppu->stat & 0x20; break;
+        case GB_PPU_MODE_HBLANK: interrupt = ppu->stat & 0x08; break;
+        case GB_PPU_MODE_VBLANK: interrupt = ppu->stat & 0x10; break;
+        case GB_PPU_MODE_OAM:    interrupt = ppu->stat & 0x20; break;
         default: break;
     }
 
@@ -348,7 +348,7 @@ static void ppu_change_mode(PPU* ppu, PPUMode new_mode)
     }
 }
 
-static void check_lyc_stat_interrupt(PPU* ppu)
+static void check_lyc_stat_interrupt(gb_ppu* ppu)
 {
     if (ppu->ly == ppu->lyc) {
         ppu->stat |= 0x04; // Set LYC=LY coincidence flag (bit 2)

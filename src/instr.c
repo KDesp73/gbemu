@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 
-static bool instr_8bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
+static bool instr_8bit_arithm(gb_cpu* cpu, gb_bus* bus, uint8_t opcode)
 {
     switch (opcode) {
         // ADC A, r8
@@ -18,13 +18,13 @@ static bool instr_8bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_ADC_A_L:
         case OP_ADC_A_HL_IND:
         case OP_ADC_A_A: {
-            uint8_t value = get_reg_by_index(cpu, bus, opcode & 0x07);
-            uint8_t carry = flag_get(cpu, FLAG_C) ? 1 : 0;
+            uint8_t value = gb_get_reg_by_index(cpu, bus, opcode & 0x07);
+            uint8_t carry = gb_flag_get(cpu, GB_FLAG_C) ? 1 : 0;
             uint16_t result = cpu->a + value + carry;
-            flag_set(cpu, FLAG_Z, (uint8_t)result == 0);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, ((cpu->a & 0x0F) + (value & 0x0F) + carry) > 0x0F);
-            flag_set(cpu, FLAG_C, result > 0xFF);
+            gb_flag_set(cpu, GB_FLAG_Z, (uint8_t)result == 0);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, ((cpu->a & 0x0F) + (value & 0x0F) + carry) > 0x0F);
+            gb_flag_set(cpu, GB_FLAG_C, result > 0xFF);
             cpu->a = (uint8_t)result;
             break;
         }
@@ -32,13 +32,13 @@ static bool instr_8bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         // ADC A, n8
         // Cycles: 2 | Bytes: 2 | Flags: Z 0 H C
         case OP_ADC_A_n8: {
-            uint8_t value = fetch8(cpu, bus);
-            uint8_t carry = flag_get(cpu, FLAG_C) ? 1 : 0;
+            uint8_t value = gb_fetch8(cpu, bus);
+            uint8_t carry = gb_flag_get(cpu, GB_FLAG_C) ? 1 : 0;
             uint16_t result = cpu->a + value + carry;
-            flag_set(cpu, FLAG_Z, (uint8_t)result == 0);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, ((cpu->a & 0x0F) + (value & 0x0F) + carry) > 0x0F);
-            flag_set(cpu, FLAG_C, result > 0xFF);
+            gb_flag_set(cpu, GB_FLAG_Z, (uint8_t)result == 0);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, ((cpu->a & 0x0F) + (value & 0x0F) + carry) > 0x0F);
+            gb_flag_set(cpu, GB_FLAG_C, result > 0xFF);
             cpu->a = (uint8_t)result;
             break;
         }
@@ -53,12 +53,12 @@ static bool instr_8bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_ADD_A_L:
         case OP_ADD_A_HL_IND:
         case OP_ADD_A_A: {
-            uint8_t value = get_reg_by_index(cpu, bus, opcode & 0x07);
+            uint8_t value = gb_get_reg_by_index(cpu, bus, opcode & 0x07);
             uint16_t result = cpu->a + value;
-            flag_set(cpu, FLAG_Z, (uint8_t)result == 0);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, ((cpu->a & 0x0F) + (value & 0x0F)) > 0x0F);
-            flag_set(cpu, FLAG_C, result > 0xFF);
+            gb_flag_set(cpu, GB_FLAG_Z, (uint8_t)result == 0);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, ((cpu->a & 0x0F) + (value & 0x0F)) > 0x0F);
+            gb_flag_set(cpu, GB_FLAG_C, result > 0xFF);
             cpu->a = (uint8_t)result;
             break;
         }
@@ -66,12 +66,12 @@ static bool instr_8bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         // ADD A, n8
         // Cycles: 2 | Bytes: 2 | Flags: Z 0 H C
         case OP_ADD_A_n8: {
-            uint8_t value = fetch8(cpu, bus);
+            uint8_t value = gb_fetch8(cpu, bus);
             uint16_t result = cpu->a + value;
-            flag_set(cpu, FLAG_Z, (uint8_t)result == 0);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, ((cpu->a & 0x0F) + (value & 0x0F)) > 0x0F);
-            flag_set(cpu, FLAG_C, result > 0xFF);
+            gb_flag_set(cpu, GB_FLAG_Z, (uint8_t)result == 0);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, ((cpu->a & 0x0F) + (value & 0x0F)) > 0x0F);
+            gb_flag_set(cpu, GB_FLAG_C, result > 0xFF);
             cpu->a = (uint8_t)result;
             break;
         }
@@ -86,24 +86,24 @@ static bool instr_8bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_CP_A_L:
         case OP_CP_A_HL_IND:
         case OP_CP_A_A: {
-            uint8_t value = get_reg_by_index(cpu, bus, opcode & 0x07);
+            uint8_t value = gb_get_reg_by_index(cpu, bus, opcode & 0x07);
             uint16_t result = cpu->a - value;
-            flag_set(cpu, FLAG_Z, (uint8_t)result == 0);
-            flag_set(cpu, FLAG_N, true);
-            flag_set(cpu, FLAG_H, (cpu->a & 0x0F) < (value & 0x0F));
-            flag_set(cpu, FLAG_C, cpu->a < value);
+            gb_flag_set(cpu, GB_FLAG_Z, (uint8_t)result == 0);
+            gb_flag_set(cpu, GB_FLAG_N, true);
+            gb_flag_set(cpu, GB_FLAG_H, (cpu->a & 0x0F) < (value & 0x0F));
+            gb_flag_set(cpu, GB_FLAG_C, cpu->a < value);
             break;
         }
 
         // CP A, n8
         // Cycles: 2 | Bytes: 2 | Flags: Z 1 H C
         case OP_CP_A_n8: {
-            uint8_t value = fetch8(cpu, bus);
+            uint8_t value = gb_fetch8(cpu, bus);
             uint16_t result = cpu->a - value;
-            flag_set(cpu, FLAG_Z, (uint8_t)result == 0);
-            flag_set(cpu, FLAG_N, true);
-            flag_set(cpu, FLAG_H, (cpu->a & 0x0F) < (value & 0x0F));
-            flag_set(cpu, FLAG_C, cpu->a < value);
+            gb_flag_set(cpu, GB_FLAG_Z, (uint8_t)result == 0);
+            gb_flag_set(cpu, GB_FLAG_N, true);
+            gb_flag_set(cpu, GB_FLAG_H, (cpu->a & 0x0F) < (value & 0x0F));
+            gb_flag_set(cpu, GB_FLAG_C, cpu->a < value);
             break;
         }
 
@@ -117,26 +117,26 @@ static bool instr_8bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_DEC_L:
         case OP_DEC_A: {
             uint8_t reg_idx = (opcode >> 3) & 0x07;
-            uint8_t value = get_reg_by_index(cpu, bus, reg_idx);
+            uint8_t value = gb_get_reg_by_index(cpu, bus, reg_idx);
             uint8_t result = value - 1;
-            set_reg_by_index(cpu, bus, reg_idx, result);
-            flag_set(cpu, FLAG_Z, result == 0);
-            flag_set(cpu, FLAG_N, true);
-            flag_set(cpu, FLAG_H, (value & 0x0F) == 0x00);
+            gb_set_reg_by_index(cpu, bus, reg_idx, result);
+            gb_flag_set(cpu, GB_FLAG_Z, result == 0);
+            gb_flag_set(cpu, GB_FLAG_N, true);
+            gb_flag_set(cpu, GB_FLAG_H, (value & 0x0F) == 0x00);
             break;
         }
 
         // DEC [HL]
         // Cycles: 3 | Bytes: 1 | Flags: Z 1 H -
         case OP_DEC_HL_IND: {
-            machine_tick(bus, 4);
-            uint8_t value = bus_read(bus, cpu->hl);
+            gb_machine_tick(bus, 4);
+            uint8_t value = gb_bus_read(bus, cpu->hl);
             uint8_t result = value - 1;
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->hl, result);
-            flag_set(cpu, FLAG_Z, result == 0);
-            flag_set(cpu, FLAG_N, true);
-            flag_set(cpu, FLAG_H, (value & 0x0F) == 0x00);
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->hl, result);
+            gb_flag_set(cpu, GB_FLAG_Z, result == 0);
+            gb_flag_set(cpu, GB_FLAG_N, true);
+            gb_flag_set(cpu, GB_FLAG_H, (value & 0x0F) == 0x00);
             break;
         }
 
@@ -150,26 +150,26 @@ static bool instr_8bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_INC_L:
         case OP_INC_A: {
             uint8_t reg_idx = (opcode >> 3) & 0x07;
-            uint8_t value = get_reg_by_index(cpu, bus, reg_idx);
+            uint8_t value = gb_get_reg_by_index(cpu, bus, reg_idx);
             uint8_t result = value + 1;
-            set_reg_by_index(cpu, bus, reg_idx, result);
-            flag_set(cpu, FLAG_Z, result == 0);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, (value & 0x0F) == 0x0F);
+            gb_set_reg_by_index(cpu, bus, reg_idx, result);
+            gb_flag_set(cpu, GB_FLAG_Z, result == 0);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, (value & 0x0F) == 0x0F);
             break;
         }
 
         // INC [HL]
         // Cycles: 3 | Bytes: 1 | Flags: Z 0 H -
         case OP_INC_HL_IND: {
-            machine_tick(bus, 4);
-            uint8_t value = bus_read(bus, cpu->hl);
+            gb_machine_tick(bus, 4);
+            uint8_t value = gb_bus_read(bus, cpu->hl);
             uint8_t result = value + 1;
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->hl, result);
-            flag_set(cpu, FLAG_Z, result == 0);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, (value & 0x0F) == 0x0F);
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->hl, result);
+            gb_flag_set(cpu, GB_FLAG_Z, result == 0);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, (value & 0x0F) == 0x0F);
             break;
         }
 
@@ -183,13 +183,13 @@ static bool instr_8bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_SBC_A_L:
         case OP_SBC_A_HL_IND:
         case OP_SBC_A_A: {
-            uint8_t value = get_reg_by_index(cpu, bus, opcode & 0x07);
-            uint8_t carry = flag_get(cpu, FLAG_C) ? 1 : 0;
+            uint8_t value = gb_get_reg_by_index(cpu, bus, opcode & 0x07);
+            uint8_t carry = gb_flag_get(cpu, GB_FLAG_C) ? 1 : 0;
             int16_t result = cpu->a - value - carry;
-            flag_set(cpu, FLAG_Z, (uint8_t)result == 0);
-            flag_set(cpu, FLAG_N, true);
-            flag_set(cpu, FLAG_H, ((cpu->a & 0x0F) - (value & 0x0F) - carry) < 0);
-            flag_set(cpu, FLAG_C, result < 0);
+            gb_flag_set(cpu, GB_FLAG_Z, (uint8_t)result == 0);
+            gb_flag_set(cpu, GB_FLAG_N, true);
+            gb_flag_set(cpu, GB_FLAG_H, ((cpu->a & 0x0F) - (value & 0x0F) - carry) < 0);
+            gb_flag_set(cpu, GB_FLAG_C, result < 0);
             cpu->a = (uint8_t)result;
             break;
         }
@@ -197,13 +197,13 @@ static bool instr_8bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         // SBC A, n8
         // Cycles: 2 | Bytes: 2 | Flags: Z 1 H C
         case OP_SBC_A_n8: {
-            uint8_t value = fetch8(cpu, bus);
-            uint8_t carry = flag_get(cpu, FLAG_C) ? 1 : 0;
+            uint8_t value = gb_fetch8(cpu, bus);
+            uint8_t carry = gb_flag_get(cpu, GB_FLAG_C) ? 1 : 0;
             int16_t result = cpu->a - value - carry;
-            flag_set(cpu, FLAG_Z, (uint8_t)result == 0);
-            flag_set(cpu, FLAG_N, true);
-            flag_set(cpu, FLAG_H, ((cpu->a & 0x0F) - (value & 0x0F) - carry) < 0);
-            flag_set(cpu, FLAG_C, result < 0);
+            gb_flag_set(cpu, GB_FLAG_Z, (uint8_t)result == 0);
+            gb_flag_set(cpu, GB_FLAG_N, true);
+            gb_flag_set(cpu, GB_FLAG_H, ((cpu->a & 0x0F) - (value & 0x0F) - carry) < 0);
+            gb_flag_set(cpu, GB_FLAG_C, result < 0);
             cpu->a = (uint8_t)result;
             break;
         }
@@ -218,12 +218,12 @@ static bool instr_8bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_SUB_A_L:
         case OP_SUB_A_HL_IND:
         case OP_SUB_A_A: {
-            uint8_t value = get_reg_by_index(cpu, bus, opcode & 0x07);
+            uint8_t value = gb_get_reg_by_index(cpu, bus, opcode & 0x07);
             uint16_t result = cpu->a - value;
-            flag_set(cpu, FLAG_Z, (uint8_t)result == 0);
-            flag_set(cpu, FLAG_N, true);
-            flag_set(cpu, FLAG_H, (cpu->a & 0x0F) < (value & 0x0F));
-            flag_set(cpu, FLAG_C, cpu->a < value);
+            gb_flag_set(cpu, GB_FLAG_Z, (uint8_t)result == 0);
+            gb_flag_set(cpu, GB_FLAG_N, true);
+            gb_flag_set(cpu, GB_FLAG_H, (cpu->a & 0x0F) < (value & 0x0F));
+            gb_flag_set(cpu, GB_FLAG_C, cpu->a < value);
             cpu->a = (uint8_t)result;
             break;
         }
@@ -231,12 +231,12 @@ static bool instr_8bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         // SUB A, n8
         // Cycles: 2 | Bytes: 2 | Flags: Z 1 H C
         case OP_SUB_A_n8: {
-            uint8_t value = fetch8(cpu, bus);
+            uint8_t value = gb_fetch8(cpu, bus);
             uint16_t result = cpu->a - value;
-            flag_set(cpu, FLAG_Z, (uint8_t)result == 0);
-            flag_set(cpu, FLAG_N, true);
-            flag_set(cpu, FLAG_H, (cpu->a & 0x0F) < (value & 0x0F));
-            flag_set(cpu, FLAG_C, cpu->a < value);
+            gb_flag_set(cpu, GB_FLAG_Z, (uint8_t)result == 0);
+            gb_flag_set(cpu, GB_FLAG_N, true);
+            gb_flag_set(cpu, GB_FLAG_H, (cpu->a & 0x0F) < (value & 0x0F));
+            gb_flag_set(cpu, GB_FLAG_C, cpu->a < value);
             cpu->a = (uint8_t)result;
             break;
         }
@@ -247,7 +247,7 @@ static bool instr_8bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
     return true;
 }
 
-static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
+static bool instr_load(gb_cpu* cpu, gb_bus* bus, uint8_t opcode)
 {
     switch (opcode) {
         // LD r8, r8
@@ -303,8 +303,8 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_LD_A_A: {
             uint8_t dest = (opcode >> 3) & 0x07;
             uint8_t src = opcode & 0x07;
-            uint8_t value = get_reg_by_index(cpu, bus, src);
-            set_reg_by_index(cpu, bus, dest, value);
+            uint8_t value = gb_get_reg_by_index(cpu, bus, src);
+            gb_set_reg_by_index(cpu, bus, dest, value);
             break;
         }
 
@@ -318,27 +318,27 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_LD_L_n8:
         case OP_LD_A_n8: {
             uint8_t dest = (opcode >> 3) & 0x07;
-            uint8_t value = fetch8(cpu, bus);
-            set_reg_by_index(cpu, bus, dest, value);
+            uint8_t value = gb_fetch8(cpu, bus);
+            gb_set_reg_by_index(cpu, bus, dest, value);
             break;
         }
 
         // LD r16, n16
         // Cycles: 3 | Bytes: 3 | Flags: -
         case OP_LD_BC_n16: {
-            cpu->bc = fetch16(cpu, bus);
+            cpu->bc = gb_fetch16(cpu, bus);
             break;
         }
         case OP_LD_DE_n16: {
-            cpu->de = fetch16(cpu, bus);
+            cpu->de = gb_fetch16(cpu, bus);
             break;
         }
         case OP_LD_HL_n16: {
-            cpu->hl = fetch16(cpu, bus);
+            cpu->hl = gb_fetch16(cpu, bus);
             break;
         }
         case OP_LD_SP_n16: {
-            cpu->sp = fetch16(cpu, bus);
+            cpu->sp = gb_fetch16(cpu, bus);
             break;
         }
 
@@ -352,18 +352,18 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_LD_HL_IND_L:
         case OP_LD_HL_IND_A: {
             uint8_t src = opcode & 0x07;
-            uint8_t value = get_reg_by_index(cpu, bus, src);
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->hl, value);
+            uint8_t value = gb_get_reg_by_index(cpu, bus, src);
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->hl, value);
             break;
         }
 
         // LD [HL], n8
         // Cycles: 3 | Bytes: 2 | Flags: -
         case OP_LD_HL_IND_n8: {
-            uint8_t value = fetch8(cpu, bus);
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->hl, value);
+            uint8_t value = gb_fetch8(cpu, bus);
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->hl, value);
             break;
         }
 
@@ -377,95 +377,95 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_LD_L_HL_IND:
         case OP_LD_A_HL_IND: {
             uint8_t dest = (opcode >> 3) & 0x07;
-            machine_tick(bus, 4);
-            uint8_t value = bus_read(bus, cpu->hl);
-            set_reg_by_index(cpu, bus, dest, value);
+            gb_machine_tick(bus, 4);
+            uint8_t value = gb_bus_read(bus, cpu->hl);
+            gb_set_reg_by_index(cpu, bus, dest, value);
             break;
         }
 
         // LD [r16], A
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_LD_BC_IND_A: {
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->bc, cpu->a);
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->bc, cpu->a);
             break;
         }
         case OP_LD_DE_IND_A: {
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->de, cpu->a);
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->de, cpu->a);
             break;
         }
 
         // LD [n16], A
         // Cycles: 4 | Bytes: 3 | Flags: -
         case OP_LD_a16_IND_A: {
-            uint16_t addr = fetch16(cpu, bus);
-            machine_tick(bus, 4);
-            bus_write(bus, addr, cpu->a);
+            uint16_t addr = gb_fetch16(cpu, bus);
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, addr, cpu->a);
             break;
         }
 
         // LDH [n16], A
         // Cycles: 3 | Bytes: 2 | Flags: -
         case OP_LDH_a8_IND_A: {
-            uint8_t a8 = fetch8(cpu, bus);
-            machine_tick(bus, 4);
-            bus_write(bus, 0xFF00 + a8, cpu->a);
+            uint8_t a8 = gb_fetch8(cpu, bus);
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, 0xFF00 + a8, cpu->a);
             break;
         }
 
         // LDH [C], A
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_LDH_C_IND_A: {
-            machine_tick(bus, 4);
-            bus_write(bus, 0xFF00 + cpu->c, cpu->a);
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, 0xFF00 + cpu->c, cpu->a);
             break;
         }
 
         // LD A, [r16]
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_LD_A_BC_IND: {
-            machine_tick(bus, 4);
-            cpu->a = bus_read(bus, cpu->bc);
+            gb_machine_tick(bus, 4);
+            cpu->a = gb_bus_read(bus, cpu->bc);
             break;
         }
         case OP_LD_A_DE_IND: {
-            machine_tick(bus, 4);
-            cpu->a = bus_read(bus, cpu->de);
+            gb_machine_tick(bus, 4);
+            cpu->a = gb_bus_read(bus, cpu->de);
             break;
         }
 
         // LD A, [n16]
         // Cycles: 4 | Bytes: 3 | Flags: -
         case OP_LD_A_a16_IND: {
-            uint16_t addr = fetch16(cpu, bus);
-            machine_tick(bus, 4);
-            cpu->a = bus_read(bus, addr);
+            uint16_t addr = gb_fetch16(cpu, bus);
+            gb_machine_tick(bus, 4);
+            cpu->a = gb_bus_read(bus, addr);
             break;
         }
 
         // LDH A, [n16]
         // Cycles: 3 | Bytes: 2 | Flags: -
         case OP_LDH_A_a8_IND: {
-            uint8_t a8 = fetch8(cpu, bus);
-            machine_tick(bus, 4);
-            cpu->a = bus_read(bus, 0xFF00 + a8);
+            uint8_t a8 = gb_fetch8(cpu, bus);
+            gb_machine_tick(bus, 4);
+            cpu->a = gb_bus_read(bus, 0xFF00 + a8);
             break;
         }
 
         // LDH A, [C]
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_LDH_A_C_IND: {
-            machine_tick(bus, 4);
-            cpu->a = bus_read(bus, 0xFF00 + cpu->c);
+            gb_machine_tick(bus, 4);
+            cpu->a = gb_bus_read(bus, 0xFF00 + cpu->c);
             break;
         }
 
         // LD [HLI], A
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_LD_HL_INC_A: {
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->hl, cpu->a);
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->hl, cpu->a);
             cpu->hl++;
             break;
         }
@@ -473,8 +473,8 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // LD [HLD], A
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_LD_HL_DEC_A: {
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->hl, cpu->a);
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->hl, cpu->a);
             cpu->hl--;
             break;
         }
@@ -482,8 +482,8 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // LD A, [HLI]
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_LD_A_HL_INC: {
-            machine_tick(bus, 4);
-            cpu->a = bus_read(bus, cpu->hl);
+            gb_machine_tick(bus, 4);
+            cpu->a = gb_bus_read(bus, cpu->hl);
             cpu->hl++;
             break;
         }
@@ -491,8 +491,8 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // LD A, [HLD]
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_LD_A_HL_DEC: {
-            machine_tick(bus, 4);
-            cpu->a = bus_read(bus, cpu->hl);
+            gb_machine_tick(bus, 4);
+            cpu->a = gb_bus_read(bus, cpu->hl);
             cpu->hl--;
             break;
         }
@@ -500,24 +500,24 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // LD [n16], SP
         // Cycles: 5 | Bytes: 3 | Flags: -
         case OP_LD_a16_IND_SP: {
-            uint16_t addr = fetch16(cpu, bus);
-            machine_tick(bus, 4);
-            bus_write(bus, addr, cpu->sp & 0xFF);
-            machine_tick(bus, 4);
-            bus_write(bus, addr + 1, cpu->sp >> 8);
+            uint16_t addr = gb_fetch16(cpu, bus);
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, addr, cpu->sp & 0xFF);
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, addr + 1, cpu->sp >> 8);
             break;
         }
 
         // LD HL, SP+e8
         // Cycles: 3 | Bytes: 2 | Flags: 0 0 H C
         case OP_LD_HL_SP_e8: {
-            int8_t e8 = (int8_t)fetch8(cpu, bus);
-            machine_tick(bus, 4); // internal cycle
+            int8_t e8 = (int8_t)gb_fetch8(cpu, bus);
+            gb_machine_tick(bus, 4); // internal cycle
             uint16_t result = cpu->sp + e8;
-            flag_set(cpu, FLAG_Z, false);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, ((cpu->sp & 0x0F) + (e8 & 0x0F)) > 0x0F);
-            flag_set(cpu, FLAG_C, ((cpu->sp & 0xFF) + (e8 & 0xFF)) > 0xFF);
+            gb_flag_set(cpu, GB_FLAG_Z, false);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, ((cpu->sp & 0x0F) + (e8 & 0x0F)) > 0x0F);
+            gb_flag_set(cpu, GB_FLAG_C, ((cpu->sp & 0xFF) + (e8 & 0xFF)) > 0xFF);
             cpu->hl = result;
             break;
         }
@@ -525,7 +525,7 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
         // LD SP, HL
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_LD_SP_HL: {
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             cpu->sp = cpu->hl;
             break;
         }
@@ -536,35 +536,35 @@ static bool instr_load(CPU* cpu, Bus* bus, uint8_t opcode)
     return true;
 }
 
-static bool instr_16bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
+static bool instr_16bit_arithm(gb_cpu* cpu, gb_bus* bus, uint8_t opcode)
 {
     switch (opcode) {
         // ADD HL, r16
         // Cycles: 2 | Bytes: 1 | Flags: - 0 H C
         case OP_ADD_HL_BC: {
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             uint32_t result = cpu->hl + cpu->bc;
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, ((cpu->hl & 0x0FFF) + (cpu->bc & 0x0FFF)) > 0x0FFF);
-            flag_set(cpu, FLAG_C, result > 0xFFFF);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, ((cpu->hl & 0x0FFF) + (cpu->bc & 0x0FFF)) > 0x0FFF);
+            gb_flag_set(cpu, GB_FLAG_C, result > 0xFFFF);
             cpu->hl = (uint16_t)result;
             break;
         }
         case OP_ADD_HL_DE: {
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             uint32_t result = cpu->hl + cpu->de;
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, ((cpu->hl & 0x0FFF) + (cpu->de & 0x0FFF)) > 0x0FFF);
-            flag_set(cpu, FLAG_C, result > 0xFFFF);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, ((cpu->hl & 0x0FFF) + (cpu->de & 0x0FFF)) > 0x0FFF);
+            gb_flag_set(cpu, GB_FLAG_C, result > 0xFFFF);
             cpu->hl = (uint16_t)result;
             break;
         }
         case OP_ADD_HL_HL: {
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             uint32_t result = cpu->hl + cpu->hl;
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, ((cpu->hl & 0x0FFF) + (cpu->hl & 0x0FFF)) > 0x0FFF);
-            flag_set(cpu, FLAG_C, result > 0xFFFF);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, ((cpu->hl & 0x0FFF) + (cpu->hl & 0x0FFF)) > 0x0FFF);
+            gb_flag_set(cpu, GB_FLAG_C, result > 0xFFFF);
             cpu->hl = (uint16_t)result;
             break;
         }
@@ -572,11 +572,11 @@ static bool instr_16bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         // ADD HL, SP
         // Cycles: 2 | Bytes: 1 | Flags: - 0 H C
         case OP_ADD_HL_SP: {
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             uint32_t result = cpu->hl + cpu->sp;
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, ((cpu->hl & 0x0FFF) + (cpu->sp & 0x0FFF)) > 0x0FFF);
-            flag_set(cpu, FLAG_C, result > 0xFFFF);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, ((cpu->hl & 0x0FFF) + (cpu->sp & 0x0FFF)) > 0x0FFF);
+            gb_flag_set(cpu, GB_FLAG_C, result > 0xFFFF);
             cpu->hl = (uint16_t)result;
             break;
         }
@@ -584,13 +584,13 @@ static bool instr_16bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         // ADD SP, e8
         // Cycles: 4 | Bytes: 2 | Flags: 0 0 H C
         case OP_ADD_SP_e8: {
-            int8_t e8 = (int8_t)fetch8(cpu, bus);
-            machine_tick(bus, 4); // two internal cycles
-            machine_tick(bus, 4);
-            flag_set(cpu, FLAG_Z, false);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, ((cpu->sp & 0x0F) + (e8 & 0x0F)) > 0x0F);
-            flag_set(cpu, FLAG_C, ((cpu->sp & 0xFF) + (e8 & 0xFF)) > 0xFF);
+            int8_t e8 = (int8_t)gb_fetch8(cpu, bus);
+            gb_machine_tick(bus, 4); // two internal cycles
+            gb_machine_tick(bus, 4);
+            gb_flag_set(cpu, GB_FLAG_Z, false);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, ((cpu->sp & 0x0F) + (e8 & 0x0F)) > 0x0F);
+            gb_flag_set(cpu, GB_FLAG_C, ((cpu->sp & 0xFF) + (e8 & 0xFF)) > 0xFF);
             cpu->sp += e8;
             break;
         }
@@ -598,17 +598,17 @@ static bool instr_16bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         // DEC r16
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_DEC_BC: {
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             cpu->bc--;
             break;
         }
         case OP_DEC_DE: {
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             cpu->de--;
             break;
         }
         case OP_DEC_HL: {
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             cpu->hl--;
             break;
         }
@@ -616,7 +616,7 @@ static bool instr_16bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         // DEC SP
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_DEC_SP: {
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             cpu->sp--;
             break;
         }
@@ -624,17 +624,17 @@ static bool instr_16bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         // INC r16
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_INC_BC: {
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             cpu->bc++;
             break;
         }
         case OP_INC_DE: {
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             cpu->de++;
             break;
         }
         case OP_INC_HL: {
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             cpu->hl++;
             break;
         }
@@ -642,7 +642,7 @@ static bool instr_16bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
         // INC SP
         // Cycles: 2 | Bytes: 1 | Flags: -
         case OP_INC_SP: {
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             cpu->sp++;
             break;
         }
@@ -653,7 +653,7 @@ static bool instr_16bit_arithm(CPU* cpu, Bus* bus, uint8_t opcode)
     return true;
 }
 
-static bool instr_bitwise(CPU* cpu, Bus* bus, uint8_t opcode)
+static bool instr_bitwise(gb_cpu* cpu, gb_bus* bus, uint8_t opcode)
 {
     switch (opcode) {
         // AND A, r8
@@ -666,24 +666,24 @@ static bool instr_bitwise(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_AND_A_L:
         case OP_AND_A_HL_IND:
         case OP_AND_A_A: {
-            uint8_t value = get_reg_by_index(cpu, bus, opcode & 0x07);
+            uint8_t value = gb_get_reg_by_index(cpu, bus, opcode & 0x07);
             cpu->a &= value;
-            flag_set(cpu, FLAG_Z, cpu->a == 0);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, true);
-            flag_set(cpu, FLAG_C, false);
+            gb_flag_set(cpu, GB_FLAG_Z, cpu->a == 0);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, true);
+            gb_flag_set(cpu, GB_FLAG_C, false);
             break;
         }
 
         // AND A, n8
         // Cycles: 2 | Bytes: 2 | Flags: Z 0 1 0
         case OP_AND_A_n8: {
-            uint8_t value = fetch8(cpu, bus);
+            uint8_t value = gb_fetch8(cpu, bus);
             cpu->a &= value;
-            flag_set(cpu, FLAG_Z, cpu->a == 0);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, true);
-            flag_set(cpu, FLAG_C, false);
+            gb_flag_set(cpu, GB_FLAG_Z, cpu->a == 0);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, true);
+            gb_flag_set(cpu, GB_FLAG_C, false);
             break;
         }
 
@@ -691,8 +691,8 @@ static bool instr_bitwise(CPU* cpu, Bus* bus, uint8_t opcode)
         // Cycles: 1 | Bytes: 1 | Flags: - 1 1 -
         case OP_CPL: {
             cpu->a = ~cpu->a;
-            flag_set(cpu, FLAG_N, true);
-            flag_set(cpu, FLAG_H, true);
+            gb_flag_set(cpu, GB_FLAG_N, true);
+            gb_flag_set(cpu, GB_FLAG_H, true);
             break;
         }
 
@@ -706,24 +706,24 @@ static bool instr_bitwise(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_OR_A_L:
         case OP_OR_A_HL_IND:
         case OP_OR_A_A: {
-            uint8_t value = get_reg_by_index(cpu, bus, opcode & 0x07);
+            uint8_t value = gb_get_reg_by_index(cpu, bus, opcode & 0x07);
             cpu->a |= value;
-            flag_set(cpu, FLAG_Z, cpu->a == 0);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, false);
-            flag_set(cpu, FLAG_C, false);
+            gb_flag_set(cpu, GB_FLAG_Z, cpu->a == 0);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, false);
+            gb_flag_set(cpu, GB_FLAG_C, false);
             break;
         }
 
         // OR A, n8
         // Cycles: 2 | Bytes: 2 | Flags: Z 0 0 0
         case OP_OR_A_n8: {
-            uint8_t value = fetch8(cpu, bus);
+            uint8_t value = gb_fetch8(cpu, bus);
             cpu->a |= value;
-            flag_set(cpu, FLAG_Z, cpu->a == 0);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, false);
-            flag_set(cpu, FLAG_C, false);
+            gb_flag_set(cpu, GB_FLAG_Z, cpu->a == 0);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, false);
+            gb_flag_set(cpu, GB_FLAG_C, false);
             break;
         }
 
@@ -737,24 +737,24 @@ static bool instr_bitwise(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_XOR_A_L:
         case OP_XOR_A_HL_IND:
         case OP_XOR_A_A: {
-            uint8_t value = get_reg_by_index(cpu, bus, opcode & 0x07);
+            uint8_t value = gb_get_reg_by_index(cpu, bus, opcode & 0x07);
             cpu->a ^= value;
-            flag_set(cpu, FLAG_Z, cpu->a == 0);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, false);
-            flag_set(cpu, FLAG_C, false);
+            gb_flag_set(cpu, GB_FLAG_Z, cpu->a == 0);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, false);
+            gb_flag_set(cpu, GB_FLAG_C, false);
             break;
         }
 
         // XOR A, n8
         // Cycles: 2 | Bytes: 2 | Flags: Z 0 0 0
         case OP_XOR_A_n8: {
-            uint8_t value = fetch8(cpu, bus);
+            uint8_t value = gb_fetch8(cpu, bus);
             cpu->a ^= value;
-            flag_set(cpu, FLAG_Z, cpu->a == 0);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, false);
-            flag_set(cpu, FLAG_C, false);
+            gb_flag_set(cpu, GB_FLAG_Z, cpu->a == 0);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, false);
+            gb_flag_set(cpu, GB_FLAG_C, false);
             break;
         }
 
@@ -764,7 +764,7 @@ static bool instr_bitwise(CPU* cpu, Bus* bus, uint8_t opcode)
     return true;
 }
 
-static bool instr_bit_flag(CPU* cpu, Bus* bus, uint8_t opcode)
+static bool instr_bit_flag(gb_cpu* cpu, gb_bus* bus, uint8_t opcode)
 {
     switch (opcode) {
         default:
@@ -773,7 +773,7 @@ static bool instr_bit_flag(CPU* cpu, Bus* bus, uint8_t opcode)
     return true;
 }
 
-static bool instr_bit_shift(CPU* cpu, Bus* bus, uint8_t opcode)
+static bool instr_bit_shift(gb_cpu* cpu, gb_bus* bus, uint8_t opcode)
 {
     switch (opcode) {
         // RLCA
@@ -781,10 +781,10 @@ static bool instr_bit_shift(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_RLCA: {
             uint8_t bit7 = (cpu->a >> 7) & 1;
             cpu->a = (cpu->a << 1) | bit7;
-            flag_set(cpu, FLAG_Z, false);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, false);
-            flag_set(cpu, FLAG_C, bit7);
+            gb_flag_set(cpu, GB_FLAG_Z, false);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, false);
+            gb_flag_set(cpu, GB_FLAG_C, bit7);
             break;
         }
 
@@ -793,10 +793,10 @@ static bool instr_bit_shift(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_RRCA: {
             uint8_t bit0 = cpu->a & 1;
             cpu->a = (cpu->a >> 1) | (bit0 << 7);
-            flag_set(cpu, FLAG_Z, false);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, false);
-            flag_set(cpu, FLAG_C, bit0);
+            gb_flag_set(cpu, GB_FLAG_Z, false);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, false);
+            gb_flag_set(cpu, GB_FLAG_C, bit0);
             break;
         }
 
@@ -804,12 +804,12 @@ static bool instr_bit_shift(CPU* cpu, Bus* bus, uint8_t opcode)
         // Cycles: 1 | Bytes: 1 | Flags: 0 0 0 C
         case OP_RLA: {
             uint8_t bit7 = (cpu->a >> 7) & 1;
-            uint8_t old_carry = flag_get(cpu, FLAG_C) ? 1 : 0;
+            uint8_t old_carry = gb_flag_get(cpu, GB_FLAG_C) ? 1 : 0;
             cpu->a = (cpu->a << 1) | old_carry;
-            flag_set(cpu, FLAG_Z, false);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, false);
-            flag_set(cpu, FLAG_C, bit7);
+            gb_flag_set(cpu, GB_FLAG_Z, false);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, false);
+            gb_flag_set(cpu, GB_FLAG_C, bit7);
             break;
         }
 
@@ -817,12 +817,12 @@ static bool instr_bit_shift(CPU* cpu, Bus* bus, uint8_t opcode)
         // Cycles: 1 | Bytes: 1 | Flags: 0 0 0 C
         case OP_RRA: {
             uint8_t bit0 = cpu->a & 1;
-            uint8_t old_carry = flag_get(cpu, FLAG_C) ? 1 : 0;
+            uint8_t old_carry = gb_flag_get(cpu, GB_FLAG_C) ? 1 : 0;
             cpu->a = (cpu->a >> 1) | (old_carry << 7);
-            flag_set(cpu, FLAG_Z, false);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, false);
-            flag_set(cpu, FLAG_C, bit0);
+            gb_flag_set(cpu, GB_FLAG_Z, false);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, false);
+            gb_flag_set(cpu, GB_FLAG_C, bit0);
             break;
         }
 
@@ -832,47 +832,47 @@ static bool instr_bit_shift(CPU* cpu, Bus* bus, uint8_t opcode)
     return true;
 }
 
-static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
+static bool instr_jumps(gb_cpu* cpu, gb_bus* bus, uint8_t opcode)
 {
     switch (opcode) {
         // JP n16
         // Cycles: 4 | Bytes: 3 | Flags: -
         case OP_JP_a16: {
-            cpu->pc = fetch16(cpu, bus);
-            machine_tick(bus, 4); // internal cycle
+            cpu->pc = gb_fetch16(cpu, bus);
+            gb_machine_tick(bus, 4); // internal cycle
             break;
         }
 
         // JP cc, n16
         // Cycles: 4 taken / 3 untaken | Bytes: 3 | Flags: -
         case OP_JP_NZ_a16: {
-            uint16_t addr = fetch16(cpu, bus);
-            if (!flag_get(cpu, FLAG_Z)) {
-                machine_tick(bus, 4); // internal cycle when taken
+            uint16_t addr = gb_fetch16(cpu, bus);
+            if (!gb_flag_get(cpu, GB_FLAG_Z)) {
+                gb_machine_tick(bus, 4); // internal cycle when taken
                 cpu->pc = addr;
             }
             break;
         }
         case OP_JP_Z_a16: {
-            uint16_t addr = fetch16(cpu, bus);
-            if (flag_get(cpu, FLAG_Z)) {
-                machine_tick(bus, 4); // internal cycle when taken
+            uint16_t addr = gb_fetch16(cpu, bus);
+            if (gb_flag_get(cpu, GB_FLAG_Z)) {
+                gb_machine_tick(bus, 4); // internal cycle when taken
                 cpu->pc = addr;
             }
             break;
         }
         case OP_JP_NC_a16: {
-            uint16_t addr = fetch16(cpu, bus);
-            if (!flag_get(cpu, FLAG_C)) {
-                machine_tick(bus, 4); // internal cycle when taken
+            uint16_t addr = gb_fetch16(cpu, bus);
+            if (!gb_flag_get(cpu, GB_FLAG_C)) {
+                gb_machine_tick(bus, 4); // internal cycle when taken
                 cpu->pc = addr;
             }
             break;
         }
         case OP_JP_C_a16: {
-            uint16_t addr = fetch16(cpu, bus);
-            if (flag_get(cpu, FLAG_C)) {
-                machine_tick(bus, 4); // internal cycle when taken
+            uint16_t addr = gb_fetch16(cpu, bus);
+            if (gb_flag_get(cpu, GB_FLAG_C)) {
+                gb_machine_tick(bus, 4); // internal cycle when taken
                 cpu->pc = addr;
             }
             break;
@@ -888,8 +888,8 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         // JR e8
         // Cycles: 3 | Bytes: 2 | Flags: -
         case OP_JR_e8: {
-            int8_t e8 = (int8_t)fetch8(cpu, bus);
-            machine_tick(bus, 4); // internal cycle
+            int8_t e8 = (int8_t)gb_fetch8(cpu, bus);
+            gb_machine_tick(bus, 4); // internal cycle
             cpu->pc += e8;
             break;
         }
@@ -897,33 +897,33 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         // JR cc, e8
         // Cycles: 3 taken / 2 untaken | Bytes: 2 | Flags: -
         case OP_JR_NZ_e8: {
-            int8_t e8 = (int8_t)fetch8(cpu, bus);
-            if (!flag_get(cpu, FLAG_Z)) {
-                machine_tick(bus, 4); // internal cycle when taken
+            int8_t e8 = (int8_t)gb_fetch8(cpu, bus);
+            if (!gb_flag_get(cpu, GB_FLAG_Z)) {
+                gb_machine_tick(bus, 4); // internal cycle when taken
                 cpu->pc += e8;
             }
             break;
         }
         case OP_JR_Z_e8: {
-            int8_t e8 = (int8_t)fetch8(cpu, bus);
-            if (flag_get(cpu, FLAG_Z)) {
-                machine_tick(bus, 4); // internal cycle when taken
+            int8_t e8 = (int8_t)gb_fetch8(cpu, bus);
+            if (gb_flag_get(cpu, GB_FLAG_Z)) {
+                gb_machine_tick(bus, 4); // internal cycle when taken
                 cpu->pc += e8;
             }
             break;
         }
         case OP_JR_NC_e8: {
-            int8_t e8 = (int8_t)fetch8(cpu, bus);
-            if (!flag_get(cpu, FLAG_C)) {
-                machine_tick(bus, 4); // internal cycle when taken
+            int8_t e8 = (int8_t)gb_fetch8(cpu, bus);
+            if (!gb_flag_get(cpu, GB_FLAG_C)) {
+                gb_machine_tick(bus, 4); // internal cycle when taken
                 cpu->pc += e8;
             }
             break;
         }
         case OP_JR_C_e8: {
-            int8_t e8 = (int8_t)fetch8(cpu, bus);
-            if (flag_get(cpu, FLAG_C)) {
-                machine_tick(bus, 4); // internal cycle when taken
+            int8_t e8 = (int8_t)gb_fetch8(cpu, bus);
+            if (gb_flag_get(cpu, GB_FLAG_C)) {
+                gb_machine_tick(bus, 4); // internal cycle when taken
                 cpu->pc += e8;
             }
             break;
@@ -932,13 +932,13 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         // CALL n16
         // Cycles: 6 | Bytes: 3 | Flags: -
         case OP_CALL_a16: {
-            uint16_t addr = fetch16(cpu, bus);
-            machine_tick(bus, 4); // internal cycle
+            uint16_t addr = gb_fetch16(cpu, bus);
+            gb_machine_tick(bus, 4); // internal cycle
             cpu->sp -= 2;
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->sp + 1, cpu->pc >> 8); // high byte first
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->sp, cpu->pc & 0xFF);
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->sp + 1, cpu->pc >> 8); // high byte first
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->sp, cpu->pc & 0xFF);
             cpu->pc = addr;
             break;
         }
@@ -946,53 +946,53 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         // CALL cc, n16
         // Cycles: 6 taken / 3 untaken | Bytes: 3 | Flags: -
         case OP_CALL_NZ_a16: {
-            uint16_t addr = fetch16(cpu, bus);
-            if (!flag_get(cpu, FLAG_Z)) {
-                machine_tick(bus, 4); // internal cycle when taken
+            uint16_t addr = gb_fetch16(cpu, bus);
+            if (!gb_flag_get(cpu, GB_FLAG_Z)) {
+                gb_machine_tick(bus, 4); // internal cycle when taken
                 cpu->sp -= 2;
-                machine_tick(bus, 4);
-                bus_write(bus, cpu->sp + 1, cpu->pc >> 8); // high byte first
-                machine_tick(bus, 4);
-                bus_write(bus, cpu->sp, cpu->pc & 0xFF);
+                gb_machine_tick(bus, 4);
+                gb_bus_write(bus, cpu->sp + 1, cpu->pc >> 8); // high byte first
+                gb_machine_tick(bus, 4);
+                gb_bus_write(bus, cpu->sp, cpu->pc & 0xFF);
                 cpu->pc = addr;
             }
             break;
         }
         case OP_CALL_Z_a16: {
-            uint16_t addr = fetch16(cpu, bus);
-            if (flag_get(cpu, FLAG_Z)) {
-                machine_tick(bus, 4); // internal cycle when taken
+            uint16_t addr = gb_fetch16(cpu, bus);
+            if (gb_flag_get(cpu, GB_FLAG_Z)) {
+                gb_machine_tick(bus, 4); // internal cycle when taken
                 cpu->sp -= 2;
-                machine_tick(bus, 4);
-                bus_write(bus, cpu->sp + 1, cpu->pc >> 8); // high byte first
-                machine_tick(bus, 4);
-                bus_write(bus, cpu->sp, cpu->pc & 0xFF);
+                gb_machine_tick(bus, 4);
+                gb_bus_write(bus, cpu->sp + 1, cpu->pc >> 8); // high byte first
+                gb_machine_tick(bus, 4);
+                gb_bus_write(bus, cpu->sp, cpu->pc & 0xFF);
                 cpu->pc = addr;
             }
             break;
         }
         case OP_CALL_NC_a16: {
-            uint16_t addr = fetch16(cpu, bus);
-            if (!flag_get(cpu, FLAG_C)) {
-                machine_tick(bus, 4); // internal cycle when taken
+            uint16_t addr = gb_fetch16(cpu, bus);
+            if (!gb_flag_get(cpu, GB_FLAG_C)) {
+                gb_machine_tick(bus, 4); // internal cycle when taken
                 cpu->sp -= 2;
-                machine_tick(bus, 4);
-                bus_write(bus, cpu->sp + 1, cpu->pc >> 8); // high byte first
-                machine_tick(bus, 4);
-                bus_write(bus, cpu->sp, cpu->pc & 0xFF);
+                gb_machine_tick(bus, 4);
+                gb_bus_write(bus, cpu->sp + 1, cpu->pc >> 8); // high byte first
+                gb_machine_tick(bus, 4);
+                gb_bus_write(bus, cpu->sp, cpu->pc & 0xFF);
                 cpu->pc = addr;
             }
             break;
         }
         case OP_CALL_C_a16: {
-            uint16_t addr = fetch16(cpu, bus);
-            if (flag_get(cpu, FLAG_C)) {
-                machine_tick(bus, 4); // internal cycle when taken
+            uint16_t addr = gb_fetch16(cpu, bus);
+            if (gb_flag_get(cpu, GB_FLAG_C)) {
+                gb_machine_tick(bus, 4); // internal cycle when taken
                 cpu->sp -= 2;
-                machine_tick(bus, 4);
-                bus_write(bus, cpu->sp + 1, cpu->pc >> 8); // high byte first
-                machine_tick(bus, 4);
-                bus_write(bus, cpu->sp, cpu->pc & 0xFF);
+                gb_machine_tick(bus, 4);
+                gb_bus_write(bus, cpu->sp + 1, cpu->pc >> 8); // high byte first
+                gb_machine_tick(bus, 4);
+                gb_bus_write(bus, cpu->sp, cpu->pc & 0xFF);
                 cpu->pc = addr;
             }
             break;
@@ -1001,75 +1001,75 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         // RET
         // Cycles: 4 | Bytes: 1 | Flags: -
         case OP_RET: {
-            machine_tick(bus, 4);
-            uint8_t lo = bus_read(bus, cpu->sp);
-            machine_tick(bus, 4);
-            uint8_t hi = bus_read(bus, cpu->sp + 1);
+            gb_machine_tick(bus, 4);
+            uint8_t lo = gb_bus_read(bus, cpu->sp);
+            gb_machine_tick(bus, 4);
+            uint8_t hi = gb_bus_read(bus, cpu->sp + 1);
             cpu->sp += 2;
             cpu->pc = (hi << 8) | lo;
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             break;
         }
 
         // RET cc
         // Cycles: 5 taken / 2 untaken | Bytes: 1 | Flags: -
         case OP_RET_NZ: {
-            if (!flag_get(cpu, FLAG_Z)) {
-                machine_tick(bus, 4); // internal cycle when taken
-                machine_tick(bus, 4);
-                uint8_t lo = bus_read(bus, cpu->sp);
-                machine_tick(bus, 4);
-                uint8_t hi = bus_read(bus, cpu->sp + 1);
+            if (!gb_flag_get(cpu, GB_FLAG_Z)) {
+                gb_machine_tick(bus, 4); // internal cycle when taken
+                gb_machine_tick(bus, 4);
+                uint8_t lo = gb_bus_read(bus, cpu->sp);
+                gb_machine_tick(bus, 4);
+                uint8_t hi = gb_bus_read(bus, cpu->sp + 1);
                 cpu->sp += 2;
                 cpu->pc = (hi << 8) | lo;
-                machine_tick(bus, 4); // internal cycle
+                gb_machine_tick(bus, 4); // internal cycle
             } else {
-                machine_tick(bus, 4); // untaken: fetch + internal cycle
+                gb_machine_tick(bus, 4); // untaken: fetch + internal cycle
             }
             break;
         }
         case OP_RET_Z: {
-            if (flag_get(cpu, FLAG_Z)) {
-                machine_tick(bus, 4); // internal cycle when taken
-                machine_tick(bus, 4);
-                uint8_t lo = bus_read(bus, cpu->sp);
-                machine_tick(bus, 4);
-                uint8_t hi = bus_read(bus, cpu->sp + 1);
+            if (gb_flag_get(cpu, GB_FLAG_Z)) {
+                gb_machine_tick(bus, 4); // internal cycle when taken
+                gb_machine_tick(bus, 4);
+                uint8_t lo = gb_bus_read(bus, cpu->sp);
+                gb_machine_tick(bus, 4);
+                uint8_t hi = gb_bus_read(bus, cpu->sp + 1);
                 cpu->sp += 2;
                 cpu->pc = (hi << 8) | lo;
-                machine_tick(bus, 4); // internal cycle
+                gb_machine_tick(bus, 4); // internal cycle
             } else {
-                machine_tick(bus, 4); // untaken: fetch + internal cycle
+                gb_machine_tick(bus, 4); // untaken: fetch + internal cycle
             }
             break;
         }
         case OP_RET_NC: {
-            if (!flag_get(cpu, FLAG_C)) {
-                machine_tick(bus, 4); // internal cycle when taken
-                machine_tick(bus, 4);
-                uint8_t lo = bus_read(bus, cpu->sp);
-                machine_tick(bus, 4);
-                uint8_t hi = bus_read(bus, cpu->sp + 1);
+            if (!gb_flag_get(cpu, GB_FLAG_C)) {
+                gb_machine_tick(bus, 4); // internal cycle when taken
+                gb_machine_tick(bus, 4);
+                uint8_t lo = gb_bus_read(bus, cpu->sp);
+                gb_machine_tick(bus, 4);
+                uint8_t hi = gb_bus_read(bus, cpu->sp + 1);
                 cpu->sp += 2;
                 cpu->pc = (hi << 8) | lo;
-                machine_tick(bus, 4); // internal cycle
+                gb_machine_tick(bus, 4); // internal cycle
             } else {
-                machine_tick(bus, 4); // untaken: fetch + internal cycle
+                gb_machine_tick(bus, 4); // untaken: fetch + internal cycle
             }
             break;
         }
         case OP_RET_C: {
-            if (flag_get(cpu, FLAG_C)) {
-                machine_tick(bus, 4); // internal cycle when taken
-                machine_tick(bus, 4);
-                uint8_t lo = bus_read(bus, cpu->sp);
-                machine_tick(bus, 4);
-                uint8_t hi = bus_read(bus, cpu->sp + 1);
+            if (gb_flag_get(cpu, GB_FLAG_C)) {
+                gb_machine_tick(bus, 4); // internal cycle when taken
+                gb_machine_tick(bus, 4);
+                uint8_t lo = gb_bus_read(bus, cpu->sp);
+                gb_machine_tick(bus, 4);
+                uint8_t hi = gb_bus_read(bus, cpu->sp + 1);
                 cpu->sp += 2;
                 cpu->pc = (hi << 8) | lo;
-                machine_tick(bus, 4); // internal cycle
+                gb_machine_tick(bus, 4); // internal cycle
             } else {
-                machine_tick(bus, 4); // untaken: fetch + internal cycle
+                gb_machine_tick(bus, 4); // untaken: fetch + internal cycle
             }
             break;
         }
@@ -1077,13 +1077,13 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         // RETI
         // Cycles: 4 | Bytes: 1 | Flags: -
         case OP_RETI: {
-            machine_tick(bus, 4);
-            uint8_t lo = bus_read(bus, cpu->sp);
-            machine_tick(bus, 4);
-            uint8_t hi = bus_read(bus, cpu->sp + 1);
+            gb_machine_tick(bus, 4);
+            uint8_t lo = gb_bus_read(bus, cpu->sp);
+            gb_machine_tick(bus, 4);
+            uint8_t hi = gb_bus_read(bus, cpu->sp + 1);
             cpu->sp += 2;
             cpu->pc = (hi << 8) | lo;
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             cpu->ime = true; // RETI enables IME immediately (unlike EI)
             break;
         }
@@ -1099,12 +1099,12 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
         case OP_RST_S30:
         case OP_RST_S38: {
             uint16_t vec = opcode & 0x38;
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             cpu->sp -= 2;
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->sp + 1, cpu->pc >> 8); // high byte first
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->sp, cpu->pc & 0xFF);
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->sp + 1, cpu->pc >> 8); // high byte first
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->sp, cpu->pc & 0xFF);
             cpu->pc = vec;
             break;
         }
@@ -1115,24 +1115,24 @@ static bool instr_jumps(CPU* cpu, Bus* bus, uint8_t opcode)
     return true;
 }
 
-static bool instr_carry(CPU* cpu, Bus* bus, uint8_t opcode)
+static bool instr_carry(gb_cpu* cpu, gb_bus* bus, uint8_t opcode)
 {
     switch (opcode) {
         // CCF
         // Cycles: 1 | Bytes: 1 | Flags: - 0 0 C
         case OP_CCF: {
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, false);
-            flag_set(cpu, FLAG_C, !flag_get(cpu, FLAG_C));
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, false);
+            gb_flag_set(cpu, GB_FLAG_C, !gb_flag_get(cpu, GB_FLAG_C));
             break;
         }
 
         // SCF
         // Cycles: 1 | Bytes: 1 | Flags: - 0 0 1
         case OP_SCF: {
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, false);
-            flag_set(cpu, FLAG_C, true);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, false);
+            gb_flag_set(cpu, GB_FLAG_C, true);
             break;
         }
 
@@ -1142,40 +1142,40 @@ static bool instr_carry(CPU* cpu, Bus* bus, uint8_t opcode)
     return true;
 }
 
-static bool instr_stack(CPU* cpu, Bus* bus, uint8_t opcode)
+static bool instr_stack(gb_cpu* cpu, gb_bus* bus, uint8_t opcode)
 {
     switch (opcode) {
         // POP r16
         // Cycles: 3 | Bytes: 1 | Flags: - (POP AF sets Z N H C)
         case OP_POP_BC: {
-            machine_tick(bus, 4);
-            uint8_t lo = bus_read(bus, cpu->sp++);
-            machine_tick(bus, 4);
-            uint8_t hi = bus_read(bus, cpu->sp++);
+            gb_machine_tick(bus, 4);
+            uint8_t lo = gb_bus_read(bus, cpu->sp++);
+            gb_machine_tick(bus, 4);
+            uint8_t hi = gb_bus_read(bus, cpu->sp++);
             cpu->bc = (hi << 8) | lo;
             break;
         }
         case OP_POP_DE: {
-            machine_tick(bus, 4);
-            uint8_t lo = bus_read(bus, cpu->sp++);
-            machine_tick(bus, 4);
-            uint8_t hi = bus_read(bus, cpu->sp++);
+            gb_machine_tick(bus, 4);
+            uint8_t lo = gb_bus_read(bus, cpu->sp++);
+            gb_machine_tick(bus, 4);
+            uint8_t hi = gb_bus_read(bus, cpu->sp++);
             cpu->de = (hi << 8) | lo;
             break;
         }
         case OP_POP_HL: {
-            machine_tick(bus, 4);
-            uint8_t lo = bus_read(bus, cpu->sp++);
-            machine_tick(bus, 4);
-            uint8_t hi = bus_read(bus, cpu->sp++);
+            gb_machine_tick(bus, 4);
+            uint8_t lo = gb_bus_read(bus, cpu->sp++);
+            gb_machine_tick(bus, 4);
+            uint8_t hi = gb_bus_read(bus, cpu->sp++);
             cpu->hl = (hi << 8) | lo;
             break;
         }
         case OP_POP_AF: {
-            machine_tick(bus, 4);
-            uint8_t lo = bus_read(bus, cpu->sp++);
-            machine_tick(bus, 4);
-            uint8_t hi = bus_read(bus, cpu->sp++);
+            gb_machine_tick(bus, 4);
+            uint8_t lo = gb_bus_read(bus, cpu->sp++);
+            gb_machine_tick(bus, 4);
+            uint8_t hi = gb_bus_read(bus, cpu->sp++);
             cpu->af = (hi << 8) | (lo & 0xF0);
             break;
         }
@@ -1183,39 +1183,39 @@ static bool instr_stack(CPU* cpu, Bus* bus, uint8_t opcode)
         // PUSH r16
         // Cycles: 4 | Bytes: 1 | Flags: -
         case OP_PUSH_BC: {
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             cpu->sp -= 2;
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->sp + 1, cpu->bc >> 8); // high byte first
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->sp, cpu->bc & 0xFF);
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->sp + 1, cpu->bc >> 8); // high byte first
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->sp, cpu->bc & 0xFF);
             break;
         }
         case OP_PUSH_DE: {
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             cpu->sp -= 2;
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->sp + 1, cpu->de >> 8); // high byte first
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->sp, cpu->de & 0xFF);
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->sp + 1, cpu->de >> 8); // high byte first
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->sp, cpu->de & 0xFF);
             break;
         }
         case OP_PUSH_HL: {
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             cpu->sp -= 2;
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->sp + 1, cpu->hl >> 8); // high byte first
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->sp, cpu->hl & 0xFF);
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->sp + 1, cpu->hl >> 8); // high byte first
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->sp, cpu->hl & 0xFF);
             break;
         }
         case OP_PUSH_AF: {
-            machine_tick(bus, 4); // internal cycle
+            gb_machine_tick(bus, 4); // internal cycle
             cpu->sp -= 2;
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->sp + 1, cpu->af >> 8); // high byte first
-            machine_tick(bus, 4);
-            bus_write(bus, cpu->sp, cpu->af & 0xFF);
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->sp + 1, cpu->af >> 8); // high byte first
+            gb_machine_tick(bus, 4);
+            gb_bus_write(bus, cpu->sp, cpu->af & 0xFF);
             break;
         }
 
@@ -1225,7 +1225,7 @@ static bool instr_stack(CPU* cpu, Bus* bus, uint8_t opcode)
     return true;
 }
 
-static bool instr_interrupts(CPU* cpu, Bus* bus, uint8_t opcode)
+static bool instr_interrupts(gb_cpu* cpu, gb_bus* bus, uint8_t opcode)
 {
     switch (opcode) {
         // DI
@@ -1246,7 +1246,7 @@ static bool instr_interrupts(CPU* cpu, Bus* bus, uint8_t opcode)
         // HALT
         // Cycles: 4 | Bytes: 1 | Flags: -
         case OP_HALT: {
-            uint8_t if_reg = bus_read(bus, 0xFF0F);
+            uint8_t if_reg = gb_bus_read(bus, 0xFF0F);
             // Only bits 0-4 are valid interrupt sources; bits 5-7 of IF are unused
             // (always read as 1) and must not participate in the pending check.
             if ((if_reg & bus->ie & 0x1F) != 0) {
@@ -1272,24 +1272,24 @@ static bool instr_interrupts(CPU* cpu, Bus* bus, uint8_t opcode)
     return true;
 }
 
-static bool instr_misc(CPU* cpu, Bus* bus, uint8_t opcode)
+static bool instr_misc(gb_cpu* cpu, gb_bus* bus, uint8_t opcode)
 {
     switch (opcode) {
         // DAA
         // Cycles: 1 | Bytes: 1 | Flags: Z - 0 C
         case OP_DAA: {
             uint16_t a = cpu->a;
-            if (!flag_get(cpu, FLAG_N)) {
-                if (flag_get(cpu, FLAG_H) || (a & 0x0F) > 9) a += 0x06;
-                if (flag_get(cpu, FLAG_C) || a > 0x9F) a += 0x60;
+            if (!gb_flag_get(cpu, GB_FLAG_N)) {
+                if (gb_flag_get(cpu, GB_FLAG_H) || (a & 0x0F) > 9) a += 0x06;
+                if (gb_flag_get(cpu, GB_FLAG_C) || a > 0x9F) a += 0x60;
             } else {
-                if (flag_get(cpu, FLAG_H)) a = (a - 6) & 0xFF;
-                if (flag_get(cpu, FLAG_C)) a -= 0x60;
+                if (gb_flag_get(cpu, GB_FLAG_H)) a = (a - 6) & 0xFF;
+                if (gb_flag_get(cpu, GB_FLAG_C)) a -= 0x60;
             }
-            flag_set(cpu, FLAG_H, false);
-            if ((a & 0x100) == 0x100) flag_set(cpu, FLAG_C, true);
+            gb_flag_set(cpu, GB_FLAG_H, false);
+            if ((a & 0x100) == 0x100) gb_flag_set(cpu, GB_FLAG_C, true);
             cpu->a = (uint8_t)a;
-            flag_set(cpu, FLAG_Z, cpu->a == 0);
+            gb_flag_set(cpu, GB_FLAG_Z, cpu->a == 0);
             break;
         }
 
@@ -1302,7 +1302,7 @@ static bool instr_misc(CPU* cpu, Bus* bus, uint8_t opcode)
         // STOP
         // Cycles: 1 | Bytes: 2 | Flags: -
         case OP_STOP_n8: {
-            fetch8(cpu, bus);
+            gb_fetch8(cpu, bus);
             // CGB: STOP is the only way to switch between normal and
             // double-speed mode (when KEY1 bit 0 is set)
             if (bus->io[0x4D] & 0x01) {
@@ -1318,7 +1318,7 @@ static bool instr_misc(CPU* cpu, Bus* bus, uint8_t opcode)
     return true;
 }
 
-typedef bool (*instrfn)(CPU*, Bus*, uint8_t);
+typedef bool (*instrfn)(gb_cpu*, gb_bus*, uint8_t);
 
 static instrfn instr_handlers[] = {
     instr_8bit_arithm,
@@ -1335,22 +1335,22 @@ static instrfn instr_handlers[] = {
 };
 
 
-static int instr_cb(CPU* cpu, Bus* bus)
+static int instr_cb(gb_cpu* cpu, gb_bus* bus)
 {
-    uint8_t cb_opcode = fetch8(cpu, bus); // CB prefix byte occupies one M-cycle
+    uint8_t cb_opcode = gb_fetch8(cpu, bus); // CB prefix byte occupies one M-cycle
     int cycles = get_cb_opcode_cycles(cb_opcode);
 
     uint8_t reg_idx = cb_opcode & 0x07;
     uint8_t bit_pos = (cb_opcode >> 3) & 0x07;
     uint8_t group = (cb_opcode >> 6) & 0x03;
 
-    uint8_t value = get_reg_by_index(cpu, bus, reg_idx);
+    uint8_t value = gb_get_reg_by_index(cpu, bus, reg_idx);
 
     if (group == 0x01) {
         // BIT u3, r8 (0x40-0x7F)
-        flag_set(cpu, FLAG_Z, (value & (1 << bit_pos)) == 0);
-        flag_set(cpu, FLAG_N, false);
-        flag_set(cpu, FLAG_H, true);
+        gb_flag_set(cpu, GB_FLAG_Z, (value & (1 << bit_pos)) == 0);
+        gb_flag_set(cpu, GB_FLAG_N, false);
+        gb_flag_set(cpu, GB_FLAG_H, true);
         return cycles;
     }
 
@@ -1362,72 +1362,72 @@ static int instr_cb(CPU* cpu, Bus* bus)
                 case 0x00: { // RLC
                     uint8_t bit7 = (value >> 7) & 1;
                     result = (value << 1) | bit7;
-                    flag_set(cpu, FLAG_C, bit7);
+                    gb_flag_set(cpu, GB_FLAG_C, bit7);
                     break;
                 }
                 case 0x01: { // RRC
                     uint8_t bit0 = value & 1;
                     result = (value >> 1) | (bit0 << 7);
-                    flag_set(cpu, FLAG_C, bit0);
+                    gb_flag_set(cpu, GB_FLAG_C, bit0);
                     break;
                 }
                 case 0x02: { // RL
                     uint8_t bit7 = (value >> 7) & 1;
-                    uint8_t old_carry = flag_get(cpu, FLAG_C) ? 1 : 0;
+                    uint8_t old_carry = gb_flag_get(cpu, GB_FLAG_C) ? 1 : 0;
                     result = (value << 1) | old_carry;
-                    flag_set(cpu, FLAG_C, bit7);
+                    gb_flag_set(cpu, GB_FLAG_C, bit7);
                     break;
                 }
                 case 0x03: { // RR
                     uint8_t bit0 = value & 1;
-                    uint8_t old_carry = flag_get(cpu, FLAG_C) ? 1 : 0;
+                    uint8_t old_carry = gb_flag_get(cpu, GB_FLAG_C) ? 1 : 0;
                     result = (value >> 1) | (old_carry << 7);
-                    flag_set(cpu, FLAG_C, bit0);
+                    gb_flag_set(cpu, GB_FLAG_C, bit0);
                     break;
                 }
                 case 0x04: { // SLA
                     uint8_t bit7 = (value >> 7) & 1;
                     result = value << 1;
-                    flag_set(cpu, FLAG_C, bit7);
+                    gb_flag_set(cpu, GB_FLAG_C, bit7);
                     break;
                 }
                 case 0x05: { // SRA
                     uint8_t bit7 = value & 0x80;
                     result = (value >> 1) | bit7;
-                    flag_set(cpu, FLAG_C, value & 1);
+                    gb_flag_set(cpu, GB_FLAG_C, value & 1);
                     break;
                 }
                 case 0x06: { // SWAP
                     result = ((value & 0x0F) << 4) | ((value & 0xF0) >> 4);
-                    flag_set(cpu, FLAG_C, false);
+                    gb_flag_set(cpu, GB_FLAG_C, false);
                     break;
                 }
                 case 0x07: { // SRL
                     result = value >> 1;
-                    flag_set(cpu, FLAG_C, value & 1);
+                    gb_flag_set(cpu, GB_FLAG_C, value & 1);
                     break;
                 }
                 default:
                     return 0;
             }
-            flag_set(cpu, FLAG_Z, result == 0);
-            flag_set(cpu, FLAG_N, false);
-            flag_set(cpu, FLAG_H, false);
-            set_reg_by_index(cpu, bus, reg_idx, result);
+            gb_flag_set(cpu, GB_FLAG_Z, result == 0);
+            gb_flag_set(cpu, GB_FLAG_N, false);
+            gb_flag_set(cpu, GB_FLAG_H, false);
+            gb_set_reg_by_index(cpu, bus, reg_idx, result);
             return cycles;
         }
 
         case 0x02: {
             // RES u3, r8 (0x80-0xBF)
             result = value & ~(1 << bit_pos);
-            set_reg_by_index(cpu, bus, reg_idx, result);
+            gb_set_reg_by_index(cpu, bus, reg_idx, result);
             return cycles;
         }
 
         case 0x03: {
             // SET u3, r8 (0xC0-0xFF)
             result = value | (1 << bit_pos);
-            set_reg_by_index(cpu, bus, reg_idx, result);
+            gb_set_reg_by_index(cpu, bus, reg_idx, result);
             return cycles;
         }
 
@@ -1436,23 +1436,23 @@ static int instr_cb(CPU* cpu, Bus* bus)
     }
 }
 
-static bool get_condition_met(CPU* cpu, uint8_t opcode)
+static bool get_condition_met(gb_cpu* cpu, uint8_t opcode)
 {
     switch (opcode) {
         case 0x20: case 0xC0: case 0xC2: case 0xC4:
-            return !flag_get(cpu, FLAG_Z);
+            return !gb_flag_get(cpu, GB_FLAG_Z);
         case 0x28: case 0xC8: case 0xCA: case 0xCC:
-            return flag_get(cpu, FLAG_Z);
+            return gb_flag_get(cpu, GB_FLAG_Z);
         case 0x30: case 0xD0: case 0xD2: case 0xD4:
-            return !flag_get(cpu, FLAG_C);
+            return !gb_flag_get(cpu, GB_FLAG_C);
         case 0x38: case 0xD8: case 0xDA: case 0xDC:
-            return flag_get(cpu, FLAG_C);
+            return gb_flag_get(cpu, GB_FLAG_C);
         default:
             return false;
     }
 }
 
-int instr(CPU* cpu, Bus* bus, uint8_t opcode)
+int gb_instr(gb_cpu* cpu, gb_bus* bus, uint8_t opcode)
 {
     if (opcode == OP_PREFIX) {
         return instr_cb(cpu, bus);

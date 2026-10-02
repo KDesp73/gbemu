@@ -43,7 +43,7 @@ static uint32_t crc32(const uint8_t* data, size_t len)
 }
 
 // Resolve which 16KB ROM bank backs the given address under MBC1 banking.
-static uint16_t mbc1_bank_for_addr(const Bus* bus, uint16_t addr)
+static uint16_t mbc1_bank_for_addr(const gb_bus* bus, uint16_t addr)
 {
     uint16_t bank;
     if (addr < 0x4000) {
@@ -69,7 +69,7 @@ static uint16_t mbc1_bank_for_addr(const Bus* bus, uint16_t addr)
     return bank & (bus->rom_banks - 1);
 }
 
-static uint8_t bus_read_rom(const Bus* bus, uint16_t addr)
+static uint8_t bus_read_rom(const gb_bus* bus, uint16_t addr)
 {
     uint16_t bank;
     if (mbc_is_mbc1(bus->mbc_type)) {
@@ -98,7 +98,7 @@ static uint8_t bus_read_rom(const Bus* bus, uint16_t addr)
     return bus->rom[addr];
 }
 
-static uint8_t bus_read_sram(const Bus* bus, uint16_t addr)
+static uint8_t bus_read_sram(const gb_bus* bus, uint16_t addr)
 {
     if (mbc_is_mbc2(bus->mbc_type)) {
         // Reads return the latched value of the RAM enable bit in the upper
@@ -135,7 +135,7 @@ static uint8_t bus_read_sram(const Bus* bus, uint16_t addr)
     return bus->sram[bank * 0x2000 + (addr - 0xA000)];
 }
 
-static void mbc1_write(Bus* bus, uint16_t addr, uint8_t value)
+static void mbc1_write(gb_bus* bus, uint16_t addr, uint8_t value)
 {
     if (addr < 0x2000) {
         // RAM enable: upper nibble must be 0x0A
@@ -152,7 +152,7 @@ static void mbc1_write(Bus* bus, uint16_t addr, uint8_t value)
     }
 }
 
-static void mbc2_write(Bus* bus, uint16_t addr, uint8_t value)
+static void mbc2_write(gb_bus* bus, uint16_t addr, uint8_t value)
 {
     // MBC2 registers only exist in $0000-$3FFF.  Writes to $4000-$7FFF are
     // ignored on real MBC2A hardware (verified via mooneye bits_unused test).
@@ -168,7 +168,7 @@ static void mbc2_write(Bus* bus, uint16_t addr, uint8_t value)
     }
 }
 
-static void mbc3_write(Bus* bus, uint16_t addr, uint8_t value)
+static void mbc3_write(gb_bus* bus, uint16_t addr, uint8_t value)
 {
     if (addr < 0x2000) {
         // RAM / RTC enable: $0A enables, anything else disables
@@ -193,7 +193,7 @@ static void mbc3_write(Bus* bus, uint16_t addr, uint8_t value)
     }
 }
 
-static void mbc5_write(Bus* bus, uint16_t addr, uint8_t value)
+static void mbc5_write(gb_bus* bus, uint16_t addr, uint8_t value)
 {
     if (addr < 0x2000) {
         // RAM enable: upper nibble must be 0x0A
@@ -211,7 +211,7 @@ static void mbc5_write(Bus* bus, uint16_t addr, uint8_t value)
     // 0x6000-0x7FFF: Rumble enable (ignored)
 }
 
-uint8_t bus_read(Bus *bus, uint16_t addr)
+uint8_t gb_bus_read(gb_bus *bus, uint16_t addr)
 {
     uint8_t result;
 
@@ -240,11 +240,11 @@ uint8_t bus_read(Bus *bus, uint16_t addr)
                 nibble &= bus->joypad_buttons & 0x0F;
             result |= nibble;
         } else if (addr >= 0xFF04 && addr <= 0xFF07 && bus->timer) {
-            result = timer_read(bus->timer, addr);
+            result = gb_timer_read(bus->timer, addr);
         } else if (addr >= 0xFF10 && addr <= 0xFF3F && bus->apu) {
-            result = apu_read(bus->apu, addr);
+            result = gb_apu_read(bus->apu, addr);
         } else if (addr >= 0xFF40 && addr <= 0xFF4B && bus->ppu) {
-            result = ppu_read(bus->ppu, addr);
+            result = gb_ppu_read(bus->ppu, addr);
         } else if (addr == 0xFF4D) {
             result = (bus->double_speed ? 0x80 : 0x00) | (bus->io[0x4D] & 0x01);
         } else if (addr == 0xFF0F) {
@@ -263,7 +263,7 @@ uint8_t bus_read(Bus *bus, uint16_t addr)
     return result;
 }
 
-void bus_write(Bus *bus, uint16_t addr, uint8_t value)
+void gb_bus_write(gb_bus *bus, uint16_t addr, uint8_t value)
 {
     if (addr < 0x8000) {
         if (mbc_is_mbc1(bus->mbc_type)) mbc1_write(bus, addr, value);
@@ -347,11 +347,11 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
     }
     else if (addr >= 0xFF00 && addr < 0xFF80) {
         if (addr >= 0xFF04 && addr <= 0xFF07) {
-            if (bus->timer) timer_write(bus->timer, addr, value);
+            if (bus->timer) gb_timer_write(bus->timer, addr, value);
             return;
         }
         if (addr >= 0xFF10 && addr <= 0xFF3F) {
-            if (bus->apu) apu_write(bus->apu, addr, value);
+            if (bus->apu) gb_apu_write(bus->apu, addr, value);
             return;
         }
         if (addr >= 0xFF40 && addr <= 0xFF4B) {
@@ -373,7 +373,7 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
                 }
                 return;
             }
-            if (bus->ppu) ppu_write(bus->ppu, addr, value);
+            if (bus->ppu) gb_ppu_write(bus->ppu, addr, value);
             return;
         }
         if (addr == 0xFF00) {
@@ -408,7 +408,7 @@ void bus_write(Bus *bus, uint16_t addr, uint8_t value)
 
 }
 
-void bus_tick(Bus* bus)
+void gb_bus_tick(gb_bus* bus)
 {
     // A queued restart takes over from the running transfer after 2 cycles
     // (the previous DMA keeps running until then).
@@ -429,14 +429,14 @@ void bus_tick(Bus* bus)
 
     if (bus->dma_offset < 0xA0) {
         uint16_t src = ((uint16_t)bus->dma_src_high << 8) | (bus->dma_offset & 0xFF);
-        bus->oam[bus->dma_offset] = bus_read(bus, src);
+        bus->oam[bus->dma_offset] = gb_bus_read(bus, src);
         bus->dma_offset++;
     } else {
         bus->dma_active = false;
     }
 }
 
-void machine_tick(Bus* bus, int t_cycles)
+void gb_machine_tick(gb_bus* bus, int t_cycles)
 {
     // The timer is CPU-clock derived: it runs at the same rate in
     // T-cycles regardless of speed mode (so DIV/TIMA frequencies
@@ -445,13 +445,13 @@ void machine_tick(Bus* bus, int t_cycles)
     // CGB dot rate, so one T-cycle = two dots at normal speed and
     // one dot in double-speed mode.
     int scale = bus->double_speed ? 1 : 2;
-    bus_tick(bus); // OAM DMA advances one byte per M-cycle
-    if (bus->timer) timer_step(bus->timer, t_cycles);
-    if (bus->ppu) ppu_step(bus->ppu, bus, t_cycles * scale);
-    if (bus->apu) apu_step(bus->apu, t_cycles * scale);
+    gb_bus_tick(bus); // OAM DMA advances one byte per M-cycle
+    if (bus->timer) gb_timer_step(bus->timer, t_cycles);
+    if (bus->ppu) gb_ppu_step(bus->ppu, bus, t_cycles * scale);
+    if (bus->apu) gb_apu_step(bus->apu, t_cycles * scale);
 }
 
-size_t bus_load_rom(Bus* bus, const char* filepath)
+size_t gb_bus_load_rom(gb_bus* bus, const char* filepath)
 {
     FILE* file = fopen(filepath, "rb");
     if (!file) {

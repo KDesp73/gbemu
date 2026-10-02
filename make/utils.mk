@@ -27,7 +27,7 @@ compile_commands.json: $(SRC_FILES) ## Generate compile_commands.json
 .PHONY: docs
 docs: ## Generate docs using tinydocs
 	tinydocs-cli \
-		--files src/emu.h,src/frontend.h \
+		--files src/gbemu.h,src/frontend.h \
 		--markers docs/tiny.markers.json \
 		--ignore .gitignore \
 		-o docs \

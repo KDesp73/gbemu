@@ -23,7 +23,7 @@ EM_JS(void, js_render_to_canvas, (const void* buffer, int width, int height), {
     ctx.putImageData(imageData, 0, 0);
 });
 
-static bool wasm_init(Frontend* fe, int width, int height)
+static bool wasm_init(gb_frontend* fe, int width, int height)
 {
     EM_ASM({
         var canvas = document.getElementById('screen');
@@ -35,24 +35,24 @@ static bool wasm_init(Frontend* fe, int width, int height)
     return true;
 }
 
-static void wasm_render(Frontend* fe, const uint32_t* buffer,
+static void wasm_render(gb_frontend* fe, const uint32_t* buffer,
                         int width, int height)
 {
     js_render_to_canvas(buffer, width, height);
 }
 
-static void wasm_poll_events(Frontend* fe, Bus* bus, bool* running)
+static void wasm_poll_events(gb_frontend* fe, gb_bus* bus, bool* running)
 {
 }
 
-static void wasm_destroy(Frontend* fe)
+static void wasm_destroy(gb_frontend* fe)
 {
     free(fe->priv);
 }
 
-Frontend* frontend_wasm_create(void)
+gb_frontend* frontend_wasm_create(void)
 {
-    Frontend* fe = calloc(1, sizeof(Frontend));
+    gb_frontend* fe = calloc(1, sizeof(gb_frontend));
     fe->priv = NULL;
     fe->init = wasm_init;
     fe->render = wasm_render;

@@ -6,7 +6,7 @@
 
 #define BOOL(x) ((x) ? "true" : "false")
 
-void cpu_init(CPU* cpu)
+void gb_cpu_init(gb_cpu* cpu)
 {
     cpu->pc = 0x0100; // ROM execution begins at 0x0100
     cpu->af = 0x11B0; // CGB boot registers (A=0x11 selects Game Boy Color)
@@ -16,7 +16,7 @@ void cpu_init(CPU* cpu)
     cpu->sp = 0xFFFE;
 }
 
-void cpu_dump_fd(CPU cpu, FILE* fd)
+void gb_cpu_dump_fd(gb_cpu cpu, FILE* fd)
 {
     fprintf(fd, "AF: %d\ta: %d\tf: %d\n", cpu.af, cpu.a, cpu.f);
     fprintf(fd, "AF: %d\tb: %d\tc: %d\n", cpu.bc, cpu.b, cpu.c);
@@ -27,7 +27,7 @@ void cpu_dump_fd(CPU cpu, FILE* fd)
     fprintf(fd, "IME: %s\tHALTED: %s\n", BOOL(cpu.ime), BOOL(cpu.halted));
 }
 
-uint8_t get_reg_by_index(CPU* cpu, Bus* bus, uint8_t index)
+uint8_t gb_get_reg_by_index(gb_cpu* cpu, gb_bus* bus, uint8_t index)
 {
     switch (index & 0x07) { // Mask to lower 3 bits for safety
         case 0: return cpu->b;
@@ -36,13 +36,13 @@ uint8_t get_reg_by_index(CPU* cpu, Bus* bus, uint8_t index)
         case 3: return cpu->e;
         case 4: return cpu->h;
         case 5: return cpu->l;
-        case 6: machine_tick(bus, 4); return bus_read(bus, cpu->hl); // Memory access at address [HL]
+        case 6: gb_machine_tick(bus, 4); return gb_bus_read(bus, cpu->hl); // Memory access at address [HL]
         case 7: return cpu->a;
         default: return 0; // Unreachable
     }
 }
 
-void set_reg_by_index(CPU* cpu, Bus* bus, uint8_t index, uint8_t value)
+void gb_set_reg_by_index(gb_cpu* cpu, gb_bus* bus, uint8_t index, uint8_t value)
 {
     switch (index & 0x07) {
         case 0: cpu->b = value; break;
@@ -51,12 +51,12 @@ void set_reg_by_index(CPU* cpu, Bus* bus, uint8_t index, uint8_t value)
         case 3: cpu->e = value; break;
         case 4: cpu->h = value; break;
         case 5: cpu->l = value; break;
-        case 6: machine_tick(bus, 4); bus_write(bus, cpu->hl, value); break; // Memory write at address [HL]
+        case 6: gb_machine_tick(bus, 4); gb_bus_write(bus, cpu->hl, value); break; // Memory write at address [HL]
         case 7: cpu->a = value; break;
     }
 }
 
-void flag_set(CPU* cpu, Flag flag, bool value)
+void gb_flag_set(gb_cpu* cpu, gb_flag flag, bool value)
 {
     if (value) {
         cpu->f |= flag;
@@ -65,12 +65,12 @@ void flag_set(CPU* cpu, Flag flag, bool value)
     }
 }
 
-bool flag_get(const CPU* cpu, Flag flag)
+bool gb_flag_get(const gb_cpu* cpu, gb_flag flag)
 { 
     return (cpu->f & flag) != 0;
 }
 
-int cpu_step(CPU* cpu, Bus* bus)
+int gb_cpu_step(gb_cpu* cpu, gb_bus* bus)
 {
     // EI has a 1-instruction delay: enable IME at the start of the NEXT instruction
     if (cpu->ime_scheduled) {
@@ -79,7 +79,7 @@ int cpu_step(CPU* cpu, Bus* bus)
     }
 
     if (cpu->halted) {
-        machine_tick(bus, 4); // CPU sleeps for 1 M-cycle (4 T-cycles)
+        gb_machine_tick(bus, 4); // CPU sleeps for 1 M-cycle (4 T-cycles)
         return 4;
     }
 
@@ -87,15 +87,15 @@ int cpu_step(CPU* cpu, Bus* bus)
     // fetch below does not advance PC (operand reads shift back one byte).
     // Every bus access consumes one M-cycle: advance the machine first,
     // then fetch (the fetch logically completes at the end of its M-cycle).
-    machine_tick(bus, 4);
-    uint8_t opcode = bus_read(bus, cpu->pc);
+    gb_machine_tick(bus, 4);
+    uint8_t opcode = gb_bus_read(bus, cpu->pc);
     if (cpu->halt_bug) {
         cpu->halt_bug = false;
     } else {
         cpu->pc++;
     }
 
-    int cycles = instr(cpu, bus, opcode);
+    int cycles = gb_instr(cpu, bus, opcode);
     if (!cycles) {
         fprintf(stderr, "Unhandled opcode: 0x%02X at PC: 0x%04X\n", opcode, cpu->pc - 1);
         exit(1);

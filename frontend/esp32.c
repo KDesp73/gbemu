@@ -63,10 +63,10 @@
 #define EMU_LCD_HEIGHT 240
 #endif
 #ifndef EMU_LCD_OFF_X
-#define EMU_LCD_OFF_X ((EMU_LCD_WIDTH - SCREEN_WIDTH) / 2)
+#define EMU_LCD_OFF_X ((EMU_LCD_WIDTH - GB_SCREEN_WIDTH) / 2)
 #endif
 #ifndef EMU_LCD_OFF_Y
-#define EMU_LCD_OFF_Y ((EMU_LCD_HEIGHT - SCREEN_HEIGHT) / 2)
+#define EMU_LCD_OFF_Y ((EMU_LCD_HEIGHT - GB_SCREEN_HEIGHT) / 2)
 #endif
 #ifndef EMU_LCD_SPI_CLOCK_HZ
 #define EMU_LCD_SPI_CLOCK_HZ (80 * 1000 * 1000) // drop to 40MHz for flaky wiring
@@ -133,7 +133,7 @@
 #endif
 
 typedef struct {
-    APU* apu;
+    gb_apu* apu;
     esp_lcd_panel_io_handle_t io;
     esp_lcd_panel_handle_t panel;
 
@@ -153,7 +153,7 @@ static bool btn_down(int gpio)
     return gpio_get_level(gpio) == 0;
 }
 
-static bool esp32_init(Frontend* fe, int width, int height)
+static bool esp32_init(gb_frontend* fe, int width, int height)
 {
     ESPPriv* priv = fe->priv;
 
@@ -245,7 +245,7 @@ static bool esp32_init(Frontend* fe, int width, int height)
     chan_cfg.auto_clear = true;
     if (i2s_new_channel(&chan_cfg, &priv->i2s_tx, NULL) == ESP_OK) {
         i2s_std_config_t std_cfg = {
-            .clk_cfg  = I2S_STD_CLK_DEFAULT_CONFIG(APU_SAMPLE_RATE),
+            .clk_cfg  = I2S_STD_CLK_DEFAULT_CONFIG(GB_APU_SAMPLE_RATE),
             .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(
                             I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO),
             .gpio_cfg = {
@@ -276,7 +276,7 @@ static bool esp32_init(Frontend* fe, int width, int height)
     return true;
 }
 
-static void esp32_render(Frontend* fe, const uint32_t* buffer,
+static void esp32_render(gb_frontend* fe, const uint32_t* buffer,
                          int width, int height)
 {
     ESPPriv* priv = fe->priv;
@@ -296,7 +296,7 @@ static void esp32_render(Frontend* fe, const uint32_t* buffer,
     esp_lcd_panel_draw_bitmap(priv->panel, 0, 0, width, height, priv->pixels);
 }
 
-static void esp32_poll_events(Frontend* fe, Bus* bus, bool* running)
+static void esp32_poll_events(gb_frontend* fe, gb_bus* bus, bool* running)
 {
     ESPPriv* priv = fe->priv;
     (void)running;
@@ -327,16 +327,16 @@ static void esp32_poll_events(Frontend* fe, Bus* bus, bool* running)
         if (combo) {
             priv->combo_frames++;
             if (priv->combo_frames == EMU_HOTKEY_SAVE_FRAMES)
-                fe->on_hotkey(fe->hotkey_ctx, HOTKEY_SAVE_STATE);
+                fe->on_hotkey(fe->hotkey_ctx, GB_HOTKEY_SAVE_STATE);
             else if (priv->combo_frames == EMU_HOTKEY_LOAD_FRAMES)
-                fe->on_hotkey(fe->hotkey_ctx, HOTKEY_LOAD_STATE);
+                fe->on_hotkey(fe->hotkey_ctx, GB_HOTKEY_LOAD_STATE);
         } else {
             priv->combo_frames = 0;
         }
     }
 }
 
-static void esp32_destroy(Frontend* fe)
+static void esp32_destroy(gb_frontend* fe)
 {
     ESPPriv* priv = fe->priv;
 
@@ -367,7 +367,7 @@ static void audio_task_fn(void* arg)
 
     while (!priv->audio_quit) {
         for (int i = 0; i < CHUNK; i++) {
-            float s = apu_buf_pop(priv->apu);
+            float s = gb_apu_buf_pop(priv->apu);
             if (s > 1.0f) s = 1.0f;
             if (s < -1.0f) s = -1.0f;
             samples[i] = (int16_t)(s * 32767.0f);
@@ -381,9 +381,9 @@ static void audio_task_fn(void* arg)
     vTaskDelete(NULL);
 }
 
-Frontend* frontend_esp32_create(APU* apu)
+gb_frontend* frontend_esp32_create(gb_apu* apu)
 {
-    Frontend* fe = calloc(1, sizeof(Frontend));
+    gb_frontend* fe = calloc(1, sizeof(gb_frontend));
     ESPPriv* priv = calloc(1, sizeof(ESPPriv));
     priv->apu = apu;
 

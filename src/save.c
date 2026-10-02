@@ -14,7 +14,7 @@
 // bus_load_rom made for the current ROM.
 typedef struct {
     char     magic[4];   // STATE_MAGIC
-    uint32_t version;    // VERSION_HEX of the emulator that wrote the file
+    uint32_t emu_version;    // GB_VERSION_HEX of the emulator that wrote the file
     uint32_t rom_hash;   // FNV-1a over the full (padded) ROM image
     uint32_t sram_size;  // Cartridge RAM size at capture time
 } StateHeader;
@@ -62,7 +62,7 @@ static bool cart_is_mbc2(uint8_t type)
 
 // Pack the MBC3 RTC registers into the 5-byte layout other emulators use:
 // sec, min, hr, day-low, day-high (bit0 = day MSB, bit6 = halt, bit7 = carry)
-static void rtc_pack(const Bus* bus, uint8_t out[5])
+static void rtc_pack(const gb_bus* bus, uint8_t out[5])
 {
     out[0] = bus->mbc3_seconds;
     out[1] = bus->mbc3_minutes;
@@ -73,7 +73,7 @@ static void rtc_pack(const Bus* bus, uint8_t out[5])
                        | (bus->mbc3_day_carry ? 0x80 : 0x00));
 }
 
-static void rtc_unpack(Bus* bus, const uint8_t in[5])
+static void rtc_unpack(gb_bus* bus, const uint8_t in[5])
 {
     bus->mbc3_seconds     = in[0];
     bus->mbc3_minutes     = in[1];
@@ -83,7 +83,7 @@ static void rtc_unpack(Bus* bus, const uint8_t in[5])
     bus->mbc3_day_carry   = (in[4] & 0x80) != 0;
 }
 
-bool battery_load(Bus* bus, const char* rom_path)
+bool gb_battery_load(gb_bus* bus, const char* rom_path)
 {
     if (!bus->sram || bus->sram_size == 0) return false;
 
@@ -116,7 +116,7 @@ bool battery_load(Bus* bus, const char* rom_path)
     return true;
 }
 
-bool battery_save(const Bus* bus, const char* rom_path)
+bool gb_battery_save(const gb_bus* bus, const char* rom_path)
 {
     // Only persist carts that declare a battery; this keeps test ROMs and
     // battery-less games from littering .sav files next to them.
@@ -154,8 +154,8 @@ bool battery_save(const Bus* bus, const char* rom_path)
 #define W(field) fwrite(&(field), sizeof(field), 1, f)
 #define R(field) (fread(&(field), sizeof(field), 1, f) == 1)
 
-bool save_state(const CPU* cpu, const Bus* bus, const Timer* timer,
-                const PPU* ppu, const APU* apu, const char* rom_path)
+bool gb_save_state(const gb_cpu* cpu, const gb_bus* bus, const gb_timer* timer,
+                const gb_ppu* ppu, const gb_apu* apu, const char* rom_path)
 {
     char path[PATH_MAX_LEN];
     snprintf(path, sizeof(path), "%s.state", rom_path);
@@ -168,15 +168,15 @@ bool save_state(const CPU* cpu, const Bus* bus, const Timer* timer,
 
     StateHeader hdr = {0};
     memcpy(hdr.magic, STATE_MAGIC, sizeof(hdr.magic));
-    hdr.version   = VERSION_HEX;
+    hdr.emu_version   = GB_VERSION_HEX;
     hdr.rom_hash  = fnv1a(bus->rom, bus->rom_size);
     hdr.sram_size = (uint32_t)bus->sram_size;
 
     bool ok = W(hdr)
            && W(*cpu)
            && W(*timer)
-           && fwrite(ppu, offsetof(PPU, frame_buffer), 1, f) == 1 // registers + state, pixels excluded
-           && fwrite(apu, offsetof(APU, audio_buf), 1, f) == 1    // synthesis state, ring buffer excluded
+           && fwrite(ppu, offsetof(gb_ppu, frame_buffer), 1, f) == 1 // registers + state, pixels excluded
+           && fwrite(apu, offsetof(gb_apu, audio_buf), 1, f) == 1    // synthesis state, ring buffer excluded
         // Bus: everything except rom/sram buffers, component pointers and sram_dirty
            && W(bus->vram) && W(bus->wram) && W(bus->oam) && W(bus->io) && W(bus->hram) && W(bus->ie)
            && W(bus->dma_active) && W(bus->dma_start_delay) && W(bus->dma_src_high) && W(bus->dma_offset)
@@ -206,8 +206,8 @@ bool save_state(const CPU* cpu, const Bus* bus, const Timer* timer,
     return true;
 }
 
-bool load_state(CPU* cpu, Bus* bus, Timer* timer,
-                PPU* ppu, APU* apu, const char* rom_path)
+bool gb_load_state(gb_cpu* cpu, gb_bus* bus, gb_timer* timer,
+                gb_ppu* ppu, gb_apu* apu, const char* rom_path)
 {
     char path[PATH_MAX_LEN];
     snprintf(path, sizeof(path), "%s.state", rom_path);
@@ -224,9 +224,9 @@ bool load_state(CPU* cpu, Bus* bus, Timer* timer,
         fclose(f);
         return false;
     }
-    if (hdr.version != VERSION_HEX) {
-        fprintf(stderr, "[ERR] Save state version mismatch: file %u, emulator %u\n",
-                hdr.version, (uint32_t)VERSION_HEX);
+    if (hdr.emu_version != GB_VERSION_HEX) {
+        fprintf(stderr, "[ERR] Save state gb_version mismatch: file %u, emulator %u\n",
+                hdr.emu_version, (uint32_t)GB_VERSION_HEX);
         fclose(f);
         return false;
     }
@@ -244,8 +244,8 @@ bool load_state(CPU* cpu, Bus* bus, Timer* timer,
 
     bool ok = R(*cpu)
            && R(*timer)
-           && fread(ppu, offsetof(PPU, frame_buffer), 1, f) == 1
-           && fread(apu, offsetof(APU, audio_buf), 1, f) == 1
+           && fread(ppu, offsetof(gb_ppu, frame_buffer), 1, f) == 1
+           && fread(apu, offsetof(gb_apu, audio_buf), 1, f) == 1
            && R(bus->vram) && R(bus->wram) && R(bus->oam) && R(bus->io) && R(bus->hram) && R(bus->ie)
            && R(bus->dma_active) && R(bus->dma_start_delay) && R(bus->dma_src_high) && R(bus->dma_offset)
            && R(bus->dma_pending) && R(bus->dma_pend_delay) && R(bus->dma_pend_src)

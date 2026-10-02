@@ -7,7 +7,7 @@ typedef struct {
     SDL_Renderer* renderer;
     SDL_Texture* texture;
     int scale;
-    APU* apu;
+    gb_apu* apu;
     SDL_AudioStream* audio_stream;
 } SDLPriv;
 
@@ -23,13 +23,13 @@ static void SDLCALL audio_callback(void* userdata, SDL_AudioStream* stream,
         int chunk = samples_needed - filled;
         if (chunk > 1024) chunk = 1024;
         for (int i = 0; i < chunk; i++)
-            buf[i] = apu_buf_pop(priv->apu);
+            buf[i] = gb_apu_buf_pop(priv->apu);
         SDL_PutAudioStreamData(stream, buf, chunk * sizeof(float));
         filled += chunk;
     }
 }
 
-static bool sdl_init(Frontend* fe, int width, int height)
+static bool sdl_init(gb_frontend* fe, int width, int height)
 {
     SDLPriv* priv = fe->priv;
 
@@ -68,7 +68,7 @@ static bool sdl_init(Frontend* fe, int width, int height)
 
     // --- Audio ---
     SDL_AudioSpec spec = {
-        .freq     = APU_SAMPLE_RATE,
+        .freq     = GB_APU_SAMPLE_RATE,
         .format   = SDL_AUDIO_F32,
         .channels = 1,
     };
@@ -83,7 +83,7 @@ static bool sdl_init(Frontend* fe, int width, int height)
     return true;
 }
 
-static void sdl_render(Frontend* fe, const uint32_t* buffer,
+static void sdl_render(gb_frontend* fe, const uint32_t* buffer,
                        int width, int height)
 {
     SDLPriv* priv = fe->priv;
@@ -93,7 +93,7 @@ static void sdl_render(Frontend* fe, const uint32_t* buffer,
     SDL_RenderPresent(priv->renderer);
 }
 
-static void sdl_poll_events(Frontend* fe, Bus* bus, bool* running)
+static void sdl_poll_events(gb_frontend* fe, gb_bus* bus, bool* running)
 {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
@@ -119,8 +119,8 @@ static void sdl_poll_events(Frontend* fe, Bus* bus, bool* running)
             case SDLK_BACKSPACE: bus->joypad_buttons = pressed ? (bus->joypad_buttons & ~0x04) : (bus->joypad_buttons | 0x04); break; // Select
             case SDLK_RETURN:  bus->joypad_buttons = pressed ? (bus->joypad_buttons & ~0x08) : (bus->joypad_buttons | 0x08); break; // Start
             // Host hotkeys (fire on press only)
-            case SDLK_F5: if (pressed && fe->on_hotkey) fe->on_hotkey(fe->hotkey_ctx, HOTKEY_SAVE_STATE); break;
-            case SDLK_F9: if (pressed && fe->on_hotkey) fe->on_hotkey(fe->hotkey_ctx, HOTKEY_LOAD_STATE); break;
+            case SDLK_F5: if (pressed && fe->on_hotkey) fe->on_hotkey(fe->hotkey_ctx, GB_HOTKEY_SAVE_STATE); break;
+            case SDLK_F9: if (pressed && fe->on_hotkey) fe->on_hotkey(fe->hotkey_ctx, GB_HOTKEY_LOAD_STATE); break;
             default: break;
             }
             if (pressed) bus->joypad_interrupt = true;
@@ -130,7 +130,7 @@ static void sdl_poll_events(Frontend* fe, Bus* bus, bool* running)
     }
 }
 
-static void sdl_destroy(Frontend* fe)
+static void sdl_destroy(gb_frontend* fe)
 {
     SDLPriv* priv = fe->priv;
     if (priv->audio_stream) {
@@ -143,9 +143,9 @@ static void sdl_destroy(Frontend* fe)
     free(priv);
 }
 
-Frontend* frontend_sdl_create(APU* apu)
+gb_frontend* frontend_sdl_create(gb_apu* apu)
 {
-    Frontend* fe = calloc(1, sizeof(Frontend));
+    gb_frontend* fe = calloc(1, sizeof(gb_frontend));
     SDLPriv* priv = calloc(1, sizeof(SDLPriv));
     priv->apu = apu;
 

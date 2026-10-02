@@ -27,7 +27,7 @@ static volatile sig_atomic_t got_sigint = 0;
 
 static void sigint_handler(int sig) { (void)sig; got_sigint = 1; }
 
-static bool term_init(Frontend* fe, int width, int height)
+static bool term_init(gb_frontend* fe, int width, int height)
 {
     TermPriv* priv = fe->priv;
     priv->width = width;
@@ -55,7 +55,7 @@ static bool term_init(Frontend* fe, int width, int height)
     return true;
 }
 
-static void term_render(Frontend* fe, const uint32_t* buffer,
+static void term_render(gb_frontend* fe, const uint32_t* buffer,
                          int width, int height)
 {
     (void)fe;
@@ -86,7 +86,7 @@ static void term_render(Frontend* fe, const uint32_t* buffer,
     fflush(stdout);
 }
 
-static void press_btn(TermPriv* priv, Bus* bus, int btn)
+static void press_btn(TermPriv* priv, gb_bus* bus, int btn)
 {
     priv->hold[btn] = KEY_HOLD_FRAMES;
     switch (btn) {
@@ -101,7 +101,7 @@ static void press_btn(TermPriv* priv, Bus* bus, int btn)
     }
 }
 
-static void release_btn(TermPriv* priv, Bus* bus, int btn)
+static void release_btn(TermPriv* priv, gb_bus* bus, int btn)
 {
     (void)priv;
     switch (btn) {
@@ -116,7 +116,7 @@ static void release_btn(TermPriv* priv, Bus* bus, int btn)
     }
 }
 
-static void term_poll_events(Frontend* fe, Bus* bus, bool* running)
+static void term_poll_events(gb_frontend* fe, gb_bus* bus, bool* running)
 {
     TermPriv* priv = fe->priv;
     uint8_t buf[64];
@@ -165,7 +165,7 @@ static void term_poll_events(Frontend* fe, Bus* bus, bool* running)
     bus->joypad_interrupt = true;
 }
 
-static void term_destroy(Frontend* fe)
+static void term_destroy(gb_frontend* fe)
 {
     TermPriv* priv = fe->priv;
     printf("\033[?25h\033[?7h\033[0m\033[2J\033[H");
@@ -174,9 +174,9 @@ static void term_destroy(Frontend* fe)
     free(priv);
 }
 
-Frontend* frontend_terminal_create(void)
+gb_frontend* frontend_terminal_create(void)
 {
-    Frontend* fe = calloc(1, sizeof(Frontend));
+    gb_frontend* fe = calloc(1, sizeof(gb_frontend));
     TermPriv* priv = calloc(1, sizeof(TermPriv));
 
     fe->priv = priv;

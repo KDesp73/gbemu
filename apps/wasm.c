@@ -1,17 +1,17 @@
-#include "emu.h"
+#include "gbemu.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <emscripten.h>
 
-Frontend* frontend_wasm_create(void);
+gb_frontend* frontend_wasm_create(void);
 
-static CPU cpu;
-static Bus bus;
-static Timer timer;
-static PPU ppu;
-static APU apu;
-static Frontend* fe;
+static gb_cpu cpu;
+static gb_bus bus;
+static gb_timer timer;
+static gb_ppu ppu;
+static gb_apu apu;
+static gb_frontend* fe;
 static bool emu_running = false;
 
 EMSCRIPTEN_KEEPALIVE
@@ -43,10 +43,10 @@ static void init_emu(void)
     bus.ppu = &ppu;
     bus.apu = &apu;
 
-    cpu_init(&cpu);
-    timer_init(&timer);
-    ppu_init(&ppu);
-    apu_init(&apu);
+    gb_cpu_init(&cpu);
+    gb_timer_init(&timer);
+    gb_ppu_init(&ppu);
+    gb_apu_init(&apu);
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -54,7 +54,7 @@ void wasm_load_rom(void)
 {
     init_emu();
 
-    if (!bus_load_rom(&bus, "/rom.gb")) {
+    if (!gb_bus_load_rom(&bus, "/rom.gb")) {
         fprintf(stderr, "Failed to load ROM\n");
         emu_running = false;
         return;
@@ -82,14 +82,14 @@ static void main_loop(void)
     if (!emu_running) return;
 
     int frame_cycles = 0;
-    while (frame_cycles < CYCLES_PER_FRAME) {
+    while (frame_cycles < GB_CYCLES_PER_FRAME) {
         // cpu_step and handle_interrupts advance the timer/PPU/APU
         // themselves at each M-cycle boundary (via machine_tick).
-        int cycles = cpu_step(&cpu, &bus);
+        int cycles = gb_cpu_step(&cpu, &bus);
         int scale = bus.double_speed ? 1 : 2;
         int sys_cycles = cycles * scale;
 
-        int int_cycles = handle_interrupts(&cpu, &bus, &ppu, &timer);
+        int int_cycles = gb_handle_interrupts(&cpu, &bus, &ppu, &timer);
         if (int_cycles > 0) {
             sys_cycles += int_cycles * scale;
         }
@@ -98,7 +98,7 @@ static void main_loop(void)
     }
 
     if (ppu.frame_ready) {
-        fe->render(fe, &ppu.frame_buffer[0][0], SCREEN_WIDTH, SCREEN_HEIGHT);
+        fe->render(fe, &ppu.frame_buffer[0][0], GB_SCREEN_WIDTH, GB_SCREEN_HEIGHT);
         ppu.frame_ready = false;
     }
 }
@@ -106,7 +106,7 @@ static void main_loop(void)
 int main(int argc, char** argv)
 {
     fe = frontend_wasm_create();
-    if (!fe->init(fe, SCREEN_WIDTH, SCREEN_HEIGHT)) {
+    if (!fe->init(fe, GB_SCREEN_WIDTH, GB_SCREEN_HEIGHT)) {
         fprintf(stderr, "Failed to initialize frontend\n");
         return 1;
     }

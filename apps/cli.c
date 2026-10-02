@@ -1,29 +1,29 @@
 #include "gbemu.h"
 #include <stdlib.h>
 
-Frontend* frontend_sdl_create(APU* apu);
-Frontend* frontend_headless_create(void);
-Frontend* frontend_terminal_create(void);
+gb_frontend* frontend_sdl_create(gb_apu* apu);
+gb_frontend* frontend_headless_create(void);
+gb_frontend* frontend_terminal_create(void);
 
 // State the hotkey handler needs access to
 typedef struct {
-    CPU* cpu;
-    Bus* bus;
-    Timer* timer;
-    PPU* ppu;
-    APU* apu;
+    gb_cpu* cpu;
+    gb_bus* bus;
+    gb_timer* timer;
+    gb_ppu* ppu;
+    gb_apu* apu;
     const char* rom_path;
 } EmuContext;
 
-static void on_hotkey(void* userdata, Hotkey key)
+static void on_hotkey(void* userdata, gb_hotkey key)
 {
     EmuContext* ctx = userdata;
     switch (key) {
-    case HOTKEY_SAVE_STATE:
-        save_state(ctx->cpu, ctx->bus, ctx->timer, ctx->ppu, ctx->apu, ctx->rom_path);
+    case GB_HOTKEY_SAVE_STATE:
+        gb_save_state(ctx->cpu, ctx->bus, ctx->timer, ctx->ppu, ctx->apu, ctx->rom_path);
         break;
-    case HOTKEY_LOAD_STATE:
-        load_state(ctx->cpu, ctx->bus, ctx->timer, ctx->ppu, ctx->apu, ctx->rom_path);
+    case GB_HOTKEY_LOAD_STATE:
+        gb_load_state(ctx->cpu, ctx->bus, ctx->timer, ctx->ppu, ctx->apu, ctx->rom_path);
         break;
     }
 }
@@ -37,25 +37,25 @@ int main(int argc, char** argv)
     }
     const char* rom_path = argv[1];
 
-    CPU cpu = {0};
-    Bus bus = {0};
-    Timer timer = {0};
-    PPU ppu = {0};
-    APU apu = {0};
+    gb_cpu cpu = {0};
+    gb_bus bus = {0};
+    gb_timer timer = {0};
+    gb_ppu ppu = {0};
+    gb_apu apu = {0};
 
     bus.timer = &timer;
     bus.ppu = &ppu;
     bus.apu = &apu;
 
-    cpu_init(&cpu);
-    timer_init(&timer);
-    ppu_init(&ppu);
-    apu_init(&apu);
+    gb_cpu_init(&cpu);
+    gb_timer_init(&timer);
+    gb_ppu_init(&ppu);
+    gb_apu_init(&apu);
 
-    if (!bus_load_rom(&bus, rom_path)) return 1;
+    if (!gb_bus_load_rom(&bus, rom_path)) return 1;
 
     // Restore cartridge RAM from a previous session (<rom>.sav)
-    battery_load(&bus, rom_path);
+    gb_battery_load(&bus, rom_path);
 
     // Post-boot register state
     bus.io[0x0F] = 0x01; // IF: VBlank pending from last scanline of boot ROM
@@ -67,7 +67,7 @@ int main(int argc, char** argv)
     if (bus.rom[0x143] != 0x80 && bus.rom[0x143] != 0xC0)
         cpu.a = 0x01; // DMG mode
 
-    Frontend* fe;
+    gb_frontend* fe;
 #ifdef EMU_TERM
     fe = frontend_terminal_create();
 #elif defined(EMU_HEADLESS)
@@ -76,7 +76,7 @@ int main(int argc, char** argv)
     fe = frontend_sdl_create(&apu);
 #endif
 
-    if (!fe->init(fe, SCREEN_WIDTH, SCREEN_HEIGHT)) return 1;
+    if (!fe->init(fe, GB_SCREEN_WIDTH, GB_SCREEN_HEIGHT)) return 1;
 
     EmuContext ctx = {
         .cpu = &cpu,
@@ -89,10 +89,10 @@ int main(int argc, char** argv)
     fe->hotkey_ctx = &ctx;
     fe->on_hotkey = on_hotkey;
 
-    loop(&cpu, &bus, &timer, &ppu, &apu, fe);
+    gb_loop(&cpu, &bus, &timer, &ppu, &apu, fe);
 
     // Persist cartridge RAM for the next session (<rom>.sav)
-    battery_save(&bus, rom_path);
+    gb_battery_save(&bus, rom_path);
 
     fe->destroy(fe);
     return 0;

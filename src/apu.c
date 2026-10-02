@@ -36,7 +36,7 @@ static bool is_wave_ram(uint16_t addr)
 }
 
 // DAC enabled for square/noise when (NRx2 & 0xF8) != 0; wave uses NR30 bit 7.
-static bool dac_enabled(const APU* apu, int ch)
+static bool dac_enabled(const gb_apu* apu, int ch)
 {
     switch (ch) {
         case 0: return (apu->regs[0x02] & 0xF8) != 0; // NR12
@@ -49,7 +49,7 @@ static bool dac_enabled(const APU* apu, int ch)
 
 // Frequency timer reload value from 11-bit frequency register (NRx3|NRx4 high bits)
 // For noise channel (ch==3), uses NOISE_DIVISOR instead.
-static int freq_timer_reload(const APU* apu, int ch)
+static int freq_timer_reload(const gb_apu* apu, int ch)
 {
     uint16_t freq;
     switch (ch) {
@@ -63,7 +63,7 @@ static int freq_timer_reload(const APU* apu, int ch)
 }
 
 // Square channel output: returns 0 or current volume (0-15)
-static int square_output(const APU* apu, int ch)
+static int square_output(const gb_apu* apu, int ch)
 {
     if (!apu->ch_on[ch]) return 0;
     int duty_idx = (apu->regs[ch == 0 ? 0x01 : 0x06] >> 6) & 0x03;
@@ -72,7 +72,7 @@ static int square_output(const APU* apu, int ch)
 }
 
 // Wave channel output: reads from wave RAM, returns 0-15 attenuated by volume shift
-static int wave_output(const APU* apu)
+static int wave_output(const gb_apu* apu)
 {
     if (!apu->ch_on[2]) return 0;
     // Wave RAM byte: each byte holds two 4-bit samples (high nibble first)
@@ -84,7 +84,7 @@ static int wave_output(const APU* apu)
 }
 
 // Noise channel output: LFSR bit 0 determines output
-static int noise_output(const APU* apu)
+static int noise_output(const gb_apu* apu)
 {
     if (!apu->ch_on[3]) return 0;
     return (~apu->lfsr & 1) ? apu->vol[2] : 0;
@@ -101,7 +101,7 @@ static int noise_output(const APU* apu)
 //   5: (nothing)
 //   6: length + sweep
 //   7: envelope
-static void fs_step_length(APU* apu)
+static void fs_step_length(gb_apu* apu)
 {
     for (int i = 0; i < 4; i++) {
         if (apu->length_enable[i] && apu->length[i] > 0) {
@@ -112,7 +112,7 @@ static void fs_step_length(APU* apu)
     }
 }
 
-static void fs_step_sweep(APU* apu)
+static void fs_step_sweep(gb_apu* apu)
 {
     if (apu->sweep_counter > 0)
         apu->sweep_counter--;
@@ -143,7 +143,7 @@ static void fs_step_sweep(APU* apu)
     }
 }
 
-static void fs_step_envelope(APU* apu)
+static void fs_step_envelope(gb_apu* apu)
 {
     for (int i = 0; i < 3; i++) {
         if (apu->env_period[i] == 0) continue;
@@ -162,9 +162,9 @@ static void fs_step_envelope(APU* apu)
 
 // ---------- Ring buffer (SPSC) ----------
 
-static inline void buf_push(APU* apu, float sample)
+static inline void buf_push(gb_apu* apu, float sample)
 {
-    uint32_t next = (apu->buf_write + 1) & APU_BUF_MASK;
+    uint32_t next = (apu->buf_write + 1) & GB_APU_BUF_MASK;
     if (next != apu->buf_read) {
         apu->audio_buf[apu->buf_write] = sample;
         apu->buf_write = next;
@@ -172,18 +172,18 @@ static inline void buf_push(APU* apu, float sample)
 }
 
 // Public: called from SDL audio callback
-float apu_buf_pop(APU* apu)
+float gb_apu_buf_pop(gb_apu* apu)
 {
     if (apu->buf_read == apu->buf_write)
         return 0.0f;
     float s = apu->audio_buf[apu->buf_read];
-    apu->buf_read = (apu->buf_read + 1) & APU_BUF_MASK;
+    apu->buf_read = (apu->buf_read + 1) & GB_APU_BUF_MASK;
     return s;
 }
 
 // ---------- Core ----------
 
-void apu_init(APU* apu)
+void gb_apu_init(gb_apu* apu)
 {
     memset(apu, 0, sizeof(*apu));
     apu->power = true;
@@ -196,7 +196,7 @@ void apu_init(APU* apu)
     apu->regs[0x25] = 0xFF; // NR51 pan default: all channels to both L/R
 }
 
-void apu_step(APU* apu, int dots)
+void gb_apu_step(gb_apu* apu, int dots)
 {
     if (!apu->power) return;
 
@@ -245,7 +245,7 @@ void apu_step(APU* apu, int dots)
 
     // --- Downsampling: produce one sample every CPU_FREQ/SAMPLE_RATE dots ---
     apu->sample_accum += (uint32_t)dots;
-    uint32_t dots_per_sample = CPU_FREQ / APU_SAMPLE_RATE;
+    uint32_t dots_per_sample = GB_CPU_FREQ / GB_APU_SAMPLE_RATE;
     while (apu->sample_accum >= dots_per_sample) {
         apu->sample_accum -= dots_per_sample;
 
@@ -280,7 +280,7 @@ void apu_step(APU* apu, int dots)
 
 // ---------- Register read ----------
 
-uint8_t apu_read(const APU* apu, uint16_t addr)
+uint8_t gb_apu_read(const gb_apu* apu, uint16_t addr)
 {
     if (addr == 0xFF26) { // NR52
         if (!apu->power) return 0x70; // bits 4-6 always high
@@ -296,7 +296,7 @@ uint8_t apu_read(const APU* apu, uint16_t addr)
 
 // ---------- Register write ----------
 
-static void apu_power_off(APU* apu)
+static void apu_power_off(gb_apu* apu)
 {
     apu->power = false;
     memset(apu->regs, 0, 0x16); // NR10-NR51
@@ -317,7 +317,7 @@ static void apu_power_off(APU* apu)
 }
 
 // Trigger event for a channel (bit 7 of NRx4)
-static void trigger_channel(APU* apu, int ch)
+static void trigger_channel(gb_apu* apu, int ch)
 {
     apu->ch_on[ch] = true;
 
@@ -378,7 +378,7 @@ static void trigger_channel(APU* apu, int ch)
     }
 }
 
-void apu_write(APU* apu, uint16_t addr, uint8_t value)
+void gb_apu_write(gb_apu* apu, uint16_t addr, uint8_t value)
 {
     // NR52 master control
     if (addr == 0xFF26) {
