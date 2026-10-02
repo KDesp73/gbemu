@@ -5,6 +5,7 @@ include ./make/libs.mk
 include ./make/utils.mk
 include ./make/wasm.mk
 include ./make/esp32.mk
+include ./make/docs.mk
 
 .PHONY: help
 help: ## Show this help message

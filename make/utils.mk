@@ -24,16 +24,6 @@ compile_commands.json: $(SRC_FILES) ## Generate compile_commands.json
 	@echo "[INFO] Generating compile_commands.json"
 	bear -- make all
 
-.PHONY: docs
-docs: ## Generate docs using tinydocs
-	tinydocs-cli \
-		--files src/gbemu.h,src/frontend.h \
-		--markers docs/tiny.markers.json \
-		--ignore .gitignore \
-		-o docs \
-		--comment-style "//" \
-		--name $(LIBRARY_NAME)
-
 .PHONY: install
 install: ## Install emulator system-wide (run with sudo)
 	cp $(TARGET) $(PREFIX)/$(TARGET)

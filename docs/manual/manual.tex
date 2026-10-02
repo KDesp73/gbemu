@@ -1,0 +1,4056 @@
+% %
+% manual.tex - Reference manual for gbemu
+%                                       2026-10-02
+%
+%  Reference manual for the gbemu Game Boy / Game Boy Color emulator.
+%  Layout follows the reference-manual style of the refart class: a narrow
+%  text column with a wide left margin that carries headings and margin
+%  notes.
+%
+\documentclass[twoside,a4paper]{refart}
+\usepackage{makeidx}
+\usepackage{ifthen}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{fancyvrb}
+\usepackage[hidelinks]{hyperref}
+
+% ---------------------------------------------------------------------------
+% Notation
+% ---------------------------------------------------------------------------
+
+% backslash in \tt font
+\def\bs{\char'134 }
+
+\newcommand{\ie}{i.\,e.,}
+\newcommand{\eg}{e.\,g.,}
+
+% Long identifiers must wrap: the text column is narrow and names like
+% GB_HOTKEY_SAVE_STATE are wider than it.  \cs and \fname therefore insert a
+% zero-width break opportunity between every token.
+\usepackage{seqsplit}
+\renewcommand*\seqinsert{\allowbreak}
+\ExplSyntaxOn
+\NewDocumentCommand{\brk}{m}{\tl_map_inline:nn {#1} {##1\allowbreak}}
+\ExplSyntaxOff
+
+% \cs{name}   -> "\name" in typewriter (macros without underscores)
+% \fname{x}   -> "x" in typewriter, underscores safe (identifiers)
+\DeclareRobustCommand\cs[1]{\texttt{\char`\\\brk{#1}}}
+\DeclareRobustCommand\fname[1]{%
+  \texttt{\edef\gbemudetok{\detokenize{#1}}%
+         \expandafter\seqsplit\expandafter{\gbemudetok}}}
+
+% Verbatim environments. "Code" is framed, "Trace" is not.
+\DefineVerbatimEnvironment{Code}{Verbatim}{%
+  fontsize=\footnotesize,
+  frame=single,
+  framesep=4pt,
+  xleftmargin=2pt,
+  baselinestretch=0.92
+}
+\DefineVerbatimEnvironment{Trace}{Verbatim}{%
+  fontsize=\footnotesize,
+  baselinestretch=0.92
+}
+
+% Column types for long tables
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\renewcommand{\arraystretch}{1.05}
+\setlength{\LTleft}{0pt}
+\setlength{\LTright}{\fill}
+% The refart text column is only about 316pt wide, so the default 6pt
+% intercolumn glue pushes the wider tables past the right margin.
+\setlength{\tabcolsep}{3pt}
+
+% A boxed paragraph used for "gotchas"
+\newsavebox{\warnbox}
+\newenvironment{warning}{%
+  \par\medskip\noindent
+  \begin{lrbox}{\warnbox}%
+  \begin{minipage}{\linewidth}%
+  \hrule height 0.6pt
+  \vspace{3pt}%
+  \textbf{Note.}\hspace{0.5em}\ignorespaces
+}{%
+  \par\vspace{3pt}\hrule height 0.6pt
+  \end{minipage}%
+  \end{lrbox}%
+  \noindent\box{\warnbox}\par\medskip
+}
+
+% Run-in notes.  refart's \attention and \seealso are margin commands that
+% require an argument; the notes here are whole paragraphs of prose, so they
+% are rendered in the text column under their own run-in label instead.
+\renewcommand*\attention{\par\medskip\noindent{\bfseries !\enspace}\ignorespaces}
+\renewcommand*\seealso{\par\medskip\noindent{\bfseries $\rightarrow$\enspace}\ignorespaces}
+
+\title{gbemu\\
+\large A Game Boy Emulator in C\\
+\large Reference Manual}
+\author{Konstantinos Despoinidis (KDesp73)\\
+gbemu 0.1.0\\
+MIT licensed\thanks{The full text of the MIT license ships with the
+source tree in the file \fname{LICENSE}.}}
+
+\date{October 2026}
+\emergencystretch1em
+
+\pagestyle{myfootings}
+\markboth{gbemu: A Game Boy Emulator in C}
+         {gbemu Reference Manual}
+
+\makeindex
+
+\setcounter{tocdepth}{2}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+    \fname{gbemu} is a Game Boy and Game Boy Color emulator written in
+    portable~C99.  The emulator core is a frontend-agnostic library: it
+    knows nothing about windows, canvases or sound cards.  Everything the
+    core cannot do by itself --- presenting a frame, reading a game pad,
+    pushing audio samples --- is delegated to a small vtable that a host
+    program fills in.  The same core therefore drives an SDL3 desktop
+    build, a terminal front end that draws with ANSI half-blocks, a
+    headless build used by the test harness, a WebAssembly build that runs
+    in a browser, and an ESP32 firmware image.
+
+    This manual documents the whole system: how to build it, how to run it,
+    how the memory map, the cartridge mappers, the timer, the PPU and the
+    APU are implemented, how save files and save states are laid out on
+    disk, how to embed the library in your own program, and how the test
+    suites are driven.  Where the implementation knowingly deviates from
+    hardware, the deviation is stated rather than hidden.
+\end{abstract}
+
+\tableofcontents
+
+\newpage
+
+% ===========================================================================
+\section{Introduction}
+\label{intro}
+
+\subsection{What gbemu is}
+
+\index{gbemu}
+\fname{gbemu} is a from-scratch emulator for the original monochrome Game
+Boy and, partially, for the Game Boy Color.  It is written in C99 with no
+mandatory third-party dependency: the core library talks to nothing but
+the C standard library.  Optional back ends add SDL3 (desktop), emscripten
+(browser) or ESP-IDF (microcontroller) support, but each one is a
+separate, replaceable translation unit.
+
+The design goal is \emph{testability first}.  Every hardware subsystem is
+a small, independently callable state machine that advances by an explicit
+number of cycles, so that conformance ROMs can be run at full speed with
+no window and no sound card.  The second goal is \emph{transparency}: the
+source is small enough to read in an afternoon, and this manual explains
+every register, every timing constant and every deliberate deviation from
+real hardware.
+
+\marginlabel{Scope:}
+The emulator implements the DMG feature set, the four supported memory bank
+controllers, the four audio channels, and the interrupt system.  Game Boy
+Color support is limited to the CPU speed switch; the CGB-specific
+palette, video and DMA registers are not implemented and are listed in
+section~\ref{cgb-limits}.
+
+\subsection{Design goals}
+\label{goals}
+
+\begin{description}
+
+\item[Frontend independence]\index{frontend!independence}
+    The core exposes a four-function vtable (\fname{init},
+    \fname{render}, \fname{poll\_events}, \fname{destroy}) through
+    \fname{gb\_frontend}, plus an optional hotkey callback.  A frontend
+    never pokes at emulator internals; it receives a frame buffer and a
+    memory bus.  This is what makes the headless test build possible.
+
+\item[Cycle-driven hardware]\index{cycle-driven}
+    The CPU does not "run" the hardware; hardware is advanced explicitly.
+    \fname{gb\_cpu\_step} reports how many T-cycles an instruction took
+    and calls \fname{gb\_machine\_tick} at each machine-cycle boundary, so
+    the timer, the PPU, the APU and the OAM DMA engine all observe bus
+    activity at the right slot in time.
+
+\item[Generated opcode tables]\index{code generation}
+    Opcode mnemonics and cycle counts come from a machine-readable table
+    and are regenerated into \fname{src/opcodes.h} by
+    \fname{scripts/generate\_opcodes.py}.  Hand-maintained opcode lists
+    drift; generated ones do not.
+
+\item[Documented from the source]\index{documentation}
+    The public header \fname{src/gbemu.h} carries structured comments
+    (\fname{//@func}, \fname{//@param}, \fname{//@desc}, \ldots) that are
+    turned into browsable API documentation by \fname{make docs}.  This
+    manual covers the parts a header comment cannot: why the code looks the
+    way it does, and what it does not do.
+
+\item[Portability]\index{portability}
+    Only the core library has to be portable.  The timing helpers
+    (\fname{gb\_get\_time\_ns}, \fname{gb\_sleep\_ns}) switch between
+    POSIX and FreeRTOS behind \fname{\#ifdef}, and the ESP32 build compiles
+    the core freestanding, with no ESP-IDF headers.
+\end{description}
+
+\subsection{Feature summary}
+\label{features}
+
+\begin{longtable}{@{}L{0.22\textwidth}L{0.72\textwidth}@{}}
+\toprule
+\textbf{Area} & \textbf{What is implemented}\\
+\midrule
+\endhead
+CPU &
+  Full SM83 instruction set: all 256 base opcodes and all 256
+  \fname{CB}-prefixed opcodes, with hardware-accurate cycle counts,
+  the \fname{EI} one-instruction delay, the \fname{HALT} bug and
+  interrupt dispatch.\\
+Memory bus &
+  Complete address decoding including echo RAM, the unusable region,
+  I/O register routing, the joypad matrix, OAM DMA and a flat I/O
+  shadow array for registers that are not modelled.\\
+Cartridges &
+  ROM-only, MBC1 (including MBC1M multicarts), MBC2, MBC3 (with an RTC
+  register stub) and MBC5.  Battery saves for every mapper that has
+  battery-backed RAM.\\
+Timer &
+  \fname{DIV}/\fname{TIMA}/\fname{TMA}/\fname{TAC} with a 16-bit internal
+  counter, a bit-selected frequency clock and a falling-edge detector,
+  including the delayed \fname{TIMA} reload and the \fname{DIV}-write
+  trigger.\\
+PPU &
+  Background, window and sprite rendering to a 160$\times$144 ARGB frame
+  buffer, scanline mode transitions (OAM, transfer, H-blank, V-blank),
+  \fname{LY}/\fname{LYC} coincidence and the four STAT interrupt sources.\\
+Joypad &
+  \fname{P1} at \fname{0xFF00} with the two select lines, active-low
+  button state and joypad interrupt generation.\\
+OAM DMA &
+  \fname{0xFF46} transfers copy 160 bytes at one byte per machine cycle
+  after a two-cycle start delay, with restart queueing and OAM blocking
+  during the copy.\\
+Audio &
+  Four-channel synthesis (two squares with duty, a wave channel reading
+  channel~3's sample RAM, and a 15/7-bit LFSR noise channel), NR51/NR50
+  panning and master volume, naive decimation to the output rate and a
+  single-producer/single-consumer ring buffer.\\
+Serial &
+  Output is intercepted: a write of \fname{0x81} to \fname{0xFF02}
+  prints the pending byte, and writes to cartridge RAM above
+  \fname{0xA004} print printable bytes.  This is what makes the
+  Blargg, mooneye and SameSuite suites reportable.\\
+Persistence &
+  Battery saves (\fname{<rom>.sav}) and full-machine save states
+  (\fname{<rom>.state}) with version and ROM-hash validation.\\
+Frontends &
+  SDL3, terminal (ANSI truecolour half-blocks), headless, WebAssembly
+  and ESP32.\\
+\bottomrule
+\end{longtable}
+
+\subsection{Accuracy and known limitations}
+\label{limits-intro}
+
+An emulator that documents only its successes is not much use to anyone
+trying to decide whether a given test failure is the emulator's fault.
+The known deviations are therefore listed where they belong, in the
+chapter of the subsystem they affect:
+
+\begin{itemize}
+\item \textbf{CPU:} \fname{STOP} consumes its operand byte and performs the
+      CGB speed switch, but it does not stop the CPU, the divider or the
+      APU.\index{STOP}
+\item \textbf{Bus:} unmapped I/O reads return \fname{0x00} rather than
+      \fname{0xFF}; VRAM and OAM are not blocked during PPU modes~2 and~3;
+      the OAM DMA source page is not masked or validated; \fname{0xFF46}
+      does not read back the value written to it.
+\item \textbf{Timer:} writing \fname{TAC} does not generate the
+      falling edge that real hardware produces.
+\item \textbf{PPU:} scanlines are rendered in one step at dot~504 rather
+      than pixel by pixel, mode~3 has a fixed length, \fname{LCDC} bit~0 is
+      ignored, the sprite priority flag (OAM attribute bit~7) is parsed
+      but not applied, scanline~0 is not drawn after the LCD is switched
+      on, and there is no OAM-scan corruption bug.
+\item \textbf{APU:} the frame sequencer period, the noise channel shift
+      and the wave-channel volume register are all wrong in ways
+      section~\ref{apu-limits} quantifies; the volume envelope is not
+      wired up.
+\item \textbf{CGB:} no palette RAM, no VRAM banking, no GDMA/HDMA, no
+      boot ROM.  See section~\ref{cgb-limits}.
+\end{itemize}
+
+\subsection{Repository layout}
+\label{repo-layout}
+
+\begin{longtable}{@{}L{0.24\textwidth}L{0.70\textwidth}@{}}
+\toprule
+\textbf{Path} & \textbf{Contents}\\
+\midrule
+\endhead
+\fname{src/} &
+  The emulator core.  \fname{gbemu.h} is the entire public API;
+  \fname{frontend.h} declares the vtable.  \fname{cpu.c},
+  \fname{instr.c}, \fname{opcodes.h} (generated), \fname{bus.c},
+  \fname{timer.c}, \fname{ppu.c}, \fname{apu.c}, \fname{inter.c},
+  \fname{loop.c}, \fname{memops.c} and \fname{save.c} make up the
+  implementation.  Nothing in this directory includes SDL or any
+  windowing header.\\
+\fname{frontend/} &
+  One file per front end: \fname{sdl.c}, \fname{terminal.c},
+  \fname{headless.c}, \fname{wasm.c}, \fname{esp32.c}.  Exactly one of
+  these is compiled into a given host program; the build system picks
+  the default.\\
+\fname{apps/} &
+  Host programs.  \fname{cli.c} is the desktop/CLI entry point,
+  \fname{wasm.c} is the emscripten entry point with the exported
+  functions the web shell calls.\\
+\fname{make/} &
+  GNU make fragments: \fname{common.mk} (compiler and flags),
+  \fname{libs.mk} (artifacts), \fname{utils.mk} (housekeeping),
+  \fname{wasm.mk}, \fname{esp32.mk}, \fname{docs.mk}.\\
+\fname{scripts/} &
+  \fname{generate\_opcodes.py} regenerates \fname{src/opcodes.h};
+  \fname{test} is the test-suite driver.\\
+\fname{tests/} &
+  Checked-out test ROMs: \fname{gb-test-roms} (Bla'rg),
+  \fname{mooneye-test-suite} and \fname{SameSuite}.\\
+\fname{docs/} &
+  This manual (\fname{manual.tex}), developer notes under
+  \fname{docs/dev/}, and the generated API reference
+  (\fname{tiny.docs.json} plus \fname{index.html}).\\
+\fname{web/} &
+  \fname{shell.html}, the emscripten shell template that becomes
+  \fname{emu-wasm.html}.\\
+\bottomrule
+\end{longtable}
+
+\subsection{Conventions used in this manual}
+\label{conventions}
+
+\begin{description}
+
+\item[Identifiers] are set in typewriter font: \fname{gb\_bus\_write}.
+\item[Hexadecimal constants] are written \texttt{0xFF40} with an
+      \texttt{0x} prefix and four digits for addresses; masks and
+      immediate values may be shorter.
+\item[Time bases] are named explicitly.  A \emph{dot} (a system cycle) is
+      a \fname{GB\_CPU\_FREQ} unit at 8.388608\,MHz.  A \emph{T-cycle} is
+      a CPU clock unit, equal to two dots at normal speed.  An
+      \emph{M-cycle} (machine cycle) is four T-cycles, equal to one bus
+      access.  Section~\ref{time-bases} tabulates the conversions.
+\item[Addresses] are given as full I/O addresses where the I/O space is
+      involved (\texttt{0xFF05}) and as cartridge-window offsets where the
+      mapper is involved (\texttt{\$2000--\$3FFF}), matching the
+      conventions of the Game Boy hardware documentation.
+\item[\texttt{DONE}/\texttt{TODO}] items in the source \fname{TODO} file
+      are quoted when they explain a missing feature.
+\end{description}
+
+\subsection{License and authorship}
+
+\index{license}
+The project is released under the MIT license.  The public header
+declares this too, through the \fname{//@license} documentation marker.
+Contributions are welcome; the fastest way to make progress is to pick an
+item from the \fname{TODO} file or a failing conformance test and send a
+patch.
+
+\clearpage
+
+% ===========================================================================
+\section{Building gbemu}
+\label{building}
+
+\subsection{Prerequisites}
+
+The core needs only a C99 compiler.  The rest depends on the target:
+
+\begin{longtable}{@{}L{0.26\textwidth}L{0.68\textwidth}@{}}
+\toprule
+\textbf{Target} & \textbf{Requirements}\\
+\midrule
+\endhead
+Core library, CLI &
+  \textbf{gcc} (or any C99 compiler).  On macOS with Homebrew this is
+  the system compiler.  \textbf{pkg-config} is used to locate SDL3.\\
+SDL3 front end &
+  SDL3 development files, discovered with
+  \cs{pkg-config --cflags --libs sdl3}.  The makefiles additionally point
+  \cs{PKG\_CONFIG\_PATH} at \fname{/opt/homebrew/lib/pkgconfig}, which is
+  where Homebrew installs it on Apple Silicon.\\
+Terminal / headless &
+  Nothing beyond libc; useful on systems without a display server.\\
+WebAssembly &
+  \textbf{emcc} from the Emscripten SDK.  Only the core, the WASM front
+  end and \fname{apps/wasm.c} are compiled; SDL is not involved.\\
+ESP32 &
+  The Espressif cross toolchain, on \cs{PATH} after sourcing
+  \cs{\$HOME/esp/esp-idf/export.sh}.  The core cross-compiles
+  freestanding; \fname{frontend/esp32.c} additionally needs a full
+  ESP-IDF component environment.\\
+Documentation &
+  \textbf{pdflatex} for this manual, \textbf{tinydocs-cli} for the API
+  reference, \textbf{rgbds} (for SameSuite) and \textbf{wla-dx} (for
+  mooneye) if you want to rebuild the test ROMs.\\
+\bottomrule
+\end{longtable}
+
+\subsection{Build targets}
+\label{make-targets}
+
+The top-level \fname{Makefile} includes five fragments and defines
+\cs{help} as the default goal.  Every target below carries a \cs{\#\#}
+comment so that \cs{make help} lists it:
+
+\begin{longtable}{@{}L{0.26\textwidth}L{0.68\textwidth}@{}}
+\toprule
+\textbf{Target} & \textbf{Description}\\
+\midrule
+\endhead
+\cs{all} &
+  The default build: checks the toolchain, creates \fname{build/}, then
+  builds the static library, the shared library and the CLI binary.
+  Equivalent to \cs{check\_tools static shared gbemu-cli}.\\
+\cs{static} &
+  Archives the core objects into \fname{libgbemu.a} with
+  \cs{ar rcs}.\\
+\cs{shared} &
+  Links the same objects into \fname{libgbemu.so} with \cs{-shared}.\\
+\cs{gbemu-cli} &
+  Links \fname{apps/cli.c} together with the selected front end against
+  \fname{libgbemu.a}.  This is the program you actually run.\\
+\cs{check\_tools} &
+  Verifies that \textbf{gcc} exists (fatal otherwise) and warns if
+  \textbf{bear} is missing, since that only affects the
+  \cs{compile\_commands.json} target.\\
+\cs{clean} &
+  Removes \fname{build/}, the binary and both libraries.\\
+\cs{distclean} &
+  \cs{clean} plus editor backups, core dumps and
+  \fname{dist/*.tar.gz}.\\
+\cs{dist} &
+  Packs \fname{src}, \fname{frontend}, \fname{apps}, the
+  \fname{Makefile} and \fname{README.md} into
+  \fname{dist/gbemu-cli.tar.gz}.\\
+\cs{compile\_commands.json} &
+  Regenerates the compile database used by clangd and IDEs, via
+  \cs{bear -- make all}.\\
+\cs{docs} &
+  Runs \fname{tinydocs-cli} over \fname{src/gbemu.h} and
+  \fname{src/frontend.h} and writes \fname{docs/tiny.docs.json} plus an
+  HTML page.\\
+\cs{manual} &
+  Compiles this document: three \textbf{pdflatex} passes around a
+  \textbf{makeindex} run, with the output collected in
+  \fname{docs/manual/} (see section~\ref{manual-build}).\\
+\cs{manual.clean} &
+  Removes \fname{docs/manual/}.\\
+\cs{install} / \cs{uninstall} &
+  Copy, respectively remove, the binary in \cs{PREFIX}, which defaults
+  to \cs{/usr/local/bin}.  Both need write access, i.e.\ usually
+  \cs{sudo}.\\
+\cs{wasm} &
+  Cross-compiles the core plus the WASM front end with \textbf{emcc}
+  into \fname{web/emu-wasm.html} and its sidecar files.\\
+\cs{wasm.serve} &
+  Rebuilds the WASM target and serves \fname{web/} on
+  \cs{http://localhost:8080} with \cs{python3 -m http.server}.\\
+\cs{wasm.clean} &
+  Removes the WASM objects and every \fname{emu-wasm.*} artefact.\\
+\cs{esp32-lib} &
+  Cross-compiles the core for the microcontroller into
+  \fname{build/esp32/libgbemu-<target>.a}.\\
+\cs{esp32-clean} &
+  Removes \fname{build/esp32}.\\
+\bottomrule
+\end{longtable}
+
+\marginlabel{Variables:}
+The build accepts three meaningful variables.  \cs{type=RELEASE} switches
+to an optimised, sanitizer-free build.  \cs{TERM=1} and \cs{HEADLESS=1}
+select the terminal and headless front ends instead of SDL3.
+\cs{WASM\_ROM=<path>} preloads a ROM into the WASM virtual file system,
+and \cs{ESP32\_TARGET=<chip>} picks the cross toolchain.  \cs{PREFIX}
+overrides the install directory.
+
+\subsection{Build types}
+
+\cs{make/common.mk} treats \cs{type=RELEASE} specially:
+
+\begin{description}
+
+\item[Debug (default)] \cs{-DDEBUG -ggdb} plus
+  \cs{-fsanitize=address,undefined} in both the compile and the link
+  line.  This is the build you want while developing: the sanitizers
+  catch out-of-bounds accesses in the frame buffer and in the DMA code
+  that would otherwise show up as a corrupted picture two frames later.
+
+\item[Release] \cs{make all type=RELEASE} compiles with \cs{-O3} and no
+  sanitizers.  Everything always compiles with \cs{-Wall}, \cs{-Isrc} and
+  \cs{-fPIC} (the latter so the objects can go into the shared library).
+\end{description}
+
+\subsection{Choosing a front end at build time}
+
+\cs{make/common.mk} inspects two variables and sets exactly one front-end
+source file, plus the matching \cs{-D} macro that \fname{apps/cli.c}
+tests:
+
+\begin{longtable}{@{}C{0.16\textwidth}L{0.22\textwidth}L{0.54\textwidth}@{}}
+\toprule
+\textbf{Variable} & \textbf{Define} & \textbf{Front end}\\
+\midrule
+\endhead
+(not set) & --- & \fname{frontend/sdl.c}, compiled together with the
+  SDL3 flags reported by \cs{pkg-config}\\
+\cs{TERM=1} & \cs{-DEMU\_TERM} & \fname{frontend/terminal.c}; no SDL
+  dependency at all, so this is the build to use on a headless box\\
+\cs{HEADLESS=1} & \cs{-DEMU\_HEADLESS} & \fname{frontend/headless.c};
+  initialises nothing, renders nothing, never terminates on its own.  The
+  test harness uses this.\\
+\bottomrule
+\end{longtable}
+
+The front-end factory function differs per build, which is why
+\fname{apps/cli.c} declares three of them and links only one:
+
+\begin{Code}
+gb_frontend* frontend_sdl_create(gb_apu* apu);
+gb_frontend* frontend_headless_create(void);
+gb_frontend* frontend_terminal_create(void);
+\end{Code}
+
+Note that the SDL constructor takes a \fname{gb\_apu*} because its audio
+callback needs the ring buffer; the other two take nothing and produce no
+sound.
+
+\subsection{Build outputs}
+
+\cs{make all} leaves three artefacts in the repository root:
+
+\begin{longtable}{@{}L{0.24\textwidth}L{0.70\textwidth}@{}}
+\toprule
+\textbf{Artefact} & \textbf{Description}\\
+\midrule
+\endhead
+\fname{gbemu-cli} &
+  The executable.  Takes a ROM path as its only argument.\\
+\fname{libgbemu.a} &
+  Static library containing the core only --- no front end, no
+  \cs{main}.  This is the artefact to link into an application of your
+  own.\\
+\fname{libgbemu.so} &
+  The same objects as a shared library, for run-time loading or for
+  embedding in another language.\\
+\bottomrule
+\end{longtable}
+
+\subsection{The WebAssembly target}
+\label{wasm-build}
+
+\cs{make wasm} compiles every core source \emph{except} \fname{loop.c}
+(the browser supplies its own frame loop), adds \fname{frontend/wasm.c}
+and \fname{apps/wasm.c}, and links with \textbf{emcc}.  The link options
+matter:
+
+\begin{Code}
+-s ALLOW_MEMORY_GROWTH
+-s INITIAL_MEMORY=16777216
+-s EXPORTED_RUNTIME_METHODS='["FS","HEAPU8"]'
+-s EXPORTED_FUNCTIONS='["_main","_wasm_set_key","_wasm_load_rom","_wasm_is_running"]'
+--shell-file web/shell.html
+\end{Code}
+
+Two consequences follow.  \fname{FS} is required because the page writes
+the chosen ROM into the virtual file system as \fname{/rom.gb} before
+calling \fname{\_wasm\_load\_rom}.  \fname{HEAPU8} is exported because the
+front end wraps a pointer into the WASM linear memory to hand it to
+JavaScript.  \cs{INITIAL\_MEMORY} of 16\,MiB leaves room for a large ROM
+plus its bank-aligned allocation; \cs{ALLOW\_MEMORY\_GROWTH} lets a huge
+cartridge still fit.
+
+Debug builds add \cs{-s ASSERTIONS=2} so that a null pointer or a
+misaligned access traps instead of corrupting memory silently.
+
+Passing \cs{WASM\_ROM=path/to/rom.gb} adds emcc's
+\cs{-\,-preload-file} option with the target
+\fname{@/rom.gb}, so the page boots straight into a game without a file
+picker.
+
+\subsection{The ESP32 target}
+\label{esp32-build}
+
+\cs{make esp32-lib} compiles the core for the microcontroller and
+archives it:
+
+\begin{Code}
+make esp32-lib                    # xtensa-esp32-elf-gcc
+make ESP32_TARGET=esp32s3 esp32-lib
+make ESP32_TARGET=esp32c3 esp32-lib   # riscv32-esp-elf-gcc
+\end{Code}
+
+Supported \cs{ESP32\_TARGET} values are \cs{esp32}, \cs{esp32s2},
+\cs{esp32s3} and \cs{esp32c3}; anything else is a hard make error.  The
+compile flags are deliberately minimal: \cs{-O2}, \cs{\-ffunction-sections}
+and \cs{\-fdata-sections} so the linker can garbage-collect unused code,
+plus \cs{-DESP\_PLATFORM}, which is the marker that switches the portable
+paths inside \fname{loop.c} and \fname{bus.c}:
+
+\begin{itemize}
+\item \fname{gb\_sleep\_ns} uses \cs{vTaskDelay} instead of
+      \cs{nanosleep}, selected by a compile-time probe for
+      \cs{<freertos/FreeRTOS.h>}.
+\item The \cs{EMU\_NOSLEEP} environment variable is never read; frame
+      pacing is unconditional.
+\item The Bla'rg trace file side effect is compiled out.
+\end{itemize}
+
+The core needs no ESP-IDF headers, so the archive links into any IDF
+project.  \fname{frontend/esp32.c} is \emph{not} part of this target: it
+needs the full component environment, and section~\ref{esp32-frontend}
+describes how to use it from your own firmware.
+
+\subsection{Building this manual}
+\label{manual-build}
+
+\cs{make manual} compiles \fname{docs/manual.tex} into
+\fname{docs/manual/}; the target is defined in \fname{make/docs.mk} and
+shells out to the toolchain below.  The document uses only packages from
+a standard TeX Live installation (\cs{refart} with \cs{longtable},
+\cs{booktabs}, \cs{array}, \cs{fancyvrb} and \cs{hyperref}), and it has to
+run the LaTeX pass more than once so that the index and the page
+references settle:
+
+\begin{Code}
+cd docs
+pdflatex -interaction=nonstopmode -output-directory=manual manual.tex
+makeindex -o manual/manual.idx manual/manual.idx
+pdflatex -interaction=nonstopmode -output-directory=manual manual.tex
+pdflatex -interaction=nonstopmode -output-directory=manual manual.tex
+\end{Code}
+
+\cs{make manual} does exactly this, including the \cs{-output-directory},
+so the \fname{.aux}, \fname{.log} and \fname{.idx} files never appear next
+to the source.  If you invoke \cs{pdflatex} by hand without that flag,
+compile in \fname{docs/} instead and clean up the intermediate files
+afterwards with \fname{latexmk -c} or by hand.
+
+\attention
+The index is only complete if \cs{makeindex} runs \emph{after} the first
+LaTeX pass has written \fname{manual.idx} and \emph{before} the last one.
+Skipping it produces a document that compiles cleanly and prints an empty
+index.
+
+The layout is the reference-manual style: the text occupies a narrow
+column on the right, and the wide left margin carries \cs{marginlabel}
+annotations, \cs{seealso} cross references and \cs{attention} notes.  If
+you extend the document, that is where the asides belong.
+
+\clearpage
+
+% ===========================================================================
+\section{Running the emulator}
+\label{running}
+
+\subsection{Command line}
+
+The CLI takes exactly one argument, the path to a ROM file:
+
+\begin{Code}
+$ ./gbemu-cli roms/"Tetris (World) (Rev 1).gb"
+\end{Code}
+
+With no argument it prints a usage message and exits with status~1:
+
+\begin{Code}
+Please provide a rom
+Usage: ./gbemu-cli <ROM>
+\end{Code}
+
+Paths are used verbatim, including spaces --- quote them.  The ROM's
+directory matters, because both the battery save and the save state are
+written next to the ROM (section~\ref{persistence}).
+
+\subsection{Environment variables}
+
+\begin{longtable}{@{}L{0.20\textwidth}L{0.13\textwidth}L{0.59\textwidth}@{}}
+\toprule
+\textbf{Variable} & \textbf{Default} & \textbf{Meaning}\\
+\midrule
+\endhead
+\cs{EMU\_SCALE} & \cs{4} &
+  Integer window scale for the SDL front end; the window is
+  \cs{160*scale} by \cs{144*scale}.  Values below 1 are clamped to 1.
+  \cs{EMU\_SCALE=3} gives a 480$\times$432 window.\\
+\cs{EMU\_NOSLEEP} & unset &
+  If the variable exists at all --- its value is ignored --- the
+  emulator does not sleep between frames and runs as fast as it can.
+  This is what the test harness sets, and what you want when
+  measuring emulation speed.  It is not read at all in the ESP32
+  build.\\
+\bottomrule
+\end{longtable}
+
+\subsection{Controls}
+\label{controls}
+
+The joypad state is a pair of bytes on the bus, \fname{joypad\_dpad} and
+\fname{joypad\_buttons}, both \emph{active low}: a set bit means released.
+Only the low nibble of each byte is used.
+
+\begin{longtable}{@{}C{0.14\textwidth}C{0.22\textwidth}C{0.28\textwidth}C{0.28\textwidth}@{}}
+\toprule
+\textbf{Button} & \textbf{Field} & \textbf{Bit} & \textbf{SDL3 key}\\
+\midrule
+\endhead
+Right & \fname{joypad\_dpad} & \texttt{0x01} & \cs{SDLK\_RIGHT}\\
+Left  & \fname{joypad\_dpad} & \texttt{0x02} & \cs{SDLK\_LEFT}\\
+Up    & \fname{joypad\_dpad} & \texttt{0x04} & \cs{SDLK\_UP}\\
+Down  & \fname{joypad\_dpad} & \texttt{0x08} & \cs{SDLK\_DOWN}\\
+\midrule
+A     & \fname{joypad\_buttons} & \texttt{0x01} & \cs{SDLK\_Z}\\
+B     & \fname{joypad\_buttons} & \texttt{0x02} & \cs{SDLK\_X}\\
+Select & \fname{joypad\_buttons} & \texttt{0x04} & \cs{SDLK\_BACKSPACE}\\
+Start & \fname{joypad\_buttons} & \texttt{0x08} & \cs{SDLK\_RETURN}\\
+\bottomrule
+\end{longtable}
+
+Any SDL key press raises the joypad interrupt flag; the ESP32 front end
+detects the 1-to-0 transitions properly instead, and the terminal front
+end raises it once per poll unconditionally (a known quirk,
+section~\ref{terminal-frontend}).
+
+\subsection{Hotkeys}
+
+The front end never decides what a hotkey \emph{means}.  It recognises the
+input and emits an action through the \fname{on\_hotkey} callback; the
+application decides that a save action should call \fname{gb\_save\_state}.
+
+\begin{longtable}{@{}C{0.24\textwidth}L{0.34\textwidth}L{0.34\textwidth}@{}}
+\toprule
+\textbf{Action} & \textbf{SDL3} & \textbf{ESP32}\\
+\midrule
+\endhead
+\fname{GB\_HOTKEY\_SAVE\_STATE} & \cs{SDLK\_F5} & \cs{START + SELECT}
+  held for about half a second\\
+\fname{GB\_HOTKEY\_LOAD\_STATE} & \cs{SDLK\_F9} & \cs{START + SELECT}
+  held for about two and a half seconds\\
+\bottomrule
+\end{longtable}
+
+Terminal, headless and WASM builds install no hotkey callback at all, so
+the keys do nothing there.  The full wiring is shown in
+section~\ref{embedding-hotkeys}.
+
+\subsection{Battery saves and save states}
+
+Both kinds of file are derived from the ROM path by appending an extension:
+
+\begin{longtable}{@{}L{0.24\textwidth}L{0.34\textwidth}L{0.34\textwidth}@{}}
+\toprule
+\textbf{File} & \textbf{Written} & \textbf{Contains}\\
+\midrule
+\endhead
+\fname{<rom>.sav} &
+  Automatically when \fname{gb\_loop} returns, for cartridges whose
+  header declares a battery &
+  Cartridge RAM, and the RTC registers for MBC3 timer carts\\
+\fname{<rom>.state} &
+  On \cs{F5} &
+  The complete machine state: CPU, bus, timer, PPU, APU\\
+\bottomrule
+\end{longtable}
+
+On start-up the emulator loads \fname{<rom>.sav} if it exists.  Save states
+are loaded only when you press the load hotkey, and are rejected unless
+they were written by the same emulator version from the same ROM
+(section~\ref{state-validation}).
+
+\subsection{Shutting down}
+
+The emulation loop keeps a local \fname{running} flag which only the front
+end can clear, through the \cs{running} out-parameter of
+\fname{poll\_events}.  The SDL front end clears it on \cs{SDL\_EVENT\_QUIT}
+or a window-close request; the terminal front end clears it on
+\cs{Ctrl-C}, on a bare escape, or on \cs{q}.  Once the loop exits,
+\cs{main} writes the battery save, then destroys the front end and returns.
+
+Two consequences are worth knowing.  Input is only sampled once per frame,
+so quitting takes effect within roughly one frame.  And because the headless
+front end never clears the flag, a headless process runs until it is
+killed --- which is exactly what the test harness relies on.
+
+\clearpage
+
+% ===========================================================================
+\section{Architecture}
+\label{architecture}
+
+\subsection{Layers}
+
+The system is three layers deep, and each layer only knows the one below
+it:
+
+\begin{Code}
+  +---------------------------------------------------------------+
+  |  host program          apps/cli.c      apps/wasm.c           |
+  |  main(), state objects, hotkey policy, exit handling          |
+  +-------------------------------+-------------------------------+
+                                  |  gb_frontend* (vtable)
+  +-------------------------------v-------------------------------+
+  |  front end                  frontend/sdl.c, terminal.c,      |
+  |  pixels, audio, input        headless.c, wasm.c, esp32.c      |
+  +-------------------------------+-------------------------------+
+                                  |  gb_bus*, gb_apu*
+  +-------------------------------v-------------------------------+
+  |  core library               src/cpu.c instr.c bus.c timer.c  |
+  |  (libgbemu.a / .so)         src/ppu.c apu.c inter.c loop.c    |
+  |                              src/memops.c save.c              |
+  +---------------------------------------------------------------+
+\end{Code}
+
+The core never calls into a front end except through the four vtable
+slots, and a front end never calls into the core except
+\fname{gb\_apu\_buf\_pop} and the bus read/write functions it needs for
+input.  That is the whole contract.
+
+\subsection{Module map}
+\label{module-map}
+
+\begin{longtable}{@{}L{0.20\textwidth}L{0.74\textwidth}@{}}
+\toprule
+\textbf{File} & \textbf{Responsibility}\\
+\midrule
+\endhead
+\fname{cpu.c} &
+  Register initialisation, register dumping, the flag helpers, the
+  register-index helpers, and \fname{gb\_cpu\_step} --- the fetch,
+  decode and dispatch entry point, including the \fname{EI} delay and
+  the HALT bug.\\
+\fname{instr.c} &
+  The instruction set.  Eleven handler functions cover the base
+  opcodes; one more covers the \fname{CB} prefix.  All of them are
+  \cs{static}; the public surface is \fname{gb\_instr}.\\
+\fname{opcodes.h} &
+  Generated.  Two enumerations of opcode names and two
+  \cs{static inline} functions that return the cycle count for a
+  given opcode and condition.\\
+\fname{bus.c} &
+  Address decoding for the whole 16-bit space, I/O register routing,
+  ROM loading and header parsing, the four memory bank controllers,
+  the joypad matrix, serial output and the OAM DMA engine.  It also
+  owns \fname{gb\_machine\_tick}, the function that advances every
+  other component.\\
+\fname{timer.c} &
+  The divider and the timer, plus the two portability helpers
+  \fname{gb\_get\_time\_ns} and \fname{gb\_sleep\_ns}.\\
+\fname{ppu.c} &
+  The mode state machine, the scanline renderer and the video
+  register file.\\
+\fname{apu.c} &
+  The frame sequencer, the four channels, the mixer and the output
+  ring buffer.\\
+\fname{inter.c} &
+  \fname{gb\_handle\_inter\_interrupts}: turns hardware request flags
+  into IF bits, wakes a halted CPU and performs the five-machine-cycle
+  dispatch sequence.\\
+\fname{loop.c} &
+  \fname{gb\_loop}: the frame-budgeted main loop, the render handoff,
+  input polling and frame pacing.\\
+\fname{memops.c} &
+  Two helpers, \fname{gb\_fetch8} and \fname{gb\_fetch16}, which tick
+  one machine cycle per byte read and assemble little-endian 16-bit
+  values.\\
+\fname{save.c} &
+  Battery saves and save states.\\
+\bottomrule
+\end{longtable}
+
+\subsection{The front-end vtable}
+\label{vtable}
+
+\fname{src/frontend.h} declares the whole interface between core and
+host:
+
+\begin{Code}
+typedef enum {
+    GB_HOTKEY_SAVE_STATE, // Quick-save the full machine state (F5)
+    GB_HOTKEY_LOAD_STATE, // Restore the last quick-save (F9)
+} gb_hotkey;
+
+struct gb_frontend {
+    void* priv;
+
+    bool (*init)(gb_frontend* fe, int width, int height);
+    void (*render)(gb_frontend* fe, const uint32_t* buffer, int width, int height);
+    void (*poll_events)(gb_frontend* fe, gb_bus* bus, bool* running);
+    void (*destroy)(gb_frontend* fe);
+
+    void* hotkey_ctx;
+    void (*on_hotkey)(void* ctx, gb_hotkey key);
+};
+\end{Code}
+
+The contract, call by call:
+
+\begin{longtable}{@{}L{0.18\textwidth}L{0.32\textwidth}L{0.42\textwidth}@{}}
+\toprule
+\textbf{Slot} & \textbf{Called} & \textbf{Contract}\\
+\midrule
+\endhead
+\fname{init} &
+  Once, by \cs{main}, with \cs{160} and \cs{144} &
+  Returns \cs{true} on success.  Allocate everything private here;
+  return \cs{false} to abort start-up, which makes \cs{main} exit
+  with status~1.\\
+\fname{render} &
+  Once per frame, only when \cs{ppu->frame\_ready} was set &
+  \cs{buffer} points at \cs{160*144} ARGB words in row-major order.
+  The core clears the flag after the call, so the front end must
+  copy what it needs rather than keep the pointer.\\
+\fname{poll\_events} &
+  Once per frame, after rendering &
+  Drain the platform event queue, write the joypad bits into
+  \cs{bus->joypad\_dpad} / \cs{bus->joypad\_buttons} (active low),
+  raise \cs{bus->joypad\_interrupt} when a button was newly pressed,
+  and clear \cs{*running} to end the session.\\
+\fname{destroy} &
+  Once, by \cs{main} after the loop &
+  Release everything \cs{init} allocated.  The core does not touch
+  the vtable afterwards.\\
+\fname{on\_hotkey} &
+  From \cs{poll\_events}, if non-NULL &
+  The front end signals an intent; the application performs the
+  save or load.  May be \cs{NULL}.\\
+\bottomrule
+\end{longtable}
+
+\marginlabel{Ordering:}
+Rendering strictly precedes event polling, and both happen after the
+cycle budget for the frame is spent.  Input therefore takes effect on the
+following frame, at most 16.7\,ms later.
+
+\subsection{The execution model}
+\label{exec-model}
+
+The core is a cycle-driven state machine.  Nothing in it is
+event-driven: there are no callbacks from the timer into the CPU, no
+interrupts-as-preemption, no coroutines.  Each component is a plain struct
+plus a \cs{step} function that takes a cycle count.
+
+The call graph of one frame of \fname{gb\_loop}:
+
+\begin{Code}
+gb_loop(cpu, bus, timer, ppu, apu, fe)
+ |
+ +- gb_get_time_ns()                       frame start timestamp
+ |
+ +- while (frame_cycles < GB_CYCLES_PER_FRAME):
+ |    |
+ |    +- gb_cpu_step(cpu, bus)  --------------------------> T-cycles
+ |    |     +- promote ime_scheduled -> ime
+ |    |     +- if halted: gb_machine_tick(bus,4); return 4
+ |    |     +- gb_machine_tick(bus, 4)                    M-cycle 1
+ |    |     +- opcode = gb_bus_read(bus, pc); pc++       (skipped on halt bug)
+ |    |     +- gb_instr(cpu, bus, opcode)
+ |    |           +- 0xCB ? instr_cb() : handler chain
+ |    |           +- handler calls gb_machine_tick(bus,4) per M-cycle
+ |    |           +- handlers call gb_fetch8/16 (which tick too)
+ |    +- gb_handle_interrupts(cpu, bus, ppu, timer) -----> T-cycles
+ |    |     +- latch PPU/timer/joypad requests into IF (0xFF0F)
+ |    |     +- wake the CPU if IF & IE != 0
+ |    |     +- if IME: push PC, jump to 0x40 + 8*bit, cost 20 T-cycles
+ |    +- frame_cycles += t_cycles * (double_speed ? 1 : 2)
+ |
+ +- if (ppu->frame_ready): fe->render(...); frame_ready = false
+ +- fe->poll_events(fe, bus, &running)
+ +- gb_get_time_ns(); gb_sleep_ns(remaining of 1/60 s) unless EMU_NOSLEEP
+\end{Code}
+
+Four properties of this design are worth stating explicitly, because they
+explain most of the code.
+
+\begin{description}
+
+\item[Cycles are returned, never accumulated]\index{cycle accounting}
+    \fname{gb\_cpu\_step} returns the number of T-cycles an instruction
+    consumed, taken from the generated table \emph{before} execution
+    starts.  Handlers report only whether they handled the opcode.
+    Because the returned total is fixed, conditional branches are
+    charged their taken or untaken cost based on a
+    \emph{pre-execution} evaluation of the flag --- which is why
+    \fname{get\_condition\_met} is called before any handler runs.
+
+\item[Hardware advances at machine-cycle boundaries]
+    \fname{gb\_machine\_tick} is called once for the opcode fetch and
+    once for every subsequent bus access.  It steps the DMA engine, the
+    timer, the PPU and the APU.  A load from \fname{[HL]} costs a
+    machine cycle because the register-index helper calls it
+    explicitly, which is what makes the \cs{BIT n,(HL)} timing come
+    out right.
+
+\item[Interrupts are checked between instructions]
+    \fname{gb\_handle\_interrupts} runs after every completed
+    instruction, so worst-case interrupt latency is one instruction.
+    Only one interrupt is dispatched per call; the remaining pending
+    bits stay in IF for the next instruction boundary.
+
+\item[A frame is a cycle budget, not a V-blank]
+    The inner loop runs until \cs{GB\_CYCLES\_PER\_FRAME} dots have
+    been spent, and renders if --- and only if --- the PPU raised
+    \cs{frame\_ready} during that budget.  If a frame overruns, the
+    next render simply shows the newer picture; the flag is cleared
+    on read, so a second V-blank inside one budget is dropped rather
+    than queued.
+\end{description}
+
+\subsection{Time bases}
+\label{time-bases}
+
+\begin{longtable}{@{}L{0.22\textwidth}L{0.20\textwidth}L{0.52\textwidth}@{}}
+\toprule
+\textbf{Unit} & \textbf{Magnitude} & \textbf{Notes}\\
+\midrule
+\endhead
+Dot (system cycle) & 8.388608\,MHz &
+  \cs{GB\_CPU\_FREQ}.  The PPU and the APU count dots; the frame
+  budget is expressed in dots, which is why it is speed-mode
+  independent.\\
+T-cycle & 4.194304\,MHz &
+  Two dots at normal speed, one dot in CGB double-speed mode.  The CPU
+  and the timer live in this domain; the timer is
+  \emph{not} rescaled, so \fname{DIV} ticks twice as fast in real time
+  in double-speed mode, exactly as on hardware.\\
+M-cycle & 4 T-cycles &
+  One bus access.  \fname{gb\_machine\_tick} is always called with
+  \cs{4}.\\
+Frame & \cs{GB\_CYCLES\_PER\_FRAME} =
+  \cs{GB\_CPU\_FREQ/60} = 139\,810 dots &
+  The inner-loop budget.\\
+Frame wall clock & \cs{GB\_FRAME\_TIME\_NS} =
+  $10^9/60$ = 16\,666\,666\,ns &
+  The pacing target.\\
+Scanline & 912 dots = 456 T-cycles &
+  See section~\ref{ppu-modes}.\\
+Interrupt dispatch & 20 T-cycles = 5 M-cycles &
+  See section~\ref{interrupts}.\\
+\bottomrule
+\end{longtable}
+
+\subsection{State objects and ownership}
+\label{ownership}
+
+An application owns five objects and keeps them alive for the whole
+session:
+
+\begin{Code}
+gb_cpu   cpu;    // registers, IME, halt state
+gb_bus   bus;    // memory map, cartridge, MBC state, joypad, DMA
+gb_timer timer;  // DIV/TIMA/TMA/TAC and the internal counter
+gb_ppu   ppu;    // video registers and the frame buffer
+gb_apu   apu;    // sound registers, channel state, ring buffer
+\end{Code}
+
+They must be wired together before the first tick:
+
+\begin{Code}
+bus.timer = &timer;
+bus.ppu   = &ppu;
+bus.apu   = &apu;
+\end{Code}
+
+\attention
+\fname{gb\_machine\_tick} guards each of these with an
+\cs{if (bus->ppu)} style test.  If you forget a pointer, the machine
+does not crash --- it silently stops advancing that component, and you
+get a black screen with no error message.
+
+Two other ownership rules:
+
+\begin{itemize}
+\item \fname{gb\_bus\_load\_rom} allocates \cs{bus->rom} and
+      \cs{bus->sram} itself and frees any previous allocation, so a
+      reload is safe.  Nothing else allocates.
+\item The PPU frame buffer is the only large allocation in the state
+      objects (\cs{160*144*4} bytes, about 90\,KiB).  It is
+      deliberately placed last in the struct so that save states can
+      serialise the register prefix with a single
+      \cs{offsetof}.
+\end{itemize}
+
+\subsection{Symbol prefixing and \cs{GBEMU\_STRIP\_PREFIX}}
+\label{prefix}
+
+Every public symbol carries a \fname{gb\_} prefix and every macro a
+\fname{GB\_} prefix: \fname{gb\_bus\_write}, \fname{gb\_ppu\_step},
+\fname{GB\_SCREEN\_WIDTH}.  The enum constants
+(\fname{GB\_FLAG\_Z}, \fname{GB\_PPU\_MODE\_VBLANK}) follow the same
+rule.  This keeps the header usable in projects that already have a
+symbol called \fname{loop} or \fname{version}.
+
+If you are writing a single-file program that links nothing else, you can
+ask the header to undo the prefixing:
+
+\begin{Code}
+cc -DGBEMU_STRIP_PREFIX my_game.c -I src libgbemu.a -o my_game -lSDL3
+\end{Code}
+
+After that, \fname{cpu\_init} expands to \fname{gb\_cpu\_init},
+\fname{CPU} to \fname{gb\_cpu}, \fname{SCREEN\_WIDTH} to
+\fname{GB\_SCREEN\_WIDTH}, and so on.  The mechanism is a flat list of
+object-like \cs{\#define} aliases placed at the very end of
+\fname{gbemu.h}, after the real declarations, so the ABI never changes.
+
+\attention
+This deliberately gives up namespacing.  It redefines very common words
+(\fname{loop}, \fname{version}, \fname{STR}, \fname{loop}) process-wide.
+Pass it on the command line as shown rather than defining it in a source
+file, so that it cannot leak into unrelated translation units, and never
+enable it in a project that also uses another library with those names.
+
+Only the prefixed spellings are aliased for the types that are also
+declared in \fname{frontend.h}; including either header alone gives you
+the same short names.
+
+\clearpage
+
+% ===========================================================================
+\section{The CPU}
+\label{cpu}
+
+\subsection{Register file}
+
+\fname{gb\_cpu} mirrors the hardware with four anonymous unions, one per
+register pair:
+
+\begin{Code}
+typedef struct {
+    union { struct { uint8_t f; uint8_t a; }; uint16_t af; };
+    union { struct { uint8_t c; uint8_t b; }; uint16_t bc; };
+    union { struct { uint8_t e; uint8_t d; }; uint16_t de; };
+    union { struct { uint8_t l; uint8_t h; }; uint16_t hl; };
+    uint16_t sp;
+    uint16_t pc;
+    bool ime;             // Interrupt Master Enable
+    bool ime_scheduled;   // EI has a 1-instruction delay
+    bool halted;
+    bool halt_bug;        // HALT with IME=0 and an interrupt pending
+} gb_cpu;
+\end{Code}
+
+\marginlabel{Byte order:}
+In every pair the \emph{low} register occupies the low byte, so
+\fname{af = 0x11B0} means \fname{f == 0xB0} and \fname{a == 0x11}.  The
+16-bit value therefore matches the hardware's \fname{AF} while the
+storage order is reversed; code that needs \fname{A} from \fname{af}
+uses \cs{cpu->af >> 8}.  \fname{POP AF} masks the low nibble of
+\fname{F}, as required.
+
+The post-boot register set:
+
+\begin{longtable}{@{}L{0.22\textwidth}L{0.20\textwidth}L{0.52\textwidth}@{}}
+\toprule
+\textbf{Register} & \textbf{Value} & \textbf{Rationale}\\
+\midrule
+\endhead
+\cs{AF} & \cs{0x11B0} &
+  The Game Boy Color boot ROM leaves \fname{A = 0x11}, which selects
+  the enhanced register set.  The application overrides it to
+  \cs{0x01} for DMG-only carts by checking header byte
+  \fname{0x0143}.\\
+\cs{BC} & \cs{0x0013} & Boot ROM value\\
+\cs{DE} & \cs{0x00D8} & Boot ROM value\\
+\cs{HL} & \cs{0x014D} & Boot ROM value\\
+\cs{SP} & \cs{0xFFFE} & Just below the I/O block, as after boot\\
+\cs{PC} & \cs{0x0100} &
+  Execution begins at the cartridge entry point; no boot ROM is
+  emulated.\\
+\midrule
+\cs{timer.internal\_counter} & \cs{0xABCC} &
+  Chosen so that the upper byte, which is what \fname{DIV} reads,
+  equals the post-boot \cs{0xAB}.\\
+\cs{bus.io[0x0F]} & \cs{0x01} &
+  \fname{IF}: a V-blank request left over from the last scanline of
+  the boot ROM.  Set by the application, not by the core.\\
+\cs{bus.ie} & \cs{0x00} &
+  \fname{IE}: no interrupt source is enabled out of boot.\\
+\cs{joypad\_buttons}, \cs{joypad\_dpad} & \cs{0x0F} &
+  All buttons released, given the active-low encoding.\\
+\bottomrule
+\end{longtable}
+
+The first six rows are set by \fname{gb\_cpu\_init} and
+\fname{gb\_timer\_init}; the rest are the host program's
+responsibility, and both \fname{apps/cli.c} and \fname{apps/wasm.c} set
+them identically.
+
+\subsection{Flags}
+
+\begin{longtable}{@{}C{0.18\textwidth}C{0.18\textwidth}L{0.56\textwidth}@{}}
+\toprule
+\textbf{Flag} & \textbf{Bit} & \textbf{Set when}\\
+\midrule
+\endhead
+\cs{GB\_FLAG\_Z} & 7 & The result of the operation is zero\\
+\cs{GB\_FLAG\_N} & 6 & The last operation was a subtraction\\
+\cs{GB\_FLAG\_H} & 5 & Half-carry or half-borrow out of bit~3\\
+\cs{GB\_FLAG\_C} & 4 & Carry or borrow out of bit~7\\
+\bottomrule
+\end{longtable}
+
+Bits~0--3 of \fname{F} do not exist and always read as zero;
+\fname{POP AF} enforces this.  \fname{gb\_flag\_set} and
+\fname{gb\_flag\_get} are the only sanctioned way to touch them, and all
+of \fname{instr.c} goes through them --- 137 call sites, which makes the
+flag semantics auditable in one place.
+
+\subsection{Register-index helpers}
+\label{regindex}
+
+Most opcodes encode their operand in three bits.  \fname{gb\_get\_reg\_by\_index}
+and \fname{gb\_set\_reg\_by\_index} turn that index into a register:
+
+\begin{longtable}{@{}C{0.10\textwidth}L{0.28\textwidth}L{0.52\textwidth}@{}}
+\toprule
+\textbf{Index} & \textbf{Register} & \textbf{Note}\\
+\midrule
+\endhead
+\cs{0} & \cs{B} & \\
+\cs{1} & \cs{C} & \\
+\cs{2} & \cs{D} & \\
+\cs{3} & \cs{E} & \\
+\cs{4} & \cs{H} & \\
+\cs{5} & \cs{L} & \\
+\cs{6} & \cs{(HL)} &
+  The only index with a side effect: a read or write of the bus at
+  address \fname{HL}, costing one machine cycle.\\
+\cs{7} & \cs{A} & \\
+\bottomrule
+\end{longtable}
+
+Because index~6 pays a machine cycle, \cs{BIT n,(HL)} costs 12 T-cycles
+(three machine cycles: fetch, prefix byte, memory read) and
+\cs{RES}/\cs{SET n,(HL)} cost 16 (four), while the register forms cost
+one and two respectively.  The timing falls out of the data path rather
+than being special-cased.
+
+\subsection{Instruction dispatch}
+
+\fname{gb\_instr} is the dispatcher.  It looks the cycle cost up first,
+then walks a table of eleven handlers until one of them claims the
+opcode:
+
+\begin{Code}
+static instrfn instr_handlers[] = {
+    instr_8bit_arithm, instr_16bit_arithm, instr_bit_flag,
+    instr_bit_shift,   instr_bitwise,      instr_carry,
+    instr_interrupts,  instr_jumps,        instr_load,
+    instr_misc,        instr_stack
+};
+
+int gb_instr(gb_cpu* cpu, gb_bus* bus, uint8_t opcode) {
+    if (opcode == OP_PREFIX) return instr_cb(cpu, bus);
+    int cycles = get_opcode_cycles(opcode, get_condition_met(cpu, opcode));
+    for (size_t i = 0; i < N; ++i)
+        if (instr_handlers[i](cpu, bus, opcode)) return cycles;
+    return 0;  // no handler claimed it
+}
+\end{Code}
+
+Each handler has the same shape: one \cs{switch} over the opcode, with
+fall-through \cs{case} labels grouping the register variants of one
+mnemonic, and a \cs{default: return false;} to decline.  Inside a body the
+register index is recovered arithmetically with \cs{opcode \& 0x07} (source
+operand) and \cs{(opcode >> 3) \& 0x07} (destination, bit position, or
+\fname{RST} vector class).
+
+\begin{longtable}{@{}L{0.28\textwidth}C{0.16\textwidth}L{0.46\textwidth}@{}}
+\toprule
+\textbf{Handler} & \textbf{Opcodes} & \textbf{Contents}\\
+\midrule
+\endhead
+\fname{instr\_8bit\_arithm} & 61 &
+  \cs{ADD ADC SUB SBC AND XOR OR CP} against every register and
+  immediate, plus \cs{INC} / \cs{DEC} in all their forms\\
+\fname{instr\_load} & 92 &
+  Every \cs{LD} variant: register, immediate, \cs{[HL]},
+  \cs{[HL+]}, \cs{[HL-]}, \cs{LDH}, \cs{[a16]}, \cs{(C)}, and the
+  high-memory forms\\
+\fname{instr\_16bit\_arithm} & 13 &
+  \cs{ADD HL,r16}, \cs{ADD SP,e8}, \cs{INC r16}, \cs{DEC r16}\\
+\fname{instr\_bitwise} & 28 &
+  \cs{AND OR XOR CPL} against every register and immediate, including
+  \cs{CP} against \cs{(HL)}\\
+\fname{instr\_bit\_flag} & 0 &
+  An empty placeholder: a \cs{switch} with only a \cs{default} that
+  declines.  It sits in the dispatch table, so every instruction pays
+  one extra indirect call for it.\\
+\fname{instr\_bit\_shift} & 4 &
+  Only the accumulator forms \cs{RLCA}, \cs{RRCA}, \cs{RLA}, \cs{RRA};
+  the register forms are reached through \cs{CB}\\
+\fname{instr\_jumps} & 30 &
+  \cs{JP}, \cs{JR}, \cs{CALL}, \cs{RET}, \cs{RETI}, \cs{RST} in all
+  their conditional and unconditional forms\\
+\fname{instr\_carry} & 2 & \cs{CCF}, \cs{SCF}\\
+\fname{instr\_interrupts} & 3 & \cs{DI}, \cs{EI}, \cs{HALT}\\
+\fname{instr\_stack} & 8 &
+  \cs{PUSH BC DE HL AF} and \cs{POP BC DE HL AF}; \cs{LD [n16],SP},
+  \cs{ADD SP,e8} and \cs{LD HL,SP+e8} live in \fname{instr\_load} and
+  \fname{instr\_16bit\_arithm} instead\\
+\fname{instr\_misc} & 3 & \cs{DAA}, \cs{NOP}, \cs{STOP}\\
+\midrule
+\textbf{Base opcodes} & \textbf{244} &
+  256 minus the \cs{CB} prefix byte and the eleven illegal opcodes.
+  The remaining twelve reach the fatal path in \fname{gb\_cpu\_step}.\\
+\bottomrule
+\end{longtable}
+
+If no handler claims an opcode, \fname{gb\_instr} returns zero and
+\fname{gb\_cpu\_step} treats that as fatal:
+
+\begin{Code}
+fprintf(stderr, "Unhandled opcode: 0x%02X at PC: 0x%04X\n", opcode, pc - 1);
+exit(1);
+\end{Code}
+
+That path is reachable only through the eleven illegal opcodes
+(\cs{0xD3}, \cs{0xDB}, \cs{0xDD}, \cs{0xE3}, \cs{0xE4}, \cs{0xEB},
+\cs{0xEC}, \cs{0xED}, \cs{0xF4}, \cs{0xFC}, \cs{0xFD}), which the opcode
+table names and prices but no handler implements.
+
+\subsection{Generated opcode tables}
+\label{opcode-tables}
+
+\fname{src/opcodes.h} is machine-generated by
+\fname{scripts/generate\_opcodes.py} from a JSON opcode table and must
+never be edited by hand.  It contains:
+
+\begin{itemize}
+\item An anonymous enumeration of all 256 base opcodes, named
+      \cs{OP\_<mnemonic>\_<operands>}.
+\item An anonymous enumeration of all 256 \fname{CB}-prefixed opcodes,
+      with the prefix byte folded into the value
+      (\cs{OP\_CB\_RLC\_B = 0xCB00}).
+\item \cs{get\_opcode\_cycles(opcode, condition\_met)} and
+      \cs{get\_cb\_opcode\_cycles(cb\_opcode)}, both \cs{static inline}
+      switches returning the T-cycle cost.
+\end{itemize}
+
+Naming rules, worth knowing when reading \fname{instr.c}:
+
+\begin{longtable}{@{}L{0.30\textwidth}L{0.60\textwidth}@{}}
+\toprule
+\textbf{Rule} & \textbf{Example}\\
+\midrule
+\endhead
+Mnemonic in upper case, operands appended &
+  \cs{OP\_ADD\_A\_B} for \cs{ADD A,B}\\
+\cs{\$} becomes \cs{S} & \cs{OP\_RST\_S38} for \cs{RST \$38}\\
+Non-immediate operands gain \cs{\_IND} & \cs{OP\_LD\_HL\_IND\_B} for \cs{LD (HL),B}\\
+Post-increment operands gain \cs{\_INC} & \cs{OP\_LD\_HL\_INC\_A} for \cs{LD (HL+),A}\\
+Post-decrement operands gain \cs{\_DEC} & \cs{OP\_LD\_A\_HL\_DEC} for \cs{LD A,(HL-)}\\
+Size hints stay verbatim & \cs{OP\_JP\_a16}, \cs{OP\_ADD\_SP\_e8},
+  \cs{OP\_STOP\_n8}\\
+\bottomrule
+\end{longtable}
+
+The cycle functions encode the taken/untaken distinction in the table
+itself.  A conditional branch emits
+\cs{return condition\_met ? 12 : 8;}, and the caller must therefore
+evaluate the condition \emph{before} running the handler --- flags are
+clobbered by the time the handler returns.
+
+The generated \cs{OP\_*} constants exist mainly for readability;
+\fname{instr.c} matches on raw opcode numbers and recovers operand indices
+with shifts and masks, which is both faster and easier to verify against
+the reference tables.
+
+\subsection{\cs{CB}-prefixed instructions}
+
+The 256 \fname{CB} opcodes are \emph{not} dispatched through a table.
+\fname{instr\_cb} decodes the second byte as bit fields:
+
+\begin{longtable}{@{}C{0.20\textwidth}C{0.20\textwidth}L{0.50\textwidth}@{}}
+\toprule
+\textbf{Field} & \textbf{Bits} & \textbf{Meaning}\\
+\midrule
+\endhead
+\fname{reg\_idx} & \cs{0x07} & As in section~\ref{regindex}\\
+\fname{bit\_pos} & \cs{(b>>3) \& 0x07} & Bit number for \cs{BIT},
+  \cs{RES}, \cs{SET}, and the shift amount for the rotate group\\
+\fname{group} & \cs{(b>>6) \& 0x03} & Instruction family\\
+\bottomrule
+\end{longtable}
+
+\begin{longtable}{@{}C{0.16\textwidth}L{0.34\textwidth}L{0.40\textwidth}@{}}
+\toprule
+\textbf{Group} & \textbf{Instructions} & \textbf{Notes}\\
+\midrule
+\endhead
+\cs{0x00} & \cs{RLC}, \cs{RRC}, \cs{RL}, \cs{RR}, \cs{SLA}, \cs{SRA},
+  \cs{SWAP}, \cs{SRL} & Chosen by \cs{bit\_pos}; always writes back\\
+\cs{0x01} & \cs{BIT n,r} & Writes nothing; sets \fname{Z} from the bit,
+  clears \fname{N}, sets \fname{H}; returns immediately\\
+\cs{0x02} & \cs{RES n,r} & Clears one bit, writes back\\
+\cs{0x03} & \cs{SET n,r} & Sets one bit, writes back\\
+\bottomrule
+\end{longtable}
+
+The operand is fetched \emph{unconditionally}, before the group is
+dispatched, which is precisely what makes the \cs{[HL]} forms cost more:
+12 T-cycles for \cs{BIT n,(HL)} and 16 for \cs{RES}/\cs{SET n,(HL)},
+against 8 for the register forms.
+
+\subsection{Instruction timing}
+\label{instr-timing}
+
+All instruction costs are multiples of four T-cycles:
+
+\begin{longtable}{@{}C{0.18\textwidth}L{0.74\textwidth}@{}}
+\toprule
+\textbf{T-cycles} & \textbf{Representative instructions}\\
+\midrule
+\endhead
+4  & \cs{NOP}, \cs{SCF}, \cs{CCF}, \cs{DAA}, \cs{CPL}, \cs{HALT}, \cs{STOP},
+     \cs{RLCA}, all single-byte arithmetic on registers
+     (for example \cs{INC B}, \cs{ADD A,B}), and every
+     \cs{JR d8}\\
+8  & Loads and arithmetic with an immediate (\cs{LD A,d8}, \cs{ADD A,d8},
+     \cs{CP d8}), \cs{RET}, \cs{RET cc} untaken, \cs{LD [HLI],A},
+     \cs{LD A,[HLD]}, \cs{LD (C),A}, \cs{LD SP,HL}, and every
+     \cs{CB} operation on a register\\
+12 & \cs{JR cc}, \cs{POP}, \cs{LDH}, \cs{LDH (a8),A}, \cs{LD HL,SP+e8},
+     \cs{JP cc} untaken, \cs{CALL cc} untaken, \cs{BIT n,(HL)}\\
+16 & \cs{JP a16}, \cs{JP cc} taken, \cs{CALL cc} taken, \cs{RET cc} taken,
+     \cs{PUSH}, \cs{ADD SP,e8}, \cs{LD r8,[HL]}, \cs{LD [HL],r8},
+     \cs{RES}/\cs{SET n,(HL)}\\
+20 & \cs{LD [n16],SP}\\
+24 & \cs{CALL a16}\\
+\bottomrule
+\end{longtable}
+
+\marginlabel{Two prices per conditional:}
+The table entry for a conditional instruction is written
+\cs{return condition\_met ? taken : untaken;}.  Of the 240 non-\cs{CB}
+opcodes, 145 cost 4, 60 cost 8, 18 cost 16, 15 cost 12, and the
+multi-byte instructions \cs{CALL a16} and \cs{LD [n16],SP} cost 24 and 20.
+Of the 256 \cs{CB} opcodes, 224 cost 8, 24 cost 16 and 8 cost 12.
+
+\marginlabel{Invariant:}
+For every opcode, the number of \cs{gb\_machine\_tick(bus, 4)} calls made
+along the execution path (opcode fetch plus each operand or memory access)
+equals the table's T-cycle count divided by four.  Nothing checks this at
+run time, so an added access in a handler must be paid for by removing
+one elsewhere.
+
+\subsection{Interrupts}
+\label{interrupts}
+
+Hardware raises requests as booleans; \fname{gb\_handle\_interrupts} latches
+them into \fname{IF}, decides whether to wake or to dispatch, and returns
+the T-cycles consumed.
+
+\begin{longtable}{@{}C{0.08\textwidth}C{0.18\textwidth}L{0.24\textwidth}L{0.16\textwidth}C{0.24\textwidth}@{}}
+\toprule
+\textbf{IF} & \textbf{Source} & \textbf{Raised by} & \textbf{Vector} &
+\textbf{Priority}\\
+\midrule
+\endhead
+\cs{0} & V-blank & \fname{ppu->vblank\_interrupt} & \cs{0x0040} & 1 (highest)\\
+\cs{1} & LCD STAT & \fname{ppu->stat\_interrupt} & \cs{0x0048} & 2\\
+\cs{2} & Timer & \fname{timer->interrupt\_requested} & \cs{0x0050} & 3\\
+\cs{3} & Serial & \emph{nothing} & \cs{0x0058} & 4\\
+\cs{4} & Joypad & \fname{bus->joypad\_interrupt} & \cs{0x0060} & 5\\
+\bottomrule
+\end{longtable}
+
+The serial bit is never set by the hardware model: serial output is
+handled by interception (section~\ref{serial}), not by a shift
+register.  Priority is the lowest set bit, and exactly one interrupt is
+dispatched per call.
+
+The register semantics:
+
+\begin{itemize}
+\item \fname{IF} at \texttt{0xFF0F} reads back as \cs{io[0x0F] | 0xE0}:
+      bits~5--7 read as one.  Writes are masked with \cs{0x1F}.
+\item \fname{IE} at \texttt{0xFFFF} is plain storage in all eight bits,
+      read and written unmasked.
+\item The pending mask is \cs{IF \& IE \& 0x1F}.  The trailing \cs{0x1F} is
+      essential: without it the unused \fname{IF} bits would appear to be
+      permanently pending.
+\item A pending interrupt clears \cs{halted} whether or not \fname{IME}
+      is set.
+\end{itemize}
+
+When \fname{IME} is set and something is pending, dispatch clears \cs{IF}
+and \fname{IME} immediately and then consumes five machine cycles
+(20 T-cycles) in this order:
+
+\begin{enumerate}
+\item two internal machine cycles (no bus access)
+\item decrement \cs{SP} by two, one machine cycle, after the two
+      internal cycles
+\item write the \emph{high} byte of \fname{PC} to \cs{SP+1}
+\item write the \emph{low} byte of \fname{PC} to \cs{SP}
+\item set \cs{PC} to \cs{0x0040 + 8*bit} --- one final internal machine
+      cycle
+\end{enumerate}
+
+The two stack writes go through \fname{gb\_bus\_write}, so a game with
+its stack page in cartridge RAM sees the real bus behaviour, including
+mapper side effects.
+
+\attention
+The interrupt-enable tests are the strictest part of the timing model,
+because they observe \cs{IE} and the joypad register mid-frame.  The
+matching conformance tests are run by \fname{scripts/test}; the current
+failure list is in the \fname{TODO} file.
+
+\subsection{\cs{EI}, \cs{HALT}, the HALT bug and \cs{STOP}}
+\label{halt-ei}
+
+Two booleans model the enable sequence:
+
+\begin{description}
+
+\item[\cs{ime\_scheduled}] is set by \cs{EI} and cleared by \cs{DI}.
+\item[\cs{ime}] is set from \cs{ime\_scheduled} at the \emph{top} of
+      \fname{gb\_cpu\_step}, before the halt check.
+\end{description}
+
+This gives \cs{EI} its one-instruction delay: the instruction following
+\fname{EI} executes with interrupts still masked, and the first
+instruction after \emph{that} can be interrupted.
+\cs{DI} clears both flags, so \cs{EI} immediately followed by \cs{DI}
+never enables interrupts.  \cs{RETI} sets \fname{IME} immediately, as on
+hardware, and does not touch \cs{ime\_scheduled}.
+
+\fname{HALT} has three distinct outcomes:
+
+\begin{longtable}{@{}L{0.34\textwidth}L{0.56\textwidth}@{}}
+\toprule
+\textbf{Condition} & \textbf{Behaviour}\\
+\midrule
+\endhead
+Nothing pending & The CPU sleeps; each \fname{gb\_cpu\_step} burns one
+  machine cycle and returns~4 without touching \fname{PC}.\\
+Pending and \cs{IME=1} & The CPU does not sleep.  \fname{PC} stays at
+  \cs{HALT+1} and the pending interrupt is dispatched normally after
+  the instruction.\\
+Pending and \cs{IME=0} & \emph{The HALT bug.}  The CPU does not sleep and
+  \fname{halt\_bug} is set.\\
+\bottomrule
+\end{longtable}
+
+The HALT bug is modelled faithfully: the next opcode fetch reads its byte
+without incrementing \fname{PC}, so that byte is read twice and every
+subsequent operand read is shifted back one position.  The flag is
+one-shot --- it is cleared by the fetch that consumes it --- which is
+exactly the hardware behaviour for the one-byte \cs{HALT}.
+
+\cs{STOP} (\cs{0x10}) consumes its operand byte, then flips
+\fname{bus->double\_speed} if \fname{KEY1} bit~0 was set, which is the
+only way the CGB changes CPU speed.  It does \emph{not} stop the CPU,
+halt the divider or mute the APU; those remain open items in the
+\fname{TODO} list.
+
+\marginlabel{Open item:}
+The interaction between the \cs{EI} delay and \cs{HALT} is the one
+interrupt test that is known to fail (SameSuite
+\fname{interrupt/ei\_delay\_halt}), and is tracked in the
+\fname{TODO} file.
+
+\clearpage
+
+% ===========================================================================
+\section{The memory bus}
+\label{bus}
+
+\subsection{Address decoding}
+
+\fname{gb\_bus\_read} and \fname{gb\_bus\_write} decode the full 16-bit
+space.  The read path, in order:
+
+\begin{longtable}{@{}L{0.24\textwidth}L{0.66\textwidth}@{}}
+\toprule
+\textbf{Range} & \textbf{Read behaviour}\\
+\midrule
+\endhead
+\texttt{0x0000--0x7FFF} & Cartridge ROM, through the mapper's bank
+  resolution (\fname{bus\_read\_rom})\\
+\texttt{0x8000--0x9FFF} & \cs{bus->vram[addr - 0x8000]}\\
+\texttt{0xA000--0xBFFF} & Cartridge RAM, through the mapper
+  (\fname{bus\_read\_sram})\\
+\texttt{0xC000--0xDFFF} & \cs{bus->wram[addr - 0xC000]}\\
+\texttt{0xE000--0xFDFF} & Echo RAM: \cs{bus->wram[addr - 0xE000]}, the
+  same 8\,KiB seen at \texttt{0xC000}\\
+\texttt{0xFE00--0xFEA0} & Sprite attribute table, or \cs{0xFF} while an
+  OAM DMA transfer is copying\\
+\texttt{0xFF00--0xFF7F} & I/O dispatch (section~\ref{io-dispatch})\\
+\texttt{0xFF80--0xFFFE} & \cs{bus->hram[addr - 0xFF80]}, 127 bytes\\
+\texttt{0xFFFF} & \cs{bus->ie}\\
+fallthrough & \cs{0xFF} --- this is exactly the unusable region
+  \texttt{0xFEA0--0xFEFF}, the only gap in the 16-bit space\\
+\bottomrule
+\end{longtable}
+
+The write path mirrors it, with two differences: writes to the ROM window
+go to the mapper and never store anything, and writes to the unusable
+region are dropped explicitly instead of falling through to a read
+default.
+
+\marginlabel{Not modelled:}
+VRAM and OAM are \emph{not} blocked during PPU modes~2 and~3, and no
+access restrictions are implemented for any other region either.  Real
+games do rely on the restrictions in a handful of places; see
+section~\ref{ppu-limits} for what that costs.
+
+\subsection{I/O dispatch}
+\label{io-dispatch}
+
+The I/O window is not a flat array.  Reads and writes test specific
+addresses and ranges first, then fall back to a 128-byte shadow array
+\fname{bus->io[0x80]}:
+
+\begin{longtable}{@{}L{0.26\textwidth}L{0.64\textwidth}@{}}
+\toprule
+\textbf{Address} & \textbf{Handler}\\
+\midrule
+\endhead
+\texttt{0xFF00} & Joypad \fname{P1}\\
+\texttt{0xFF04--0xFF07} & \fname{gb\_timer\_read} / \fname{gb\_timer\_write}\\
+\texttt{0xFF10--0xFF3F} & \fname{gb\_apu\_read} / \fname{gb\_apu\_write}
+  (including the wave RAM at \texttt{0xFF30}--\texttt{0xFF3F})\\
+\texttt{0xFF40--0xFF4B} & \fname{gb\_ppu\_read} / \fname{gb\_ppu\_write},
+  except that a write to \texttt{0xFF46} starts an OAM DMA and returns
+  immediately\\
+\texttt{0xFF4D} & \cs{KEY1}: bit~7 is synthesised from
+  \cs{bus->double\_speed}, bit~0 is the speed-switch request\\
+\texttt{0xFF0F} & \cs{IF}: reads OR \cs{0xE0}, writes mask \cs{0x1F}\\
+otherwise & \cs{bus->io[addr - 0xFF00]}\\
+\bottomrule
+\end{longtable}
+
+\marginlabel{Gotcha:}
+Every one of the three component pointers is tested before use.  A bus
+whose \cs{timer}, \cs{ppu} or \cs{apu} pointer is \cs{NULL} falls through
+to the shadow array, so those registers appear to work --- they just do
+nothing.  The same shadow array is what unmapped registers such as
+\texttt{0xFF03}, \texttt{0xFF27} and the unimplemented CGB registers land
+in; they read back whatever was last written, initially \cs{0x00} rather
+than the \cs{0xFF} real hardware returns.
+
+\subsection{Loading a ROM}
+\label{rom-loading}
+
+\fname{gb\_bus\_load\_rom} opens the file, sizes it, allocates and clears
+the ROM buffer, and inspects three header bytes:
+
+\begin{Code}
+bus->rom_banks = next power of two >= ceil(file_size / 0x4000), min 2;
+bus->rom_size  = rom_banks * 0x4000;      // zero-padded
+bus->rom       = calloc(1, bus->rom_size);
+fread(bus->rom, 1, file_size, f);
+\end{Code}
+
+Deriving the bank count from the \emph{file size} rather than from header
+byte \fname{0x0148} is a deliberate simplification: because the count is a
+power of two, the mapper's usual masking \cs{bank \& (rom\_banks - 1)} is
+always in range, whatever the header claims.  It also means a header that
+lies about its size is ignored.
+
+\begin{longtable}{@{}L{0.16\textwidth}L{0.30\textwidth}L{0.46\textwidth}@{}}
+\toprule
+\textbf{Offset} & \textbf{Meaning} & \textbf{Use}\\
+\midrule
+\endhead
+\fname{0x0143} & CGB flag &
+  \cs{0x80} (CGB enhanced) or \cs{0xC0} (CGB only) set
+  \cs{apu->cgb}; the application also uses it to decide whether to
+  force \cs{A = 0x01}.\\
+\fname{0x0147} & Cartridge type &
+  Selects the mapper (section~\ref{mappers})\\
+\fname{0x0149} & RAM size &
+  Sizes the cartridge RAM allocation (section~\ref{sram-sizing})\\
+\midrule
+\fname{0x0104} & Nintendo logo &
+  Read \emph{only} for the MBC1M multicart heuristic: a 1\,MiB MBC1
+  cart whose four 256\,KiB pages contain the logo in at least three of
+  them is a multicart.\\
+\bottomrule
+\end{longtable}
+
+Header byte \fname{0x0148} (ROM size), the checksums and the SGB flag are
+not read at all.
+
+\subsection{Sanitising the interrupt vectors}
+\label{vector-sanitisation}
+
+Conformance ROMs deliberately leave the five interrupt vectors empty or
+pointing at unusable memory, then install their own handlers at run time.
+The loader rewrites any vector that is still empty when the ROM is
+loaded:
+
+\begin{itemize}
+\item a vector byte of \cs{0x00} becomes \cs{0xC9} (\cs{RET});
+\item a vector starting with \cs{0xC3} (\cs{JP a16}) whose target lies in
+      \fname{0x8000--0xBFFF} or \fname{0xFE00--0xFF7F} becomes
+      \cs{0xC9}.
+\end{itemize}
+
+Only \cs{JP a16} is recognised, and the WRAM and HRAM targets are left
+alone on purpose --- the Bla'rg suites copy their runtime into
+\fname{0xC000} upwards and jump there.  Because the hash used for save
+states is computed over the buffer \emph{after} this rewrite, states stay
+consistent with each other.
+
+\subsection{The joypad register}
+\label{joypad}
+
+\fname{P1} at \texttt{0xFF00} is the classic two-row matrix.  Writes
+store only the two select bits:
+
+\begin{longtable}{@{}L{0.26\textwidth}L{0.64\textwidth}@{}}
+\toprule
+\textbf{Bit} & \textbf{Meaning}\\
+\midrule
+\endhead
+6, 7 & Read as one; ignored on write\\
+5 (\cs{P15}) & Active low.  Clear selects the button row\\
+4 (\cs{P14}) & Active low.  Clear selects the D-pad row\\
+3--0 & The selected row, active low: a set bit is a released button\\
+\bottomrule
+\end{longtable}
+
+Reads start from \cs{0xC0 | select} and then \emph{and} the selected
+rows into the low nibble, so selecting both rows yields \cs{0x0F} and
+selecting neither yields the intersection of both rows.
+
+A write also raises the joypad interrupt when the newly selected row
+contains a pressed button, which approximates the hardware's
+``selected line goes low'' edge.
+
+\attention
+The comment in \fname{gbemu.h} describing bits~4--7 of the joypad bytes
+is stale.  Only bits~0--3 of \fname{joypad\_dpad} and
+\fname{joypad\_buttons} are ever used; the upper nibble is not part of
+the interface.  Section~\ref{controls} has the correct table.
+
+\subsection{Serial output}
+\label{serial}
+
+There is no serial shift register.  Two intercept paths turn a game's
+output into text, and both are what makes automated testing possible.
+
+\begin{description}
+
+\item[Register path --- \texttt{0xFF02}.]  Writing the exact byte
+  \cs{0x81} (internal clock plus start) prints the byte previously
+  written to \fname{SB} at \texttt{0xFF01} with \cs{putchar} and
+  \cs{fflush}, and then stores \cs{0x01} in \fname{SC} so that a ROM
+  polling bit~7 of \cs{SC} terminates.  This is the protocol used by
+  mooneye and SameSuite: the ROM prints a pass signature of
+  \cs{03 05 08 0D 15 22} or six \cs{0x42} bytes.
+
+\item[RAM path --- \texttt{0xA004} and above.]  Writes to cartridge RAM
+  at or above \texttt{0xA004} print every printable byte
+  (\cs{0x20}--\cs{0x7E}, newline, carriage return, tab) to standard
+  output, and append \emph{every} byte --- including NUL terminators ---
+  to \fname{/tmp/blargg\_raw.bin}.  This is Bla'rg's
+  \fname{shell.s} text-output protocol.
+
+\end{description}
+
+\marginlabel{Raw trace:}
+\fname{/tmp/blargg\_raw.bin} is opened once per process and truncated at
+first use.  It is the way to recover a diagnostic that contains
+non-printable bytes, and it is compiled out of the ESP32 build.
+
+The RAM path is only reached by carts whose mapper does not return early
+--- MBC1, MBC5 and ROM-only.  MBC2 and MBC3 returns skip it, so text
+output from those mappers is lost.
+
+\subsection{OAM DMA}
+\label{oam-dma}
+
+Writing a source page to \texttt{0xFF46} starts a transfer of 160 bytes
+into the sprite attribute table.  The timing is explicit:
+
+\begin{longtable}{@{}C{0.22\textwidth}L{0.68\textwidth}@{}}
+\toprule
+\textbf{When} & \textbf{What happens}\\
+\midrule
+\endhead
+Write &
+  \cs{dma\_active = true}, \cs{dma\_start\_delay = 2},
+  \cs{dma\_offset = 0}, source page latched\\
++1 M-cycle & Delay decrements; OAM is still accessible\\
++2 M-cycle & Delay reaches zero, the first byte copies --- OAM is now
+  blocked\\
++3 to +161 M-cycles & One byte per M-cycle, 159 more bytes\\
++162 M-cycle & \cs{dma\_offset == 0xA0}; the transfer ends and OAM
+  reopens\\
+\bottomrule
+\end{longtable}
+
+While a transfer is copying, reads from \texttt{0xFE00--0xFE9F} return
+\cs{0xFF} and writes are dropped.  A write to \texttt{0xFF46} issued while
+bytes are already moving is queued: the current transfer continues and a
+restart begins two machine cycles later.  A write during the initial
+two-cycle delay, or while a restart is already pending, restarts
+immediately.
+
+The source address is reconstructed per byte as
+\cs{(page << 8) | (offset \& 0xFF)} and read through the ordinary bus.
+It is neither masked nor validated, so a source page of \cs{0xFE} copies
+\fname{0xFF} bytes --- because OAM reads are themselves blocked during
+the copy --- and pages outside the \cs{0xXX00--0xXX9F} window are
+permitted.  Section~\ref{dma-limits} lists this among the known gaps.
+
+\subsection{\cs{IF}, \cs{IE} and the interrupt flags}
+
+Covered in section~\ref{interrupts}: \fname{IF} lives in
+\cs{bus->io[0x0F]}, \cs{IE} in \cs{bus->ie}, and hardware request flags
+live in the components that raise them.  All three are included in save
+states; the transient \cs{joypad\_interrupt} flag is not.
+
+\subsection{The CGB speed switch}
+\label{key1}
+
+\fname{KEY1} at \texttt{0xFF4D} is the only CGB register the emulator
+implements:
+
+\begin{itemize}
+\item Read: \cs{(double\_speed ? 0x80 : 0x00) | (io[0x4D] \& 0x01)} ---
+      bit~7 reports the \emph{current} mode, bit~0 the prepared one.
+\item Write: only bit~0 is stored.
+\item \cs{STOP} performs the actual switch, flipping
+      \cs{bus->double\_speed} and clearing the request bit.
+\end{itemize}
+
+Once \fname{double\_speed} is set, \fname{gb\_machine\_tick} divides the
+cycle count handed to the PPU and the APU by two, and \fname{gb\_loop}
+counts dots instead of T-cycles.  The frame budget is therefore identical
+in both modes, as on hardware.  The rest of the CGB --- palettes, VRAM
+banking, \cs{GDMA}/\cs{HDMA}, the boot ROM --- is listed in
+section~\ref{cgb-limits}.
+
+\clearpage
+
+\clearpage
+
+% ===========================================================================
+\section{Memory bank controllers}
+\label{mappers}
+
+\fname{src/bus.c} implements four mapper families, selected purely by the
+cartridge type byte at header offset \cs{0x0147}.  There is no fall-back
+mapper: an unknown type is treated as ROM-only, and the type is stored as
+zero so that the persistence layer can tell the difference.
+
+\begin{longtable}{@{}L{0.14\textwidth}L{0.30\textwidth}L{0.44\textwidth}@{}}
+\toprule
+\textbf{Types} & \textbf{Mapper} & \textbf{Identification predicate}\\
+\midrule
+\endhead
+\cs{0x01--0x03} & MBC1 & \cs{type >= 0x01 \&\& type <= 0x03}\\
+\cs{0x05--0x06} & MBC2 & \cs{type >= 0x05 \&\& type <= 0x06}\\
+\cs{0x0F--0x13} & MBC3 & \cs{type >= 0x0F \&\& type <= 0x13}\\
+\cs{0x19--0x1E} & MBC5 & \cs{type >= 0x19 \&\& type <= 0x1E}\\
+otherwise & none & \cs{mbc\_type} is stored as 0\\
+\bottomrule
+\end{longtable}
+
+Ranges rather than equality tests are used deliberately, so that the
+rumble and battery variants (\cs{0x1B}--\cs{0x1E}) are covered without a
+separate case each.  Every predicate is inlined into the read and write
+paths, which keeps \fname{bus\_read\_rom} and \fname{bus\_read\_sram} free
+of dispatch tables.
+
+\marginlabel{Addressing:}
+All four mappers see the same 32\,KiB window.  A ROM read is always
+\fname{rom[bank * 0x4000 + (addr \& 0x3FFF)]}, and every mapper's
+resolution of \cs{bank} is finally clamped with
+\cs{bank \& (rom\_banks - 1)}.  Because \cs{rom\_banks} is always a power
+of two chosen by \fname{gb\_bus\_load\_rom}, that clamp can never
+out-of-bounds, whatever the cartridge claims in its header.
+
+\subsection{MBC1}
+
+MBC1 has two mode-dependent behaviours and one special case, all confined
+to \fname{mbc1\_bank\_for\_addr}.
+
+\begin{longtable}{@{}C{0.24\textwidth}C{0.34\textwidth}C{0.36\textwidth}@{}}
+\toprule
+\textbf{Window} & \textbf{ROM mode} & \textbf{RAM mode}\\
+\midrule
+\endhead
+\cs{0x0000--0x3FFF} & always bank~0 & bank \cs{<< 5} from the 2-bit
+  register\\
+\cs{0x4000--0x7FFF} & \cs{rom\_bank | (ram\_bank << 5)} &
+  \emph{identical} to ROM mode\\
+\midrule
+Cartridge RAM & bank~0 & the 2-bit register\\
+\bottomrule
+\end{longtable}
+
+Three hardware details that the code reproduces:
+
+\begin{description}
+
+\item[Bank-0 substitution] \cs{0x00}, \cs{0x20}, \cs{0x40} and \cs{0x60}
+      are replaced by \cs{0x01}, \cs{0x21}, \cs{0x41} and \cs{0x61} in the
+      switchable window, so bank~0 is only reachable through the fixed
+      region.
+\item[The mode bit only affects the fixed region] The upper two ROM bank
+      bits are OR-ed in in \emph{both} modes; the mode select at
+      \cs{0x6000} changes only what \cs{0x0000--0x3FFF} shows and which
+      cartridge RAM bank is addressed.  This matches real MBC1B1
+      hardware, which is not what the classic Game Boy manuals describe.
+\item[MBC1M multicarts] A 1\,MiB MBC1 cart may actually be a multicart with
+      four 256\,KiB games.  The header cannot tell you, so
+      \fname{gb\_bus\_load\_rom} computes CRC-32 over the 48-byte
+      Nintendo logo at offset \cs{0x0104} in each of the four pages and
+      sets \cs{mbc1\_multicart} when at least three match the reference
+      value \cs{0x46195417} --- the same heuristic mooneye-gb uses.  In
+      that mode the ROM bank register contributes only its low four bits
+      and the 2-bit register selects the game, with bank~0 valid.
+\end{description}
+
+The four registers occupy the standard windows:
+
+\begin{longtable}{@{}L{0.26\textwidth}C{0.22\textwidth}L{0.42\textwidth}@{}}
+\toprule
+\textbf{Window} & \textbf{Field} & \textbf{Effect}\\
+\midrule
+\endhead
+\texttt{0x0000--0x1FFF} & RAM enable & Set when the low nibble of the
+  written byte is \cs{0x0A}\\
+\texttt{0x2000--0x3FFF} & ROM bank & Low five bits
+  (\cs{mbc1\_rom\_bank})\\
+\texttt{0x4000--0x5FFF} & 2-bit register & Upper ROM bank bits \emph{or}
+  the RAM bank, depending on the mode\\
+\texttt{0x6000--0x7FFF} & Mode & \cs{0} = ROM banking,
+  \cs{1} = RAM banking\\
+\bottomrule
+\end{longtable}
+
+Cartridge RAM reads return \cs{0xFF} while RAM is disabled; the read path
+checks \cs{mbc1\_ram\_enable} before anything else.
+
+\subsection{MBC2}
+
+MBC2 is the odd one out: it has 512 half-bytes of RAM on the cartridge
+itself, addressable through the same \cs{0xA000--0xBFFF} window with the
+low nine bits of the address, and only four bits per byte are
+meaningful.
+
+\begin{itemize}
+\item Writes to \cs{0xA000--0xBFFF} store \cs{value \& 0x0F} and return
+      immediately --- which means the serial-output interception of
+      section~\ref{serial} never runs for MBC2 games.
+\item Reads return \cs{0xF0 | (ram[addr \& 0x1FF] \& 0x0F)} when RAM is
+      enabled and \cs{0xFF} when it is not.  The upper nibble reads as
+      \cs{0xF} because the register only has four RAM bits; this is what
+      the mooneye \fname{bits\_unused} test checks.
+\item The mapper registers live in the \emph{fixed} window and are
+      selected by address bit~8: a write with bit~8 clear is the RAM
+      enable (\cs{0x0A} in the low nibble), a write with bit~8 set is the
+      4-bit ROM bank.
+\item Writes to \cs{0x4000--0x7FFF} are ignored outright, which the
+      mooneye test suite verifies on MBC2A hardware.
+\item Bank~0 is substituted by bank~1 in the switchable window, and the
+      result is masked to the cartridge size.
+\end{itemize}
+
+\attention
+MBC2 is the one mapper whose 512-byte save file is a different size from
+the 8\,KiB-or-more allocation the loader makes for every other cart
+(section~\ref{sram-sizing}), and \fname{gb\_battery\_save} special-cases
+it accordingly.
+
+\subsection{MBC3}
+
+MBC3 adds a real-time clock and a register-select trick: the same 2-bit
+window that selects a RAM bank can instead select one of five RTC
+registers.
+
+\begin{longtable}{@{}L{0.26\textwidth}C{0.20\textwidth}L{0.44\textwidth}@{}}
+\toprule
+\textbf{Window} & \textbf{Field} & \textbf{Effect}\\
+\midrule
+\endhead
+\texttt{0x0000--0x1FFF} & RAM/RTC enable & Low nibble \cs{0x0A} enables
+  both; anything else disables both\\
+\texttt{0x2000--0x3FFF} & ROM bank & Seven bits; a written 0 becomes 1
+  immediately, so bank~0 is unreachable here\\
+\texttt{0x4000--0x5FFF} & RAM bank / RTC select & \cs{0}--\cs{3} select a
+  RAM bank, \cs{0x08}--\cs{0x0C} select the RTC registers\\
+\texttt{0x6000--0x7FFF} & Latch & Writing \cs{0x00} then \cs{0x01}
+  latches the clock\\
+\bottomrule
+\end{longtable}
+
+The RTC registers are kept in \cs{bus->mbc3\_seconds} (0--59),
+\cs{minutes} (0--59), \cs{hours} (0--23), a 9-bit
+\cs{day\_counter}, a \cs{day\_carry} flag and a \cs{timer\_halt} flag.
+Writes are range-checked by modulo (\cs{value \% 60},
+\cs{value \% 24}), which is what the RTC register behaviour amounts to
+for out-of-range values.
+
+Reads and writes to RTC registers are reached through the normal RAM
+window after selecting them, and they set \cs{sram\_dirty} so that they
+end up in the battery save (section~\ref{battery-format}).
+
+\attention
+The latch sequence only advances a state machine; it does not copy the
+host clock into the registers.  There is a \cs{TODO} marker for that.  A
+game that latches before reading will read the counters it found at load
+time, which is stable but not wall-clock accurate.
+
+\subsection{MBC5}
+
+MBC5 is the simplest of the four --- nine ROM bank bits, four RAM bank
+bits, no mode bit, no bank-0 substitution --- and it is the only mapper
+that can address a 2\,MiB cartridge.
+
+\begin{longtable}{@{}L{0.26\textwidth}C{0.22\textwidth}L{0.42\textwidth}@{}}
+\toprule
+\textbf{Window} & \textbf{Field} & \textbf{Effect}\\
+\midrule
+\endhead
+\texttt{0x0000--0x1FFF} & RAM enable & Low nibble \cs{0x0A}\\
+\texttt{0x2000--0x2FFF} & ROM bank low & All eight bits, no masking\\
+\texttt{0x3000--0x3FFF} & ROM bank high & Bit~0 only, giving bank
+  numbers up to 511\\
+\texttt{0x4000--0x5FFF} & RAM bank & Low four bits\\
+\texttt{0x6000--0x7FFF} & Rumble & Stored nowhere; ignored\\
+\bottomrule
+\end{longtable}
+
+\attention
+Because MBC5 does not substitute bank~1 for a bank~0 write, the loader
+starts an MBC5 cartridge with bank~1 already selected
+(\cs{mbc5\_rom\_bank\_l = 1}).  Without this, the mooneye harness --- which
+copies its \fname{memcpy} and friends out of bank~1 into WRAM before
+switching banks --- would fault on its first library call.
+
+\subsection{Cartridge RAM sizing}
+\label{sram-sizing}
+
+The allocation comes from header byte \cs{0x0149}, with a floor:
+
+\begin{longtable}{@{}C{0.18\textwidth}C{0.26\textwidth}C{0.46\textwidth}@{}}
+\toprule
+\textbf{Header} & \textbf{Allocated} & \textbf{Remark}\\
+\midrule
+\endhead
+\cs{0x00} & 8\,KiB & No RAM declared, but still allocated\\
+\cs{0x01} & 8\,KiB & 2\,KiB requested, raised to the floor\\
+\cs{0x02} & 8\,KiB & The only size real carts use here\\
+\cs{0x03} & 32\,KiB &\\
+\cs{0x04} & 128\,KiB &\\
+other & 8\,KiB & Treated as 8\,KiB\\
+\bottomrule
+\end{longtable}
+
+\attention
+The 8\,KiB floor exists for the test suites: Bla'rg's \fname{shell.s}
+buffers its serial output in SRAM at \cs{0xA004} and above, so a cartridge
+that declares no RAM still needs a writable window there or the diagnostic
+never reaches standard output.  The trade-off is that
+\cs{sram\_banks} is 1 for most carts, so the bank mask is a no-op.
+
+\seealso
+\cs{rom\_banks} is computed the same way --- the next power of two at or
+above the number of 16\,KiB banks the file actually occupies, minimum 2
+(section~\ref{rom-loading}).
+
+\clearpage
+
+% ===========================================================================
+\section{The timer and divider}
+\label{timer}
+
+The timer is the one component that does \emph{not} get its cycle count
+scaled.  \fname{gb\_machine\_tick} hands the raw T-cycle count to
+\fname{gb\_timer\_step} and the scaled dot count to the PPU and the APU,
+because \cs{DIV} is derived from the CPU clock, not from the dot clock.
+The consequence is that in CGB double-speed mode \cs{DIV} increments twice
+as fast in wall-clock terms, exactly as on hardware.
+
+\subsection{The divider}
+
+\fname{gb_timer.internal\_counter} is a 16-bit free-running counter
+incremented once per T-cycle.  \fname{DIV} is simply its upper byte, and
+\fname{gb\_timer\_init} seeds it with \cs{0xABCC} so that the first
+\fname{DIV} read returns the post-boot \cs{0xAB}.
+
+The timer input is a \emph{bit} of that counter selected by \cs{TAC}, and
+\fname{TIMA} increments on the falling edge of that bit --- the standard
+hardware model, implemented by sampling the bit before and after the
+increment:
+
+\begin{Code}
+bool bit_before = get_timer_bit(timer);   // TAC enable + selected bit
+timer->internal_counter++;
+bool bit_after  = get_timer_bit(timer);
+if (bit_before && !bit_after) {
+    if (tima == 0xFF) { tima = 0; reload_pending = true; request_interrupt(); }
+    else              tima++;
+}
+\end{Code}
+
+\marginlabel{Four rates:}
+\fname{TAC} bits 1--0 select the counter bit, and therefore the
+\fname{TIMA} increment period in T-cycles:
+
+\begin{longtable}{@{}C{0.14\textwidth}C{0.20\textwidth}C{0.20\textwidth}C{0.34\textwidth}@{}}
+\toprule
+\textbf{\cs{TAC} bits} & \textbf{Counter bit} & \textbf{Period} &
+\textbf{Frequency}\\
+\midrule
+\endhead
+\cs{00} & 9 & 1024 T-cycles & 4096\,Hz\\
+\cs{01} & 3 & 16 T-cycles & 262\,144\,Hz\\
+\cs{10} & 5 & 64 T-cycles & 65\,536\,Hz\\
+\cs{11} & 7 & 256 T-cycles & 16\,384\,Hz\\
+\bottomrule
+\end{longtable}
+
+Bit~2 of \cs{TAC} is the enable.  \fname{gb\_get\_timer\_bit} returns
+\cs{false} immediately when it is clear, which means writing a zero to
+\fname{TAC} can itself produce a falling edge --- and therefore increment
+\fname{TIMA}.  That is real hardware behaviour, and the code lets it
+happen rather than special-casing the register write.
+
+\subsection{The \cs{TIMA} overflow delay}
+
+An overflow does not reload \cs{TIMA} immediately.  \fname{tima} is set to
+\cs{0x00} and \cs{tima\_reload\_pending} is raised; the reload happens on
+the \emph{next} call to \fname{gb\_timer\_step}, before the counter is
+incremented:
+
+\begin{Code}
+if (timer->tima_reload_pending) {
+    timer->tima = timer->tma;
+    timer->tima_reload_pending = false;
+}
+\end{Code}
+
+That one-cycle delay is what makes the mooneye
+\fname{timer/tima\_reload} test pass, and it gives a game exactly one
+cycle in which \fname{TIMA} reads as zero.  A write to \fname{TIMA} during
+that window cancels the pending reload, again matching hardware.
+
+The interrupt request is raised at the moment of the overflow, not at the
+reload, so the flag can already be in \cs{IF} one T-cycle before
+\fname{TIMA} reads \cs{TMA}.
+
+\subsection{Register behaviour}
+
+\begin{longtable}{@{}L{0.20\textwidth}L{0.74\textwidth}@{}}
+\toprule
+\textbf{Register} & \textbf{Behaviour}\\
+\midrule
+\endhead
+\fname{DIV} (\cs{0xFF04}) &
+  Read: upper byte of the internal counter.  Write: \emph{any} value
+  clears the whole counter, and --- if the timer was enabled and the
+  selected bit was 1 --- that reset counts as a falling edge and
+  increments \fname{TIMA}, overflow included.  Both behaviours are
+  required by the mooneye \fname{div\_write} and \fname{div\_trigger}
+  tests.\\
+\fname{TIMA} (\cs{0xFF05}) &
+  Read and write directly.  Writing cancels a pending reload.\\
+\fname{TMA} (\cs{0xFF06}) &
+  Read and write directly; the value is latched into \fname{TIMA} when the
+  pending reload fires.\\
+\fname{TAC} (\cs{0xFF07}) &
+  Only bits 0--2 are writable.  Reads return \cs{tac | 0xF8}, so the four
+  unused bits read as one.\\
+\bottomrule
+\end{longtable}
+
+\seealso
+\fname{internal\_counter} starts at \cs{0xABCC} and advances one step per
+T-cycle, so \fname{gb\_timer\_step(timer, n)} is the \emph{only} thing that
+drives it.  Calling the PPU or the APU directly, without the timer,
+produces a machine whose \cs{DIV} does not move.
+
+\clearpage
+
+% ===========================================================================
+\section{The PPU}
+\label{ppu}
+
+The PPU is a scanline renderer, not a pixel-by-pixel one.  It advances a
+dot counter, changes modes at fixed thresholds, and draws a whole
+scanline into the frame buffer at a single moment --- the mode~3 to
+mode~0 transition.  There is no FIFO, no mid-scanline fetch and no
+per-pixel timing.
+
+\subsection{Registers}
+
+\begin{longtable}{@{}C{0.14\textwidth}L{0.26\textwidth}L{0.50\textwidth}@{}}
+\toprule
+\textbf{Address} & \textbf{Name} & \textbf{Bits and behaviour}\\
+\midrule
+\endhead
+\cs{0xFF40} & \cs{LCDC} &
+  Bit~7 LCD enable, 6 window map, 5 window enable, 4 tile data source,
+  3 tile map source, 2 sprite size, 1 sprite enable, 0 BG/window
+  enable.\\
+\cs{0xFF41} & \cs{STAT} &
+  Bits 1--0 are the mode (hardware-owned), bit~2 the \cs{LYC=LY}
+  coincidence flag, bits~3--5 the mode-interrupt enables, bit~6 the
+  \cs{LYC=LY} interrupt enable.  Writes keep only bits 3--6; reads
+  additionally return \cs{0x80}.\\
+\cs{0xFF42} & \cs{SCY} & Background scroll Y\\
+\cs{0xFF43} & \cs{SCX} & Background scroll X\\
+\cs{0xFF44} & \cs{LY} & Current scanline; read-only, writes ignored\\
+\cs{0xFF45} & \cs{LYC} & The scanline compared against \cs{LY}\\
+\cs{0xFF47} & \cs{BGP} & Two bits per shade for the background\\
+\cs{0xFF48} & \cs{OBP0} & As above for sprites using palette 0\\
+\cs{0xFF49} & \cs{OBP1} & As above for sprites using palette 1\\
+\cs{0xFF4A} & \cs{WY} & First scanline on which the window is visible\\
+\cs{0xFF4B} & \cs{WX} & Window left edge, in the hardware's
+  \cs{X+7} encoding\\
+\bottomrule
+\end{longtable}
+
+Registers outside \cs{0xFF40--0xFF4B} read as \cs{0xFF}.  In particular the
+CGB palette registers \cs{0xFF68} and \cs{0xFF69} are not decoded and fall
+into the bus's shadow array, so they read back as whatever was last
+written there --- zero, initially.
+
+\subsection{Mode state machine}
+\label{ppu-modes}
+
+\fname{gb_ppu_step} receives a dot count, adds it to \cs{ppu->dots}, and
+checks the mode stored in the low two bits of \fname{STAT}:
+
+\begin{longtable}{@{}C{0.14\textwidth}L{0.24\textwidth}C{0.20\textwidth}L{0.32\textwidth}@{}}
+\toprule
+\textbf{Mode} & \textbf{Name} & \textbf{Dots} & \textbf{Transition at}\\
+\midrule
+\endhead
+\cs{2} & OAM search & 160 & \cs{dots \>= 160} $\rightarrow$ mode~3\\
+\cs{3} & Transfer & 344 more & \cs{dots \>= 504} $\rightarrow$ draw, mode~0\\
+\cs{0} & H-blank & 408 more & \cs{dots \>= 912} $\rightarrow$ next line\\
+\cs{1} & V-blank & 912 per line & \cs{ly} 144--153, then wrap to 0\\
+\bottomrule
+\end{longtable}
+
+One scanline is therefore 912 dots, and a whole frame is
+\cs{144 * 912} dots of active lines plus ten blanking lines.  The drawing
+itself happens inside the mode~3 to mode~0 transition, in this order:
+background, window, sprites.
+
+Two events are raised by the state machine:
+
+\begin{itemize}
+\item Entering mode~1 sets \cs{frame\_ready} and \cs{vblank\_interrupt}.
+      \cs{frame\_ready} is what tells \fname{gb\_loop} to call
+      \cs{render}.
+\item Every mode transition consults the mode-interrupt enables, and
+      every line boundary consults \fname{check\_lyc\_stat\_interrupt},
+      which maintains the coincidence flag and raises
+      \cs{stat\_interrupt} when bit~6 is set.
+\end{itemize}
+
+\attention
+Both interrupt flags are \emph{booleans, not bits in \cs{STAT}}.  They are
+latched into \cs{IF} by \fname{gb\_handle\_interrupts} at the next
+instruction boundary and cleared there.  A game that clears \cs{STAT}'s
+enable bits after the mode has already been entered will not see the
+interrupt, which differs from hardware but only matters for code that
+races the transition.
+
+\subsection{Turning the LCD on and off}
+
+Writing \cs{LCDC} bit~7 from 1 to 0 or from 0 to 1 resets the PPU:
+
+\begin{itemize}
+\item \emph{Off:} \cs{ly = 0}, \cs{dots = 0}, mode forced to 0
+      (H-blank), \cs{first\_line\_after\_enable} cleared.  \fname{gb\_ppu\_step}
+      returns immediately from then on, so the display is frozen on the
+      last rendered frame.
+\item \emph{On:} the same three writes, plus
+      \cs{first\_line\_after\_enable = true}, which produces a shortened
+      first line of 900 dots.  At \cs{dots \>= 900} the PPU jumps
+      straight to line~1 in mode~2.
+\end{itemize}
+
+The 900-dot first line exists because the bl'rg \fname{oam\_bug}
+composite reads \cs{LY} at roughly dot 896 and again at dot 904 and
+expects to see 0 and then~1.  Getting that wrong is one of the ways the
+suite fails.
+
+\subsection{Rendering a scanline}
+
+\fname{ppu_render_bg} walks all 160 screen columns and, for each one,
+computes the source address and writes one pixel:
+
+\begin{Code}
+line_y    = ly + SCY;
+line_x    = x  + SCX;
+tile_row  = (line_y / 8) * 32;
+tile_col  = line_x / 8;
+map_addr  = tile_map_base + tile_row + tile_col;
+tile      = bus_read(map_addr);
+tile_addr = tile_data_base + tile*16 + (line_y % 8)*2;
+bit       = 7 - (line_x % 8);
+color     = ((plane2 >> bit & 1) << 1) | (plane1 >> bit & 1);
+buffer[ly][x] = palette(BGP, color);
+\end{Code}
+
+Both addressing modes of \cs{LCDC} bit~4 are implemented: unsigned from
+\cs{0x8000} and signed from \cs{0x9000} with the tile index read as a
+\fname{int8_t}.  Every fetch goes through \fname{gb\_bus\_read}, so the
+renderer sees the same memory the CPU does --- including mapper effects on
+a game that (wrongly) puts tile data in ROM.
+
+\fname{ppu_render_window} is the same loop with \cs{line\_y =
+ly - WY}, \cs{line\_x = x - (WX - 7)}, the LCDC bit~6 map, and a
+skip of every column left of the window's edge.  The window has no
+internal line counter: its position within the map is recomputed from
+\cs{LY - WY} every line, which is why \cs{WY} must not change mid-frame
+if you want hardware-identical results.
+
+\fname{ppu_render_sprites} collects at most ten sprites whose 8 or 16
+pixel band contains the current line, then draws them in reverse
+collection order so that the lowest OAM index ends up on top:
+
+\begin{longtable}{@{}L{0.24\textwidth}L{0.68\textwidth}@{}}
+\toprule
+\textbf{OAM byte} & \textbf{Meaning}\\
+\midrule
+\endhead
+0 & Screen Y, biased by \cs{-16}; a sprite spans \cs{ly} in
+  \cs{[y-16, y-16+height)}\\
+1 & Screen X, biased by \cs{-8}\\
+2 & Tile index; bit~0 is ignored in 8$\times$16 mode\\
+3 & Bit~7 BG priority, bit~6 Y flip, bit~5 X flip, bit~4 palette\\
+\bottomrule
+\end{longtable}
+
+Colour index 0 is transparent, so sprites never erase the background.
+Only the first ten matching sprites are drawn, which is the hardware's
+per-line limit rather than a choice.
+
+\attention
+The BG-priority bit (bit~7 of OAM byte~3) is parsed but not applied:
+\fname{ppu_render_sprites} reads it into \cs{bg\_over} and then, as the
+in-code comment says, cannot tell whether the pixel underneath is
+background colour 0 without keeping the background colour indices around.
+Sprites therefore always draw over the background, and over each other, in
+OAM order.  This is visible in games that put a sprite behind a background
+tile and expect it to disappear.
+
+\subsection{Palettes}
+\label{ppu-palettes}
+
+There is one palette conversion routine for the whole system,
+\fname{ppu_get_color(palette\_reg, color\_index)}, and one fixed
+four-entry table:
+
+\begin{longtable}{@{}C{0.24\textwidth}C{0.34\textwidth}L{0.30\textwidth}@{}}
+\toprule
+\textbf{Shade} & \textbf{Colour} & \textbf{Value}\\
+\midrule
+\endhead
+0 & white & \cs{0xFFFFFFFF}\\
+1 & light grey & \cs{0xFFAAAAAA}\\
+2 & dark grey & \cs{0xFF555555}\\
+3 & black & \cs{0xFF000000}\\
+\bottomrule
+\end{longtable}
+
+The shade is \cs{(palette\_reg >> (color\_index * 2)) \& 3}, so the DMG
+palette registers are honoured exactly; only the CGB's per-tile palettes
+are missing.  Because the frame buffer is ARGB8888 with an opaque alpha,
+the terminal and WASM front ends can read the pixel as a plain
+\fname{uint32_t} and shift it, and the ESP32 front end can convert it to
+RGB565 without knowing anything about the Game Boy.
+
+\subsection{What the PPU does not do}
+\label{ppu-limits}
+
+The following are absent, and are the reason several bl'rg and SameSuite
+tests fail:
+
+\begin{itemize}
+\item No per-pixel fetch timing, no FIFO, and no per-cycle object
+      priority resolution.
+\item No blocking of VRAM access during modes 2 and 3, or of OAM during
+      modes 2 and 3, or of writes to \cs{LY}.
+\item No \cs{STAT} blocking flags (the bit~7 ``STAT blocking'' bit), so a
+      write to \cs{STAT} that hardware would delay takes effect at once.
+\item No DMG OAM scan bug.  Sprites are read straight out of OAM at draw
+      time, whereas hardware latches them during mode~2 and can be
+      corrupted by writes in the meantime.
+\item No CGB: no palette RAM, no tile attribute byte, no VRAM banking, no
+      separate window line counter, no \cs{BGPI}/\cs{BGPD}.
+\end{itemize}
+
+See section~\ref{known-gaps} for the full list and
+section~\ref{testing} for how each gap shows up in the suites.
+
+\clearpage
+
+% ===========================================================================
+\section{The APU}
+\label{apu}
+
+The APU synthesises all four channels at the emulated sample rate and
+hands the result to the host through a lock-free ring buffer.  This is
+one of the more complete parts of the emulator; the gaps that remain are
+listed at the end of the section.
+
+\subsection{Registers}
+
+All forty-eight sound registers live in one array, \fname{apu->regs[0x30]},
+indexed by \cs{addr - 0xFF10}, which is also how wave RAM is stored: the
+sixteen bytes at \cs{0xFF30}--\cs{0xFF3F} occupy
+\cs{regs[0x20]}--\cs{regs[0x2F]}.
+
+\begin{longtable}{@{}L{0.14\textwidth}L{0.20\textwidth}L{0.56\textwidth}@{}}
+\toprule
+\textbf{Offset} & \textbf{Register} & \textbf{Role}\\
+\midrule
+\endhead
+\cs{0x00} & \cs{NR10} & Sweep period, negate, shift for channel~1\\
+\cs{0x01} & \cs{NR11} & Duty and length load for channel~1\\
+\cs{0x02} & \cs{NR12} & Envelope and DAC enable for channel~1\\
+\cs{0x03} & \cs{NR13} & Frequency low byte, channel~1\\
+\cs{0x04} & \cs{NR14} & Frequency high bits, length enable, trigger\\
+\cs{0x05}--\cs{0x09} & \cs{NR21}--\cs{NR24} & As above for channel~2\\
+\cs{0x0A}--\cs{0x0E} & \cs{NR30}--\cs{NR34} & DAC enable, sample volume,
+  frequency, length enable, trigger for channel~3\\
+\cs{0x0F} & \cs{NR41} & Length load for channel~4\\
+\cs{0x10} & \cs{NR42} & Envelope and DAC enable for channel~4\\
+\cs{0x11} & \cs{NR43} & Shift clock, width mode, divisor\\
+\cs{0x12} & \cs{NR44} & Length enable and trigger\\
+\cs{0x14} & \cs{NR50} & Master volume, left (bits 6--4) and right (2--0)\\
+\cs{0x15} & \cs{NR51} & Panning: bits 0--3 right, bits 4--7 left\\
+\cs{0x16} & \cs{NR52} & Master power (bit~7) and the four channel-on flags
+  (bits 0--3)\\
+\cs{0x20}--\cs{0x2F} & wave RAM & 32 four-bit samples\\
+\bottomrule
+\end{longtable}
+
+Reads apply a per-register mask so that unused bits read as one, exactly
+as on hardware; \fname{NR52} is special-cased to synthesise the channel
+flags from \cs{ch\_on[]}, and wave RAM is returned unmasked.
+
+\subsection{Power}
+
+\fname{NR52} bit~7 is \cs{apu->power}.
+
+\begin{description}
+
+\item[Powering off] Clears \cs{NR10}--\cs{NR51}, silences and disables
+      every channel, disables every length counter, zeroes the frequency
+      timers, the duty positions, the wave position, the frame sequencer
+      and the LFSR, and reloads the LFSR with \cs{0x7FFF}.  On a CGB cart
+      the length counters are zeroed as well; on a DMG they are left
+      alone.
+\item[Powering on] Sets \cs{power} and sets \cs{frame\_div} to 1024, which
+      places the sequencer in the second half of its period --- the
+      documented behaviour for a power-on during a frame.
+\item[While powered off] \cs{NR10}--\cs{NR51} are read-only.  On a DMG
+      cart the one exception is that a write to \cs{NRx1} still updates the
+      length counter, which is what the length tests check.  Wave RAM
+      remains writable in both cases.
+\end{description}
+
+\subsection{The frame sequencer}
+
+\fname{apu->frame\_div} accumulates dots and steps every 2048 of them,
+i.e.\ at 512\,Hz in normal speed and 1024\,Hz in double speed.  The eight
+steps do the following:
+
+\begin{longtable}{@{}C{0.14\textwidth}L{0.76\textwidth}@{}}
+\toprule
+\textbf{Step} & \textbf{Action}\\
+\midrule
+\endhead
+0, 2, 4, 6 & Clock the length counters of all four channels; a counter
+  reaching zero switches its channel off\\
+2, 6 & Step the sweep unit of channel~1\\
+7 & Step the volume envelopes of channels 1, 2 and 4\\
+\bottomrule
+\end{longtable}
+
+\marginlabel{Why 2048 dots:}
+The APU is stepped in dots, and the sequencer is defined in terms of the
+CPU frequency.  8192 dots --- 2048 T-cycles at normal speed --- is one
+512\,Hz period, so the divisor is correct in both speed modes without any
+scaling.
+
+\subsection{Frequency timers}
+
+Each channel has a countdown that is decremented by the dot count every
+step; while it is non-positive the channel advances and the timer is
+reloaded.  The reload value is \cs{(2048 - frequency) * 4} for the two
+square channels and the wave channel, where \cs{frequency} is the
+eleven-bit value assembled from \cs{NRx3} and the low three bits of
+\cs{NRx4}.  For the noise channel it is four times one of eight divisors
+(\cs{8, 16, 32, 48, 64, 80, 96, 112}) taken from the low three bits of
+\cs{NR43}.
+
+What advances on each expiry:
+
+\begin{itemize}
+\item \emph{Channel 1 and 2:} \cs{duty\_pos} steps modulo 8.
+\item \emph{Channel 3:} \cs{wave\_pos} steps modulo 32.
+\item \emph{Channel 4:} the 15-bit LFSR shifts right, feeding bit 0 into
+      bit 14.  With \cs{NR43} bit~3 set, bit~6 receives the XOR feedback
+      instead of bit~1, which is the 7-bit width mode.
+\end{itemize}
+
+Duty patterns are the four standard constants --- \cs{0x01},
+\cs{0x81}, \cs{0x87}, \cs{0x7E} --- indexed by bits 6--7 of \cs{NRx1}.
+The output of a square channel is its current volume when the selected
+bit of the duty pattern is set and zero otherwise.
+
+\subsection{Volume envelopes}
+
+\fname{vol[3]}, \cs{env\_period[3]}, \cs{env\_counter[3]} and
+\cs{env\_dir[3]} cover channels 1, 2 and 4; the wave channel has no
+envelope.  At step~7 each channel with a non-zero period decrements its
+counter and, when that counter expires, reloads it and moves the volume
+one step up (direction set) or down (direction clear), clamped to 0--15.
+A triggering event reloads the volume from the high nibble of \cs{NRx2}
+and resets the counter.
+
+\attention
+The envelope parameters are read out of \cs{NRx2} only on trigger, and
+\cs{env\_period} and \cs{env\_dir} are never updated from a later write to
+\cs{NRx2}.  Hardware applies them immediately.  In practice a game writes
+\fname{NRx2} once and then triggers, so this is only visible to tests
+that rewrite the envelope mid-note.
+
+\subsection{Sweep}
+
+Channel~1's frequency is shadowed in \cs{sweep\_freq}.  At sequencer
+steps 2 and 6 the counter is decremented, and when it expires the
+frequency is recomputed as \cs{sweep\_freq} plus or minus
+\cs{(sweep\_freq >> shift)}, where the sign is \cs{sweep\_negate}.  If the
+result exceeds 2047
+the channel is switched off and the sweep disabled; otherwise the new
+value is written back into \cs{NR13} and \cs{NR14} and the shadow is
+recalculated.  A second overflow check runs after the rewrite.
+
+A trigger reloads the shadow from \cs{NR13}/\cs{NR14}, sets the counter
+from \cs{NR10} bits 4--6, and --- if the shift is non-zero --- performs
+the overflow calculation immediately, which is how the ``channel off on
+trigger when the sweep overflows'' case is handled.  Writing \cs{NR10}
+with the negate bit cleared after negation has been used switches the
+channel off, via \cs{sweep\_negate\_used}.
+
+\subsection{Length counters}
+
+Writes to the four \cs{NRx1} registers load the counters:
+\cs{64 - (value \& 0x3F)} for the square and noise channels and
+\cs{256 - value} for the wave channel.  Bit~6 of each \cs{NRx4} is the
+length enable.  On trigger, a counter that is currently zero is
+unfrozen at 64 (or 256), and if the length enable is set and the
+sequencer is in the first half of its period, an extra length clock is
+applied immediately.  The same extra clock is applied when the length
+enable bit goes from 0 to 1 during that half-period.
+
+\subsection{Triggers and DAC}
+
+A trigger (bit~7 of \cs{NRx4}) switches the channel on, reloads its
+frequency timer, resets the duty position or the wave position or the
+LFSR, and reloads the envelope.  Immediately afterwards the DAC is
+checked: channels~1, 2 and 4 need \cs{(NRx2 \& 0xF8) != 0} and channel~3
+needs \cs{NR30} bit~7, so a trigger with the DAC disabled silently leaves
+the channel off.  Conversely, writing a zero upper five bits to \cs{NRx2}
+switches the channel off without a trigger.
+
+\subsection{Mixing and output}
+
+Every \cs{GB\_CPU\_FREQ / GB\_APU\_SAMPLE\_RATE} dots --- 190 at 44.1\,kHz
+--- the four channels are sampled:
+
+\begin{enumerate}
+\item Each channel is normalised to \cs{[0, 1]}.  The wave channel reads
+      the sample nibble selected by \cs{wave\_pos}, where the high nibble
+      of a wave RAM byte comes first, and shifts it right by
+      \cs{NR30} bits 5--4 (0 mutes, 1 is full scale, 2 halves it, 3
+      quarters it).
+\item \cs{NR51} routes each channel to the left and/or the right bus.
+\item \cs{NR50} scales each side by its three-bit volume divided by~7.
+\item The two sides are added and divided by four --- the code divides by
+      8, which leaves the result at roughly half scale --- clamped to
+      \cs{[-1, 1]} and pushed onto the ring buffer.
+\end{enumerate}
+
+The buffer is a 4096-entry single-producer single-consumer ring of
+\fname{float}s with \cs{buf\_write} and \cs{buf\_read} marked
+\cs{volatile}.  The producer is \fname{gb\_apu\_step} on the emulation
+thread; the consumer is \fname{gb\_apu\_buf\_pop}, which the SDL audio
+callback and the ESP32 audio task call.  If the consumer falls behind, the
+producer simply drops samples --- the push is skipped when the next index
+would collide with the read index, rather than overwriting unread audio.
+
+\subsection{Power-on defaults}
+
+\fname{gb_apu_init} clears everything and then sets three registers that
+matter: \cs{NR52} to \cs{0xF1} (powered, all four channels reported on),
+\cs{NR11} to \cs{0xFF} (50\% duty, full length) and \cs{NR51} to
+\cs{0xFF} (everything to both sides).  The LFSR starts at \cs{0x7FFF} and
+wave RAM at zero.
+
+\subsection{What the APU does not do}
+\label{apu-limits}
+
+\begin{itemize}
+\item Envelope parameters are not latched from \cs{NRx2} on a plain write
+      (see above).
+\item Wave RAM is not blocked while channel~3 is enabled, so a test that
+      checks the read-back lock will fail.
+\item The output level is about half of what a real DMG produces, and the
+      \cs{NR50} divide-by-zero case --- both volumes zero --- produces
+      silence rather than the 50\%-mute behaviour of real hardware.
+\item There is no high-pass filter, so the DC offset that gives the DMG
+      its characteristic thin sound is absent.
+\item Length-counter reload and trigger timing are modelled in units of
+      the frame sequencer rather than at cycle granularity, so the
+      cycle-exact \fname{blargg} \fname{dmg\_sound} tests still fail even
+      where the audible result is right.
+\end{itemize}
+
+\attention
+The \fname{TODO} file claims that \fname{src/apu.c} is ``minimal (length
+counters + NR52 on/off only)''.  That is stale --- the file now contains
+the full frame sequencer, sweep, envelope, wave and LFSR synthesis.  Treat
+the \fname{TODO} entries about the APU as a record of an older state of
+the code, and re-run the suites before acting on them.
+
+\clearpage
+
+% ===========================================================================
+\section{Persistence}
+\label{persistence}
+
+Two kinds of file are written next to the ROM, both named by appending an
+extension to the ROM path.  Neither uses a directory: \fname{gbemu.save}
+and \fname{gbemu.state} appear next to the ROM, and if the ROM directory
+is not writable both operations fail with a message rather than falling
+back to a temporary location.
+
+\subsection{Battery saves}
+\label{battery-format}
+
+\fname{gb\_battery\_save} writes \cs{<rom path>.sav}, but only for
+cartridge types that declare a battery-backed RAM:
+
+\begin{longtable}{@{}C{0.16\textwidth}L{0.52\textwidth}C{0.20\textwidth}@{}}
+\toprule
+\textbf{Type} & \textbf{Cartridge} & \textbf{Payload}\\
+\midrule
+\endhead
+\cs{0x03} & MBC1 + RAM + battery & SRAM\\
+\cs{0x06} & MBC2 & 512 bytes of 4-bit RAM\\
+\cs{0x09} & ROM + RAM + battery & SRAM\\
+\cs{0x0F} & MBC3 + timer + battery & SRAM + 5 RTC bytes\\
+\cs{0x10} & MBC3 + timer + RAM + battery & SRAM + 5 RTC bytes\\
+\cs{0x13} & MBC3 + RAM + battery & SRAM\\
+\cs{0x1B} & MBC5 + RAM + battery & SRAM\\
+\cs{0x1E} & MBC5 + rumble + RAM + battery & SRAM\\
+other & none & nothing written\\
+\bottomrule
+\end{longtable}
+
+The SRAM payload is always the full \cs{sram\_size} the loader allocated,
+not the size the header asked for --- so the file is the 8\,KiB minimum
+for small carts.  For MBC2 it is exactly 512 bytes, the size of
+\cs{mbc2\_ram}.
+
+MBC3 timer carts append five bytes in the layout every other emulator
+uses: seconds, minutes, hours, the low byte of the day counter, and a
+high byte whose bit~0 is the ninth day bit, bit~6 the halt flag and bit~7
+the carry flag.  \cs{rtc\_pack} and \cs{rtc\_unpack} are the only places
+that conversion exists.
+
+\attention
+Because the save covers the whole allocation, a \cs{.sav} written by one
+build is only readable by another build of the same emulator, and only for
+the same cartridge --- the file has no header.  It is, however, the layout
+other emulators use, so it is portable between emulators.
+
+\seealso
+\fname{gb\_battery\_load} reads the same file at start-up, prints
+\cs{[INFO] Battery save loaded: <path>} on success, and reports
+\cs{[ERR] Battery save is truncated: <path>} if the payload is short.
+A missing file is not an error: it simply returns \cs{false} and the game
+starts with a fresh save.
+
+\subsection{Save states}
+
+\fname{gb\_save\_state} writes \cs{<rom path>.state} as a flat
+little-endian dump preceded by a 16-byte header:
+
+\begin{Code}
+typedef struct {
+    char     magic[4];      // "EMU1"
+    uint32_t emu_version;   // GB_VERSION_HEX
+    uint32_t rom_hash;      // FNV-1a over the padded ROM image
+    uint32_t sram_size;     // SRAM allocation at capture time
+} StateHeader;
+\end{Code}
+
+The payload follows in a fixed order, and the order is part of the file
+format:
+
+\begin{enumerate}
+\item the whole \cs{gb\_cpu} struct
+\item the whole \cs{gb\_timer} struct
+\item \cs{gb\_ppu} up to \cs{offsetof(gb\_ppu, frame\_buffer)} --- the
+      registers and internal state, but \emph{not} the 92\,KiB of pixels
+\item \cs{gb\_apu} up to \cs{offsetof(gb\_apu, audio\_buf)} --- the
+      synthesis state, but not the ring buffer or its indices
+\item the bus, field by field: the four memory arrays, \cs{io}, \cs{ie},
+      the whole DMA state, \cs{double\_speed}, both joypad bytes, the
+      mapper type and every mapper's registers (including the full
+      \cs{mbc2\_ram}), and finally the SRAM contents
+\end{enumerate}
+
+\marginlabel{Field-wise on purpose:}
+The bus is written field by field rather than with one
+\cs{fwrite(bus, sizeof *bus)} so that the pointers \cs{rom},
+\cs{sram}, \cs{timer}, \cs{ppu} and \cs{apu} --- and the
+\cs{sram\_dirty} hint --- are automatically excluded.  Two macros,
+\cs{W(field)} and \cs{R(field)}, do the work and are \cs{\#undef}'d at the
+end of the file.
+
+Two fields are deliberately not saved, and both are recreated or
+irrelevant afterwards:
+
+\begin{itemize}
+\item The \cs{apu} ring buffer indices are reset to zero after a load, so
+      the audio callback cannot consume samples that belonged to the
+      moment of capture.
+\item \cs{bus->joypad\_interrupt} is not saved.  It is a one-instruction
+      edge, and the game will re-raise it if a button is still held.
+\end{itemize}
+
+\subsection{Validation}
+\label{state-validation}
+
+\fname{gb\_load\_state} refuses a state that does not match the running
+machine, and says why:
+
+\begin{longtable}{@{}L{0.34\textwidth}L{0.58\textwidth}@{}}
+\toprule
+\textbf{Check} & \textbf{Message on failure}\\
+\midrule
+\endhead
+File exists & \cs{[ERR] No save state found: <path>}\\
+Magic is \cs{EMU1} & \cs{[ERR] Not a save state: <path>}\\
+\cs{emu\_version == GB\_VERSION\_HEX} &
+  \cs{[ERR] Save state gb\_version mismatch: file <n>, emulator <m>}\\
+\cs{rom\_hash == fnv1a(rom, rom\_size)} &
+  \cs{[ERR] Save state was captured from a different ROM}\\
+\cs{sram\_size} matches & \cs{[ERR] Save state SRAM size mismatch: ...}\\
+Payload fully readable &
+  \cs{[ERR] Save state is truncated: <path>}\\
+\bottomrule
+\end{longtable}
+
+\marginlabel{Hash choice:}
+The ROM fingerprint is FNV-1a, a 32-bit multiply-and-xor with no
+multiplication table and no dependencies, computed over the whole
+\emph{padded} buffer --- including the zero fill above the file --- and
+therefore after the interrupt-vector rewrite of
+section~\ref{vector-sanitisation}.  Two builds of the emulator agree only
+when \cs{GB\_VERSION\_HEX} agrees, so a state written by a debug build
+cannot be loaded by a release build of the same source.
+
+\attention
+Save states are raw struct dumps, so they are not portable across
+architectures, compilers or struct layouts.  They are a within-session
+convenience --- suspend and resume --- not an interchange format.
+
+\subsection{When things are written}
+
+\begin{longtable}{@{}L{0.30\textwidth}L{0.62\textwidth}@{}}
+\toprule
+\textbf{Moment} & \textbf{Action}\\
+\midrule
+\endhead
+Start-up, before the front end is created &
+  \fname{gb\_battery\_load} for the ROM path\\
+\cs{F5} or \cs{START+SELECT} & \fname{gb\_save\_state}\\
+\cs{F9} or \cs{START+SELECT} & \fname{gb\_load\_state}\\
+\fname{gb\_loop} returns & \fname{gb\_battery\_save}, then
+  \cs{fe->destroy}\\
+\bottomrule
+\end{longtable}
+
+A session that ends by killing the process rather than by closing the
+window loses both the battery save and any save state made since the last
+clean exit.
+
+\clearpage
+
+\clearpage
+
+% ===========================================================================
+\section{Front ends}
+\label{frontends}
+
+Every front end implements the same four-function vtable and returns a
+\cs{gb\_frontend*} from a \cs{frontend\_*\_create} constructor.  Five of
+them exist; which one is compiled is decided at build time
+(section~\ref{building}) or by the host application.
+
+\begin{longtable}{@{}L{0.26\textwidth}L{0.20\textwidth}L{0.46\textwidth}@{}}
+\toprule
+\textbf{File} & \textbf{Constructor} & \textbf{Purpose}\\
+\midrule
+\endhead
+\fname{frontend/sdl.c} & \cs{frontend\_sdl\_create(gb\_apu*)} &
+  Window, texture, audio device, keyboard.  The default build.\\
+\fname{frontend/terminal.c} & \cs{frontend\_terminal\_create()} &
+  ANSI true-colour output with half-block scaling, raw-mode
+  keyboard.\\
+\fname{frontend/headless.c} & \cs{frontend\_headless\_create()} &
+  No output, no input, never terminates.  The conformance harness.\\
+\fname{frontend/wasm.c} & \cs{frontend\_wasm\_create()} &
+  Blits the frame buffer into a canvas through an \cs{EM\_JS} function.\\
+\fname{frontend/esp32.c} & \cs{frontend\_esp32\_create(gb\_apu*)} &
+  SPI ST7789/ST7735 panel, GPIO buttons, optional I2S DAC, on
+  ESP-IDF 5.\\
+\bottomrule
+\end{longtable}
+
+\subsection{The SDL front end}
+
+\fname{sdl_init} initialises SDL's video and audio subsystems, then
+creates a window of \cs{160*scale} by \cs{144*scale} pixels (scale from
+\fname{EMU\_SCALE}, default 4, clamped to at least 1), a streaming
+renderer, and an \cs{SDL\_PIXELFORMAT\_ARGB8888} texture --- which is why
+the frame buffer is ARGB and not RGBA.
+
+Audio uses \cs{SDL\_OpenAudioDeviceStream} in
+\cs{SDL\_AUDIO\_F32} mono at \cs{GB\_APU\_SAMPLE\_RATE}.  The callback
+asks for \cs{additional\_amount} bytes, fills them from
+\fname{gb\_apu\_buf\_pop} in chunks of at most 1024 samples, and pushes
+them into the stream.  If the emulator has not produced a sample the pop
+returns \cs{0.0f}, so a stalled emulator produces silence rather than
+stutter.
+
+\fname{sdl_poll_events} drains the queue and maintains the joypad bytes
+with read-modify-write operations, so two keys mapped to different bits
+never clobber each other.  Both \cs{SDL\_EVENT\_KEY\_DOWN} and
+\cs{SDL\_EVENT\_KEY\_UP} are handled, which is why key repeat cannot
+accumulate.  \cs{F5} and \cs{F9} fire only on the down transition.
+
+\marginlabel{One quirk:}
+\fname{joypad\_interrupt} is raised for \emph{any} key press, including
+keys that are not mapped to a button.  A game that enables the joypad
+interrupt and uses interrupts as a timing source will see extra requests.
+
+\subsection{The terminal front end}
+\label{terminal-frontend}
+
+\fname{frontend/terminal.c} needs no graphics library at all.  It renders
+by printing one line of terminal rows per \emph{two} Game Boy scanlines,
+using the half-block character \cs{U+2580} with a true-colour foreground
+for the upper pixel and background for the lower one:
+
+\begin{Code}
+for (y = 0; y < height - 1; y += 2)
+  for (x = 0; x < width; x++)
+    printf("\033[38;2;%d;%d;%dm\033[48;2;%d;%d;%dm\u2580", ...top, ...bottom);
+\end{Code}
+
+The row buffer is 8192 bytes, sized for 160 pixels of escape sequences
+plus a reset and a newline.  143 rows are emitted, since the last
+scanline has no partner.
+
+\fname{term_init} puts the terminal in raw mode
+(\cs{ECHO}, \cs{ICANON} and \cs{IEXTEN} cleared, \cs{VMIN} and
+\cs{VTIME} zero) so that key presses arrive without a newline, hides the
+cursor, clears the screen and disables line wrapping.  It also installs a
+\cs{SIGINT} handler that only sets a flag, because the loop must leave
+\fname{gb\_loop} before the terminal can be restored.
+\fname{term_destroy} re-enables the cursor and wrapping and puts the
+original \cs{termios} back.
+
+Keys are read with a single non-blocking \cs{read} of up to 64 bytes and
+decoded inline:
+
+\begin{longtable}{@{}L{0.30\textwidth}L{0.28\textwidth}L{0.34\textwidth}@{}}
+\toprule
+\textbf{Input} & \textbf{Button} & \textbf{Note}\\
+\midrule
+\endhead
+\cs{ESC [ A/B/C/D} & Up / Down / Right / Left & Arrow escape
+  sequences; the sequence is consumed from the same buffer\\
+\cs{z}, \cs{x} & A, B &\\
+\cs{0x7F} & Select & The backspace byte\\
+\cs{LF} or \cs{CR} & Start &\\
+\cs{q}, \cs{Q} & --- & Quit\\
+bare \cs{ESC} & --- & Quit\\
+\cs{Ctrl-C} & --- & Quit, via the signal flag\\
+\bottomrule
+\end{longtable}
+
+\attention
+Because there is no key-repeat protocol in a raw terminal, each press is
+treated as five frames long (\cs{KEY\_HOLD\_FRAMES}), which is about
+83\,ms, and released afterwards.  A held arrow key therefore has to be
+pressed repeatedly.  For the same reason \cs{term\_poll\_events} raises
+\cs{joypad\_interrupt} unconditionally on every poll, so the joypad
+interrupt fires sixty times a second whether or not anything was pressed.
+
+\subsection{The headless front end}
+
+Three functions that do nothing and one that frees a \cs{NULL}.  It
+never clears the \cs{running} flag, so a headless process runs until it is
+killed or signalled.  That is exactly what \fname{scripts/test} depends
+on: each ROM is run under \cs{gtimeout} and the harness reads its standard
+output.  Any front end that returned \cs{false} from \cs{poll\_events}
+would end the run immediately and break the harness.
+
+\subsection{The WebAssembly front end}
+
+\fname{frontend/wasm.c} contains one \cs{EM\_JS} function that copies the
+frame buffer into a \cs{ImageData} and paints it:
+
+\begin{Code}
+EM_JS(void, js_render_to_canvas, (const void* buffer, int w, int h), {
+    var buf32 = new Uint32Array(Module.HEAPU8.buffer, buffer, w * h);
+    for (var i = 0; i < w * h; i++) {
+        data[i*4]     = (buf32[i] >> 16) & 0xFF;   // ARGB -> RGBA
+        data[i*4 + 3] = 0xFF;
+    }
+    ctx.putImageData(imageData, 0, 0);
+});
+\end{Code}
+
+The red and green channels are assigned inside the loop but are always
+\cs{0} for the current palette, since the emulator writes
+\cs{0xFF000000} black and \cs{0xFFFFFFFF} white.  \cs{init} only sets the
+canvas element's \cs{width} and \cs{height} attributes; \cs{poll\_events}
+is empty, because input arrives from JavaScript (see
+section~\ref{wasm-host}).
+
+\subsection{The ESP32 front end}
+\label{esp32-frontend}
+
+\fname{frontend/esp32.c} is not built by \cs{make}; it is meant to be
+compiled inside an external ESP-IDF (5.0 or newer) project together with
+the core.  Every piece of hardware configuration is a macro with a
+default, so the file can be dropped into a project for a different board
+without edits:
+
+\begin{longtable}{@{}L{0.30\textwidth}C{0.62\textwidth}@{}}
+\toprule
+\textbf{Group} & \textbf{Macros (defaults)}\\
+\midrule
+\endhead
+SPI & \cs{EMU\_LCD\_SPI\_HOST} (\cs{SPI2\_HOST}), \cs{EMU\_LCD\_PIN\_SCLK}
+  (18), \cs{MOSI} (23), \cs{CS} (15), \cs{DC} (2), \cs{RST} (4),
+  \cs{BL} (21), \cs{EMU\_LCD\_BL\_ACTIVE\_LOW} (0)\\
+Panel & \cs{EMU\_LCD\_PANEL\_ST7789} (1), \cs{EMU\_LCD\_WIDTH} (240),
+  \cs{HEIGHT} (240), \cs{EMU\_LCD\_OFF\_X}/\cs{Y} (centred),
+  \cs{EMU\_LCD\_SPI\_CLOCK\_HZ} (80\,MHz), \cs{MIRROR\_X}/\cs{Y}
+  (\cs{false}), \cs{COLOR\_INVERT} (0)\\
+Buttons & \cs{EMU\_BTN\_UP} (32), \cs{DOWN} (33), \cs{LEFT} (25),
+  \cs{RIGHT} (26), \cs{A} (27), \cs{B} (14), \cs{SELECT} (13),
+  \cs{START} (19)\\
+Hotkeys & \cs{EMU\_HOTKEY\_SAVE\_FRAMES} (30), \cs{LOAD\_FRAMES} (150)\\
+Audio & \cs{EMU\_ENABLE\_AUDIO} (1), \cs{EMU\_I2S\_PIN\_BCLK} (27),
+  \cs{LRCK} (26), \cs{DOUT} (25), \cs{EMU\_AUDIO\_TASK\_CORE} (1)\\
+\bottomrule
+\end{longtable}
+
+Rendering converts ARGB8888 to RGB565 with the bytes swapped, because SPI
+panels shift out the most significant byte first, and blits with
+\cs{esp\_lcd\_panel\_draw\_bitmap} into the DMA-capable buffer.  The frame
+is centred in the panel using the offset macros.
+
+Audio runs in its own pinned FreeRTOS task which pops
+\fname{gb\_apu\_buf\_pop} in blocks of 256 samples, converts to 16-bit
+integers and writes them to an I2S standard-mode channel; the blocking
+write is what paces the task.  If either the channel allocation or the
+initialisation fails, audio is disabled and the emulator still runs.
+
+\attention
+The default GPIO assignments for the buttons and the I2S pins overlap ---
+\cs{EMU\_BTN\_B} is 14 while \cs{EMU\_I2S\_PIN\_DOUT} is 25 and
+\cs{EMU\_BTN\_A} is 27 while \cs{EMU\_I2S\_PIN\_BCLK} is 27 --- so a board
+that enables audio \emph{and} the A/B buttons on the default pins will
+not work.  Override at least the I2S pins.  The \cs{START} default of 19 is
+deliberately not 16 or 17, which are taken by PSRAM on WROVER boards.
+
+\seealso
+The \cs{START + SELECT} combination is the only input on a device with no
+keyboard: 30 consecutive frames (about half a second) saves, 150 frames
+(about two and a half seconds) loads.  Releasing either button resets the
+counter.
+
+\clearpage
+
+% ===========================================================================
+\section{Embedding the core}
+\label{embedding}
+
+The library exposes everything an application needs and nothing else; the
+question is only which parts of the start-up sequence an embedding
+application is responsible for.
+
+\subsection{The minimal session}
+
+This is the whole of a working program apart from the front end:
+
+\begin{Code}
+#include "gbemu.h"
+
+gb_cpu   cpu;
+gb_bus   bus;
+gb_timer timer;
+gb_ppu   ppu;
+gb_apu   apu;
+
+bus.timer = &timer;   // wire the bus to its components FIRST
+bus.ppu   = &ppu;
+bus.apu   = &apu;
+
+gb_cpu_init(&cpu);
+gb_timer_init(&timer);
+gb_ppu_init(&ppu);
+gb_apu_init(&apu);
+
+if (!gb_bus_load_rom(&bus, "game.gb")) return 1;
+gb_battery_load(&bus, "game.gb");
+
+bus.io[0x0F] = 0x01;     // IF: V-blank request left by the boot ROM
+bus.ie       = 0x00;
+bus.joypad_dpad    = 0x0F;   // all released
+bus.joypad_buttons = 0x0F;
+
+gb_frontend* fe = my_frontend_create();
+fe->init(fe, GB_SCREEN_WIDTH, GB_SCREEN_HEIGHT);
+gb_loop(&cpu, &bus, &timer, &ppu, &apu, fe);
+gb_battery_save(&bus, "game.gb");
+fe->destroy(fe);
+\end{Code}
+
+\attention
+Four details are not optional:
+
+\begin{enumerate}
+\item \textbf{Wire the pointers first.}  \cs{bus->ppu} and friends are
+      tested for \cs{NULL} inside the bus, so a missing one is a silent
+      no-op rather than a crash.
+\item \textbf{Call the four \cs{init} functions.}  \cs{gb\_cpu\_init} sets
+      \cs{PC} and the registers, \cs{gb\_ppu\_init} the video registers
+      and clears the frame buffer, \cs{gb\_apu\_init} the sound defaults,
+      and \cs{gb\_timer\_init} seeds the divider with \cs{0xABCC}.
+\item \textbf{Set the post-boot interrupt state.}  Neither
+      \cs{gb\_cpu\_init} nor \cs{gb\_timer\_init} touches \cs{IF},
+      \cs{IE} or the joypad bytes; the host has to.
+\item \textbf{Decide \cs{A} from the cartridge.}  Both
+      \fname{apps/cli.c} and \fname{apps/wasm.c} force
+      \cs{cpu.a = 0x01} when header byte \cs{0x0143} is neither \cs{0x80}
+      nor \cs{0xC0}, because \cs{gb\_cpu\_init} leaves the CGB boot value
+      \cs{0x11} in place.  Skipping this leaves DMG games in CGB mode.
+\end{enumerate}
+
+\subsection{Running without a loop}
+
+\fname{gb\_loop} is a convenience, not a requirement.  It is a plain
+frame-budgeted loop and can be replaced entirely; the WASM host already
+does exactly that (section~\ref{wasm-host}).  The minimum sequence for
+one frame is:
+
+\begin{Code}
+int dots = 0;
+while (dots < GB_CYCLES_PER_FRAME) {
+    int t = gb_cpu_step(&cpu, &bus);
+    int scale = bus.double_speed ? 1 : 2;
+    dots += t * scale;
+    int it = gb_handle_interrupts(&cpu, &bus, &ppu, &timer);
+    dots += it * scale;
+}
+if (ppu.frame_ready) { /* draw */ ppu.frame_ready = false; }
+\end{Code}
+
+Any front-end-like policy --- rendering, input, sleeping, audio
+draining --- can then be woven in wherever it suits the host.
+
+\subsection{Hotkeys and save states}
+\label{embedding-hotkeys}
+
+The application, not the front end, decides what a hotkey means.  Both
+\fname{apps/cli.c} and an embedding application pass a context pointer
+and a callback:
+
+\begin{Code}
+typedef struct {
+    gb_cpu* cpu; gb_bus* bus; gb_timer* timer;
+    gb_ppu* ppu; gb_apu* apu; const char* rom_path;
+} EmuContext;
+
+static void on_hotkey(void* userdata, gb_hotkey key) {
+    EmuContext* ctx = userdata;
+    switch (key) {
+    case GB_HOTKEY_SAVE_STATE:
+        gb_save_state(ctx->cpu, ctx->bus, ctx->timer, ctx->ppu, ctx->apu,
+                      ctx->rom_path);
+        break;
+    case GB_HOTKEY_LOAD_STATE:
+        gb_load_state(ctx->cpu, ctx->bus, ctx->timer, ctx->ppu, ctx->apu,
+                      ctx->rom_path);
+        break;
+    }
+}
+
+fe->hotkey_ctx = &ctx;
+fe->on_hotkey  = on_hotkey;
+\end{Code}
+
+A front end that has no use for them leaves \cs{on\_hotkey} \cs{NULL},
+which is what the terminal, headless and WASM front ends do.
+
+\subsection{Audio consumer}
+
+The APU never blocks and never calls into the host.  It produces samples
+at \cs{GB\_APU\_SAMPLE\_RATE} and drops them if nobody is reading, so the
+only requirement on a host is to call \fname{gb\_apu\_buf\_pop}
+periodically:
+
+\begin{Code}
+float s = gb_apu_buf_pop(&apu);   // 0.0f when the buffer is empty
+\end{Code}
+
+It is safe to do this from another thread --- the ring buffer is
+single-producer single-consumer --- and both real front ends do.  Nothing
+else in the core is thread-safe: \cs{gb\_cpu\_step},
+\cs{gb\_bus\_read}, \fname{gb\_bus\_write} and \cs{gb\_save\_state} must all
+be called from the emulation thread.
+
+\subsection{Linking}
+
+\begin{Code}
+cc -Isrc my_game.c -L. -lgbemu $(pkg-config --cflags --libs sdl3) -o my_game
+cc -Isrc -DGBEMU_STRIP_PREFIX my_game.c libgbemu.a -o my_game
+\end{Code}
+
+The static archive has the front ends \emph{out} of it --- only
+\fname{src/*.c} is archived --- so an embedding application links its own
+front end, or none at all.  That is why the three constructor prototypes
+in \fname{apps/cli.c} are declared locally rather than included from a
+header: exactly one of them is defined in the link.
+
+\attention
+There is no \cs{main} in the archive.  \fname{apps/cli.c} and
+\fname{apps/wasm.c} are the only programs, and both are compiled directly
+rather than archived.
+
+\subsection{The WebAssembly host}
+\label{wasm-host}
+
+The browser build inverts the usual structure: the C side is driven from
+JavaScript and has no input loop of its own.
+
+\begin{longtable}{@{}L{0.28\textwidth}L{0.62\textwidth}@{}}
+\toprule
+\textbf{Exported symbol} & \textbf{Meaning}\\
+\midrule
+\endhead
+\cs{wasm\_load\_rom} &
+  Zeroes all five state objects, re-runs the \cs{init} functions and
+  loads \cs{/rom.gb} from the virtual file system.  Safe to call again
+  to reset the session.\\
+\cs{wasm\_set\_key(key, pressed)} &
+  Maps a browser \cs{keyCode} to a joypad bit: 37--40 for the D-pad,
+  90 (\cs{Z}) for A, 88 (\cs{X}) for B, 8 for Select and 13 for
+  \cs{Enter}.  Raises the joypad interrupt on press.\\
+\cs{wasm\_is\_running} &
+  Returns 1 while a ROM is loaded and 0 otherwise, so the shell can
+  decide whether to show the picker.\\
+\cs{main} &
+  Creates the front end, loads \cs{/rom.gb} if it exists, and installs
+  the main loop with \cs{emscripten\_set\_main\_loop} in
+  unlimited-render mode.\\
+\bottomrule
+\end{longtable}
+
+\fname{web/shell.html} is the shell: a canvas with
+\cs{id="screen"}, a ROM picker, and the keyboard handling that calls
+\cs{wasm\_set\_key}.  Because the loop runs in the browser's
+\cs{requestAnimationFrame}, frame pacing is the browser's job and the
+\cs{EMU\_NOSLEEP} logic is not compiled in.
+
+\clearpage
+
+\clearpage
+
+% ===========================================================================
+\section{Testing}
+\label{testing}
+
+Correctness is measured against three external ROM suites that are run
+against a headless build of the emulator.  No unit tests exist: the
+project has one test entry point, \fname{scripts/test}, and its
+assertions live inside the ROMs.
+
+\subsection{The suites}
+
+\begin{longtable}{@{}L{0.22\textwidth}L{0.30\textwidth}L{0.40\textwidth}@{}}
+\toprule
+\textbf{Suite} & \textbf{Source} & \textbf{What it checks}\\
+\midrule
+\endhead
+\fname{gb} & \cs{tests/gb-test-roms} &
+  Blargg's classic test ROMs, both as composites and as individual
+  cases: \cs{instr\_timing}, \cs{interrupt\_time}, \cs{halt\_bug},
+  \cs{cpu\_instrs}, \cs{mem\_timing}, \cs{mem\_timing-2},
+  \cs{oam\_bug}, \cs{dmg\_sound}, \cs{cgb\_sound}\\
+\fname{samesuite} & \cs{tests/SameSuite} &
+  SameBoy's hardware-behaviour ROMs, one per behaviour: \cs{cpu},
+  \cs{dma}, \cs{ppu}, \cs{apu}, \cs{timer}, \cs{interrupt}, \cs{sgb} and
+  so on\\
+\fname{mooneye} & \cs{tests/mooneye\-test\-suite} &
+  The acceptance and emulator-only ROMs whose hardware suffix says they
+  are expected to pass on a DMG\\
+\bottomrule
+\end{longtable}
+
+SameSuite ROMs are assembled with \textbf{rgbds} and mooneye ROMs with
+\cs{wla\-dx}; the script builds them if the tools are present, and skips
+the build if prebuilt ROMs already exist.
+
+\marginlabel{mooneye filtering:}
+mooneye names carry a hardware suffix after the last hyphen --- an empty
+suffix means ``all models'', \cs{-GS} means Game Boy and Super Game Boy,
+\cs{-dmgABCmgb} names specific models, \cs{-sgb} is Super Game Boy only.
+The harness keeps a test only if there is no suffix, or the suffix
+contains \cs{dmg} or a capital \cs{G}.  This is why a CGB-only test does
+not appear as a failure: it is never run.
+
+\subsection{Verdicts}
+
+Verdicts arrive over the emulated serial port, using the two interception
+paths of section~\ref{serial}.
+
+\begin{description}
+
+\item[SameSuite and mooneye] The ROM writes a result byte per iteration
+      through \cs{SB}/\cs{SC}.  Success is the Fibonacci register
+      \cs{03 05 08 0D 15 22}; failure is six \cs{0x42} bytes.  The script
+      pipes the emulator's standard output through \cs{xxd -p} and
+      compares the hex string.
+\item[Blargg] The ROM prints human-readable lines through cartridge RAM
+      at \cs{0xA004} and finishes with \cs{Passed} or \cs{Failed}.  The
+      script greps for \cs{passed} while requiring that \cs{failed} does
+      \emph{not} also appear, which distinguishes a partial composite
+      report from a clean pass.
+\end{description}
+
+\attention
+The \cs{Passed} test runs before the \cs{Failed} test on purpose: the
+bl'rg composites print every individual result and a final verdict, and a
+ROM that prints both \cs{01:ok 02:ok ... Failed} must be scored as a
+failure.
+
+\subsection{Running the harness}
+
+\begin{Code}
+./scripts/test                # all three suites
+./scripts/test gb             # only the bl'rg ROMs
+./scripts/test samesuite      # only SameSuite
+./scripts/test mooneye        # only mooneye
+./scripts/test --help
+\end{Code}
+
+The script sets two environment variables that matter:
+\cs{EMU\_NOSLEEP=1} so that each ROM runs as fast as the CPU allows, and
+\cs{EMU\_HEADLESS=1} so that no window is created.  It then rebuilds the
+emulator:
+
+\begin{Code}
+make clean
+make all type=RELEASE HEADLESS=1
+\end{Code}
+
+\attention
+The rebuild is unconditional and it \emph{overwrites} a debug build.  If
+you are running the harness under a debugger, or have
+\fname{libgbemu.a} linked into something else, build the emulator again
+afterwards --- and remember that the release build has no sanitizers, so
+memory errors that the debug build would report here simply corrupt the
+picture.
+
+Each ROM runs under \cs{gtimeout} with a suite-specific limit: 60 seconds
+for the bl'rg composites, 30 seconds for individual bl'rg ROMs, and 15
+seconds for SameSuite and mooneye, which print their result within a few
+seconds and then halt forever.
+
+\subsection{Report files}
+
+Three reports are written, one per suite:
+\fname{test-report-gb.txt}, \fname{test-report-samesuite.txt} and
+\fname{test-report-mooneye.txt}.  Each test contributes one block:
+
+\begin{Code}
+TEST: [composite] instr_timing
+  File:  .../tests/gb-test-roms/instr_timing/instr_timing.gb
+  Lines: 4
+  Status: PASS
+  Detail: instr_timing; ; ; Passed;
+---
+\end{Code}
+
+\cs{Status} is one of six values:
+
+\begin{longtable}{@{}L{0.18\textwidth}L{0.74\textwidth}@{}}
+\toprule
+\textbf{Status} & \textbf{Meaning}\\
+\midrule
+\endhead
+\cs{PASS} & The expected signature was seen\\
+\cs{FAIL} & The failure signature was seen, or the text verdict said
+  \cs{Failed}, or nothing was printed at all (\cs{NOOUT})\\
+\cs{NOOUT} & The emulator exited without producing any output\\
+\cs{TIMEOUT} & The emulator was killed having produced nothing\\
+\cs{PARTIAL} & The emulator was killed having produced a prefix of the
+  signature --- the most useful status, since it says how far it got\\
+\cs{UNKNOWN} & Some other output\\
+\bottomrule
+\end{longtable}
+
+A per-suite summary with the counts of each status is appended to each
+report.
+
+\subsection{Reading a failure}
+
+\begin{enumerate}
+\item Look at \cs{Detail}.  For a SameSuite or mooneye ROM it is the raw
+      serial bytes; \cs{4242} means the ROM decided it had failed.
+\item A \cs{PARTIAL} serial result is not a failure of the emulator --- it
+      means the ROM printed its result and then kept running, so it
+      usually indicates that the test itself passed and the timeout was
+      simply too short, or that the ROM halted before finishing its
+      remaining iterations.
+\item Check \cs{Lines} for the bl'rg composites: a composite that dies
+      early prints far fewer lines than the last one in a passing run.
+\item Cross-check the group name against
+      section~\ref{known-gaps}.  Most failures have a documented cause,
+      and re-running the suite after fixing one of them usually moves the
+      failure elsewhere rather than removing it.
+\end{enumerate}
+
+\attention
+\cs{/tmp/blargg\_raw.bin} accumulates every byte written to cartridge RAM
+at \cs{0xA004} and above, including non-printable ones, for the whole
+process.  It is truncated when the first write happens, so run one ROM at a
+time if you want to inspect it.  The file is not created by the ESP32
+build.
+
+\subsection{What the suites do not cover}
+
+\begin{itemize}
+\item No multi-frame determinism test: there is no test that runs the same
+      ROM twice and compares the frame buffers.
+\item No fuzzing of the bus, so an access to an address the mapper model
+      does not expect is caught only if a ROM happens to make it.
+\item No performance regression tracking.  \cs{EMU\_NOSLEEP=1} makes the
+      harness run as fast as possible but nothing measures the rate.
+\item The bl'rg and mooneye suites are third-party; \cs{make all} does not
+      fetch them, and the script fails with an explicit message if a
+      suite's ROMs are neither present nor buildable.
+\end{itemize}
+
+\clearpage
+
+% ===========================================================================
+\section{Extending the emulator}
+\label{extending}
+
+This chapter is about changing the code without breaking its two
+contracts: the cycle count an instruction reports, and the size and
+layout of the structs a save state dumps.
+
+\subsection{Adding an instruction}
+
+The generated table has to know about it first.  Add the entry to
+\fname{docs/dev/Opcodes.json} with its mnemonic, operands, size and cycle
+counts, then regenerate:
+
+\begin{Code}
+python3 scripts/generate_opcodes.py
+\end{Code}
+
+The script reads the JSON, derives the \cs{OP\_*} enum name from the
+mnemonic and operands using the rules in
+section~\ref{opcode-tables}, and rewrites \fname{src/opcodes.h} from
+scratch.  Editing \fname{opcodes.h} by hand is pointless: the next
+regeneration discards it.
+
+Then implement the body in the handler that already owns that category,
+and add the \cs{case} label:
+
+\begin{Code}
+case OP_SLA_A: {
+    uint8_t carry = (cpu->a >> 7) & 1;
+    cpu->a = cpu->a << 1;
+    gb_flag_set(cpu, GB_FLAG_Z, cpu->a == 0);
+    gb_flag_set(cpu, GB_FLAG_N, false);
+    gb_flag_set(cpu, GB_FLAG_H, false);
+    gb_flag_set(cpu, GB_FLAG_C, carry);
+    break;
+}
+\end{Code}
+
+\attention
+Three things must all stay true, and nothing checks any of them:
+
+\begin{enumerate}
+\item \textbf{The number of machine cycles matches the table.}  Count the
+      \cs{gb\_machine\_tick(bus, 4)} calls made on the execution path,
+      including the ones inside \fname{gb\_fetch8}, \fname{gb\_fetch16} and
+      the register-index helpers, and add the internal cycles.  The total
+      must equal the entry's cycle count divided by four.
+\item \textbf{Flags are set explicitly.}  Every arithmetic or logical
+      instruction must write \cs{Z}, \cs{N} and \cs{H} even when the answer
+      is ``unchanged'': on hardware those flags are not preserved.
+\item \textbf{\cs{POP AF} masks the low nibble.}  If your instruction can
+      affect \fname{F} indirectly, check that path.
+\end{enumerate}
+
+The bl'rg \cs{cpu\_instrs} and SameSuite \cs{cpu} suites are the tests that
+will find a mistake here.
+
+\subsection{Adding a component}
+
+A new emulated device is a struct plus a \cs{step} function plus a call
+site in \fname{gb\_machine\_tick}:
+
+\begin{Code}
+typedef struct gb_something { /* ... */ } gb_something;
+
+void gb_something_init(gb_something* d);
+void gb_something_step(gb_something* d, int dots);
+uint8_t gb_something_read(const gb_something* d, uint16_t addr);
+void    gb_something_write(gb_something* d, uint16_t addr, uint8_t v);
+
+// in gb_machine_tick
+if (bus->something) gb_something_step(bus->something, t_cycles * scale);
+\end{Code}
+
+\attention
+If you also want it in save states, add it to the \cs{W} and \cs{R} chains
+in \fname{save.c} --- in the same position on both sides, since the format
+is positional.  And keep the large buffers at the \emph{end} of the
+struct, because \fname{gb\_save\_state} serialises a component with
+\fname{fwrite(ppu, offsetof(gb_ppu, frame\_buffer), 1, f)} and a new member
+inserted before the buffer would silently be included.
+
+Bus routing follows the existing pattern: test
+\cs{bus->something != NULL} before delegating, and fall through to the
+\cs{io} shadow array otherwise, so a bus without the component still
+answers reads.
+
+\subsection{Adding a front end}
+
+Write four functions and one constructor, following
+\fname{frontend/headless.c}, which is the whole of a working (if useless)
+front end:
+
+\begin{Code}
+static bool  my_init  (gb_frontend* fe, int w, int h);
+static void  my_render(gb_frontend* fe, const uint32_t* buf, int w, int h);
+static void  my_poll  (gb_frontend* fe, gb_bus* bus, bool* running);
+static void  my_destroy(gb_frontend* fe);
+
+gb_frontend* my_frontend_create(void) {
+    gb_frontend* fe = calloc(1, sizeof(gb_frontend));
+    fe->priv = my_private_state();
+    fe->init = my_init;
+    fe->render = my_render;
+    fe->poll_events = my_poll;
+    fe->destroy = my_destroy;
+    return fe;
+}
+\end{Code}
+
+Rules that the loop depends on:
+
+\begin{itemize}
+\item \cs{init} must return \cs{false} rather than aborting; \cs{main}
+      turns that into exit status~1.
+\item \cs{render} must not keep the buffer pointer.  The core clears
+      \cs{frame\_ready} immediately after the call and the pixels are
+      overwritten on the next scanline.
+\item \cs{poll\_events} is the only way to stop the machine, through the
+      \cs{running} out-parameter.  A front end that never clears it can
+      only be terminated from outside --- which is the headless design.
+\item \cs{destroy} must release what \cs{init} allocated.  The core does
+      not touch the vtable again.
+\end{itemize}
+
+Then add it to \fname{make/common.mk} as another
+\cs{FRONTEND\_SRC} case, and add the corresponding \cs{-D} test to
+\fname{apps/cli.c}.
+
+\subsection{Adding an interrupt}
+
+\begin{enumerate}
+\item Reserve the bit in \fname{gb_bus}: a boolean next to the existing
+      request flags is enough.
+\item Set it where the condition is detected, e.g.\ at the end of a
+      scanline in \fname{gb\_ppu\_step}.
+\item Latch it into \cs{IF} in \fname{gb\_handle\_interrupts}.  That
+      function is the \emph{only} place hardware flags become register
+      bits, and the pending mask there is
+      \cs{if\_reg \& bus->ie \& 0x1F} --- a new bit needs widening, or it
+      will be invisible.
+\item Add the vector case to the loop in the same function.  The dispatch
+      is a linear scan from bit~0, so the loop bound and the vector
+      arithmetic (\cs{0x0040 + 8*bit}) both need updating.
+\item Extend the save state if the flag is persistent.
+\end{enumerate}
+
+\attention
+The serial interrupt (\cs{IF} bit~3) is the worked example of how not to
+do this: \cs{IF} bit~3 is reachable and dispatchable, but nothing ever
+raises it, because serial output is handled by interception instead.  The
+vector at \cs{0x0058} exists and costs nothing until it is used.
+
+\subsection{Changing the timing model}
+
+Two constants govern everything, and both are derived from the clock
+rather than hard-coded:
+
+\begin{longtable}{@{}L{0.32\textwidth}L{0.58\textwidth}@{}}
+\toprule
+\textbf{Macro} & \textbf{Definition}\\
+\midrule
+\endhead
+\cs{GB\_CPU\_FREQ} & \cs{4194304} T-cycles per second, the DMG rate\\
+\cs{GB\_CYCLES\_PER\_FRAME} & \cs{GB\_CPU\_FREQ / 60}, i.e.\ 69\,905
+  T-cycles\\
+\cs{GB\_FRAME\_TIME\_NS} & \cs{1000000000L / 60}\\
+\bottomrule
+\end{longtable}
+
+Note that \cs{GB\_CYCLES\_PER\_FRAME} is expressed in T-cycles but is
+compared in \fname{gb\_loop} against a running total of \emph{dots}, so
+the two agree only because one T-cycle is two dots at normal speed.  That
+is not an accident: it is what keeps the frame budget correct in CGB
+double-speed mode, where the scale flips to 1.  Any change to the cycle
+handling has to preserve that relationship.
+
+\clearpage
+
+% ===========================================================================
+\section{Known gaps}
+\label{known-gaps}
+
+This chapter collects, in one place, the hardware behaviour the emulator
+does not implement.  Each entry says what is missing and which suite
+notices.  Most of them were found by running the suites, not by reading
+the Game Boy documentation.
+
+\subsection{CPU and timing}
+
+\begin{longtable}{@{}L{0.30\textwidth}L{0.60\textwidth}@{}}
+\toprule
+\textbf{Gap} & \textbf{Effect}\\
+\midrule
+\endhead
+Atomic instructions &
+  An instruction executes as a unit: its total cost is returned from the
+  table, and its immediate reads and writes happen in handler order
+  rather than at fixed dots.  The bl'rg \cs{mem\_timing} suites, which
+  read a register at a precise dot inside \cs{LDH A,(a8)}, fail all
+  their cases.  See also
+  \cs{ADD SP,e8}/\cs{LD HL,SP+e8}, whose internal cycles are modelled as
+  plain increments.\\
+\cs{EI} and \cs{HALT} &
+  The interaction is not exact: \cs{ime\_scheduled} is promoted at the
+  top of \fname{gb\_cpu\_step}, before the halted check, so a
+  \cs{EI;HALT} sequence does not wake the CPU the way hardware does.
+  SameSuite \cs{interrupt/ei\_delay\_halt} fails; the bl'rg
+  \cs{halt\_bug} composite passes.\\
+\cs{STOP} &
+  Performs the CGB speed switch and consumes its operand byte, then
+  returns.  It does not stop the CPU, halt the divider, mute the APU or
+  reset the joypad matrix, all of which real hardware does.\\
+\cs{DAA} &
+  Implemented, but the C-64 (non-carry) case only ever clears \cs{C} when
+  the addition overflowed, rather than preserving it.\\
+\bottomrule
+\end{longtable}
+
+\subsection{Memory, DMA and the bus}
+\label{dma-limits}
+
+\begin{longtable}{@{}L{0.30\textwidth}L{0.60\textwidth}@{}}
+\toprule
+\textbf{Gap} & \textbf{Effect}\\
+\midrule
+\endhead
+No DMA register validation &
+  The OAM DMA source page is not masked and not checked against
+  \cs{0xXX00--0xXX9F}.  A page of \cs{0xFE} copies \cs{0xFF} bytes,
+  because OAM reads are themselves blocked during the transfer.\\
+No DMA restart timing edge &
+  A \cs{0xFF46} write during the initial two-cycle delay, or while a
+  restart is already pending, restarts immediately instead of after two
+  cycles (section~\ref{oam-dma}).\\
+No CGB DMA &
+  \cs{GDMA} and \cs{HDMA} at \cs{0xFF51}--\cs{0xFF55} are not implemented
+  at all, so CGB games that use them hang.  SameSuite \cs{dma/hdma\_lcd\_off}
+  and friends fail.\\
+Unmapped I/O reads \index{unmapped I/O} &
+  Fall through to the \cs{io} shadow array, which reads back whatever was
+  last written --- zero initially --- instead of the \cs{0xFF} real
+  hardware returns.\\
+Echo RAM at \cs{0xFD00}--\cs{0xFDFF} &
+  Correctly aliases \cs{0xC000}--\cs{0xCFFF}, so games that probe
+  \cs{0xFFFE} in the echo region see HRAM contents rather than a fault.\\
+\bottomrule
+\end{longtable}
+
+\subsection{Mappers}
+
+\begin{longtable}{@{}L{0.30\textwidth}L{0.60\textwidth}@{}}
+\toprule
+\textbf{Gap} & \textbf{Effect}\\
+\midrule
+\endhead
+MBC3 RTC is not driven by a clock &
+  The latch sequence advances a state machine but never copies the host
+  time into the registers, and the counters only advance when a game
+  writes them.  A game that reads the clock sees whatever it found at
+  load time.  There is a \cs{TODO} marker for this.\\
+Serial text output for MBC2 and MBC3 &
+  The \cs{0xA004} interception is after the MBC2 and MBC3 write handlers,
+  which return early, so text diagnostics from those mappers never reach
+  standard output.  Only the \cs{SB}/\cs{SC} path works for them.\\
+MBC3 does not distinguish RAM banks 0--3 by size &
+  The bank mask is \cs{ram\_bank \& (sram\_banks - 1)}, so a cart
+  declaring 8\,KiB of RAM has only one reachable bank and selecting
+  bank~3 silently wraps.\\
+No MBC6, MBC7, HuC1, camera or rumble &
+  Cartridge types outside the four supported families are treated as
+  ROM-only.  A rumble cartridge runs, but the motor bit at
+  \cs{0x6000} is discarded.\\
+\bottomrule
+\end{longtable}
+
+\subsection{PPU}
+
+See section~\ref{ppu-limits} for the full list.  In brief: no per-pixel
+timing, no VRAM/OAM access blocking, no \cs{STAT} blocking flag, no
+\cs{LY}-write side effects, no DMG OAM scan bug, sprite BG priority not
+applied, no CGB palette RAM or tile attributes, no VRAM banking.
+
+\subsection{APU}
+
+See section~\ref{apu-limits}.  In brief: envelope parameters not latched
+on write, no wave RAM locking, no high-pass filter, output level about
+half scale, and cycle-exact length/trigger timing is not modelled.
+
+\subsection{CGB}
+\label{cgb-limits}
+
+\begin{longtable}{@{}L{0.30\textwidth}L{0.60\textwidth}@{}}
+\toprule
+\textbf{Missing} & \textbf{Consequence}\\
+\midrule
+\endhead
+Palette RAM (\cs{BGPI}/\cs{BGPD}) &
+  Colour~0 of every tile uses the DMG greyscale table, so CGB games
+  display in greyscale.  SameSuite
+  \cs{ppu/blocking\_bgpi\_increase} fails.
+\end{longtable}
+
+Everything else about the CGB --- VRAM banking, tile attributes, the
+separate window line counter, \cs{OPRB}, HDMA, the boot ROM and the
+\cs{KEY1} management registers beyond bit~0 --- is absent.
+\cs{double\_speed} and \cs{STOP} do work, so a CGB game that only checks
+which mode it is in will behave correctly.
+
+\subsection{SGB}
+
+Nothing is implemented: no \cs{MLT\_REQ}, no border palette, no attribute
+files, no joypad comms.  Two SameSuite tests,
+\cs{sgb/command\_mlt\_req} and \cs{sgb/command\_mlt\_req\_1\_incrementing},
+fail; the \fname{TODO} file suggests either implementing the commands or
+filtering the tests out.
+
+\subsection{Front ends}
+
+\begin{itemize}
+\item The SDL and terminal front ends raise \cs{joypad\_interrupt} more
+      eagerly than hardware: SDL does so for any key, the terminal for
+      every poll.
+\item The terminal front end has no key repeat, so buttons are five
+      frames long and must be re-pressed.
+\item The headless front end provides no way to end a session, and no
+      way to observe anything.
+\item The ESP32 front end's default pin assignments conflict between the
+      buttons and the I2S pins (section~\ref{esp32-frontend}).
+\end{itemize}
+
+\subsection{Stale documentation}
+
+\attention
+The \fname{TODO} file at the repository root is out of date.  Among other
+things it claims that \fname{src/apu.c} contains only length counters and
+that \fname{src/bus.c} has no DMA support --- both of which have since
+been implemented.  Read it as a record of what was missing when the entry
+was written, and confirm against the source before acting on an item.
+
+\clearpage
+
+% ===========================================================================
+\appendix
+\label{appendices}
+
+% ===========================================================================
+\section{Opcode coverage}
+\label{app-coverage}
+
+Of the 256 base opcode values, 244 are dispatched, one is the \cs{CB}
+prefix, and eleven are illegal and fatal:
+
+\begin{longtable}{@{}C{0.24\textwidth}L{0.66\textwidth}@{}}
+\toprule
+\textbf{Opcode} & \textbf{Status}\\
+\midrule
+\endhead
+\cs{0xCB} & The prefix byte; handled by \fname{instr\_cb}, never by a
+  handler\\
+\cs{0xD3}, \cs{0xDB}, \cs{0xDD} & Illegal\\
+\cs{0xE3}, \cs{0xE4} & Illegal\\
+\cs{0xEB}, \cs{0xEC}, \cs{0xED} & Illegal\\
+\cs{0xF4} & Illegal\\
+\cs{0xFC}, \cs{0xFD} & Illegal\\
+\bottomrule
+\end{longtable}
+
+The generated table prices all of them, including the illegal ones, so
+\fname{get\_opcode\_cycles} has no hole in it.  Reaching any of them
+prints \cs{Unhandled opcode: 0xNN at PC: 0xNNNN} and calls \cs{exit(1)}.
+
+The eleven handlers own the remaining 244:
+
+\begin{longtable}{@{}L{0.32\textwidth}C{0.16\textwidth}C{0.42\textwidth}@{}}
+\toprule
+\textbf{Handler} & \textbf{Opcodes} & \textbf{Category}\\
+\midrule
+\endhead
+\fname{instr\_8bit\_arithm} & 61 & 8-bit arithmetic and logic\\
+\fname{instr\_load} & 92 & Loads and stack-relative loads\\
+\fname{instr\_16bit\_arithm} & 13 & 16-bit arithmetic\\
+\fname{instr\_bitwise} & 28 & Bitwise and compare\\
+\fname{instr\_bit\_flag} & 0 & Empty placeholder\\
+\fname{instr\_bit\_shift} & 4 & Accumulator rotates\\
+\fname{instr\_jumps} & 30 & Jumps, calls, returns\\
+\fname{instr\_carry} & 2 & Carry flag control\\
+\fname{instr\_interrupts} & 3 & \cs{DI}, \cs{EI}, \cs{HALT}\\
+\fname{instr\_stack} & 8 & \cs{PUSH} and \cs{POP}\\
+\fname{instr\_misc} & 3 & \cs{DAA}, \cs{NOP}, \cs{STOP}\\
+\midrule
+\textbf{Total} & \textbf{244} &\\
+\bottomrule
+\end{longtable}
+
+The \cs{CB} space is dispatched by field rather than by table, so all 256
+values are covered: 8 rotates/shifts, 8 \cs{BIT}, 8 \cs{RES} and 8
+\cs{SET} per register, including \cs{(HL)}.
+
+\clearpage
+
+% ===========================================================================
+\section{I/O register map}
+\label{app-registers}
+
+The registers the emulator decodes, with their destinations.  Everything
+else in \cs{0xFF00--0xFF7F} is a plain byte in \cs{bus->io}.
+
+\begin{longtable}{@{}C{0.16\textwidth}L{0.28\textwidth}L{0.46\textwidth}@{}}
+\toprule
+\textbf{Address} & \textbf{Register} & \textbf{Handled by}\\
+\midrule
+\endhead
+\cs{0xFF00} & \cs{P1} & \cs{gb\_bus\_read}/\cs{write}, joypad matrix\\
+\cs{0xFF01} & \cs{SB} & \cs{io} shadow; source for the serial print\\
+\cs{0xFF02} & \cs{SC} & Special: writing \cs{0x81} prints \cs{SB}\\
+\cs{0xFF04} & \cs{DIV} & \cs{gb\_timer\_read}/\cs{write}\\
+\cs{0xFF05} & \cs{TIMA} & \cs{gb\_timer\_read}/\cs{write}\\
+\cs{0xFF06} & \cs{TMA} & \cs{gb\_timer\_read}/\cs{write}\\
+\cs{0xFF07} & \cs{TAC} & \cs{gb\_timer\_read}/\cs{write}\\
+\cs{0xFF0F} & \cs{IF} & Special: reads OR \cs{0xE0}, writes mask
+  \cs{0x1F}\\
+\cs{0xFF10--0xFF2F} & \cs{NR10}--\cs{NR51} & \cs{gb\_apu\_read}/\cs{write}\\
+\cs{0xFF30--0xFF3F} & wave RAM & \cs{gb\_apu\_read}/\cs{write}, unmasked
+  reads\\
+\cs{0xFF40} & \cs{LCDC} & \cs{gb\_ppu\_read}/\cs{write}, power transitions\\
+\cs{0xFF41} & \cs{STAT} & \cs{gb\_ppu\_read}/\cs{write}, bits 3--6 only\\
+\cs{0xFF42} & \cs{SCY} & \cs{gb\_ppu\_read}/\cs{write}\\
+\cs{0xFF43} & \cs{SCX} & \cs{gb\_ppu\_read}/\cs{write}\\
+\cs{0xFF44} & \cs{LY} & \cs{gb\_ppu\_read}; writes ignored\\
+\cs{0xFF45} & \cs{LYC} & \cs{gb\_ppu\_read}/\cs{write}\\
+\cs{0xFF46} & \cs{DMA} & Special: starts an OAM transfer\\
+\cs{0xFF47} & \cs{BGP} & \cs{gb\_ppu\_read}/\cs{write}\\
+\cs{0xFF48} & \cs{OBP0} & \cs{gb\_ppu\_read}/\cs{write}\\
+\cs{0xFF49} & \cs{OBP1} & \cs{gb\_ppu\_read}/\cs{write}\\
+\cs{0xFF4A} & \cs{WY} & \cs{gb\_ppu\_read}/\cs{write}\\
+\cs{0xFF4B} & \cs{WX} & \cs{gb\_ppu\_read}/\cs{write}\\
+\cs{0xFF4D} & \cs{KEY1} & Special: bit~7 from \cs{double\_speed}, bit~0
+  stored\\
+\cs{0xFFFF} & \cs{IE} & \cs{bus->ie}, all eight bits\\
+\bottomrule
+\end{longtable}
+
+Memory regions that are decoded but not emulated in full:
+
+\begin{longtable}{@{}C{0.24\textwidth}L{0.66\textwidth}@{}}
+\toprule
+\textbf{Range} & \textbf{State}\\
+\midrule
+\endhead
+\cs{0xFE00--0xFEA0} & OAM; reads return \cs{0xFF} and writes are dropped
+  while a DMA transfer is copying\\
+\cs{0xFEA0--0xFEFF} & Unusable; reads \cs{0xFF}, writes dropped\\
+\cs{0xFF68}, \cs{0xFF69} & CGB palette; not decoded, lands in the shadow
+  array\\
+\cs{0xFF51--0xFF55} & CGB DMA; not decoded\\
+\bottomrule
+\end{longtable}
+
+\clearpage
+
+% ===========================================================================
+\section{Public API reference}
+\label{app-api}
+
+The complete surface of \fname{src/gbemu.h}, in declaration order.
+
+\subsection{CPU}
+
+\begin{longtable}{@{}L{0.34\textwidth}L{0.58\textwidth}@{}}
+\toprule
+\textbf{Function} & \textbf{Purpose}\\
+\midrule
+\endhead
+\cs{gb\_cpu\_init} & Set \cs{PC} to \cs{0x0100} and the post-boot
+  registers\\
+\cs{gb\_cpu\_step} & Fetch, decode and execute one instruction; return its
+  T-cycles, or 4 while halted\\
+\cs{gb\_cpu\_dump\_fd} & Print the register file to a \cs{FILE*}\\
+\cs{gb\_flag\_set} / \cs{gb\_flag\_get} & Set or test one flag\\
+\cs{gb\_get\_reg\_by\_index} / \cs{gb\_set\_reg\_by\_index} &
+  Operand access by the 3-bit index, including the \cs{(HL)} machine
+  cycle\\
+\cs{gb\_fetch8} / \cs{gb\_fetch16} & Operand fetch, one machine cycle per
+  byte\\
+\cs{gb\_instr} & Decode and dispatch one opcode; returns its T-cycles\\
+\bottomrule
+\end{longtable}
+
+\subsection{Bus}
+
+\begin{longtable}{@{}L{0.34\textwidth}L{0.58\textwidth}@{}}
+\toprule
+\textbf{Function} & \textbf{Purpose}\\
+\midrule
+\endhead
+\cs{gb\_bus\_read} / \cs{gb\_bus\_write} & The whole memory map\\
+\cs{gb\_bus\_tick} & Advance the OAM DMA by one machine cycle\\
+\cs{gb\_bus\_load\_rom} & Load and pad a ROM, size the SRAM, configure the
+  mapper, sanitise the interrupt vectors; returns the byte count or 0\\
+\cs{gb\_machine\_tick} & Advance DMA, timer, PPU and APU\\
+\bottomrule
+\end{longtable}
+
+\subsection{Timer, PPU and APU}
+
+\begin{longtable}{@{}L{0.34\textwidth}L{0.58\textwidth}@{}}
+\toprule
+\textbf{Function} & \textbf{Purpose}\\
+\midrule
+\endhead
+\cs{gb\_timer\_init} / \cs{gb\_timer\_step} & Initialise and advance the
+  divider and timer\\
+\cs{gb\_timer\_read} / \cs{gb\_timer\_write} & The four registers\\
+\cs{gb\_get\_time\_ns} / \cs{gb\_sleep\_ns} & Portable monotonic clock and
+  sleep\\
+\cs{gb\_ppu\_init} / \cs{gb\_ppu\_step} & Initialise and advance the
+  scanline state machine\\
+\cs{gb\_ppu\_read} / \cs{gb\_ppu\_write} & The video registers\\
+\cs{gb\_apu\_init} / \cs{gb\_apu\_step} & Initialise and advance the
+  synthesis\\
+\cs{gb\_apu\_read} / \cs{gb\_apu\_write} & The sound registers\\
+\cs{gb\_apu\_buf\_pop} & The one function a host may call from another
+  thread\\
+\cs{gb\_handle\_interrupts} & Latch request flags into \cs{IF}, wake the
+  CPU, dispatch; returns 0 or 20\\
+\bottomrule
+\end{longtable}
+
+\subsection{Loop and persistence}
+
+\begin{longtable}{@{}L{0.34\textwidth}L{0.58\textwidth}@{}}
+\toprule
+\textbf{Function} & \textbf{Purpose}\\
+\midrule
+\endhead
+\cs{gb\_loop} & The frame-budgeted main loop\\
+\cs{gb\_battery\_load} / \cs{gb\_battery\_save} & The \cs{.sav} file\\
+\cs{gb\_save\_state} / \cs{gb\_load\_state} & The \cs{.state} file\\
+\bottomrule
+\end{longtable}
+
+\seealso
+\fname{src/frontend.h} adds the \cs{gb\_frontend} struct, the
+\cs{gb\_hotkey} enum and \cs{gb\_version}, which expand to the version
+string, \cs{0.1.0}, and \cs{GB\_VERSION\_HEX}, which expands to \cs{0x100}.
+
+\clearpage
+
+% ===========================================================================
+\section{Constants}
+\label{app-constants}
+
+Every compile-time constant in the public header, with the value it has
+in this version.
+
+\begin{longtable}{@{}L{0.38\textwidth}C{0.20\textwidth}L{0.34\textwidth}@{}}
+\toprule
+\textbf{Macro} & \textbf{Value} & \textbf{Meaning}\\
+\midrule
+\endhead
+\cs{GB\_CPU\_FREQ} & \cs{4194304} & T-cycles per second\\
+\cs{GB\_CYCLES\_PER\_FRAME} & \cs{69905} & \cs{GB\_CPU\_FREQ / 60}\\
+\cs{GB\_FRAME\_TIME\_NS} & \cs{16666666} & one second, divided by 60\\
+\cs{GB\_SCREEN\_WIDTH} & \cs{160} & Frame buffer width\\
+\cs{GB\_SCREEN\_HEIGHT} & \cs{144} & Frame buffer height\\
+\cs{GB\_APU\_BUF\_SIZE} & \cs{4096} & Ring buffer capacity, a power of two\\
+\cs{GB\_APU\_BUF\_MASK} & \cs{4095} & \cs{SIZE - 1}, for wrapping\\
+\cs{GB\_APU\_SAMPLE\_RATE} & \cs{44100} & Output sample rate\\
+\cs{GB\_VERSION\_MAJOR} & \cs{0} &\\
+\cs{GB\_VERSION\_MINOR} & \cs{1} &\\
+\cs{GB\_VERSION\_PATCH} & \cs{0} &\\
+\cs{GB\_VERSION\_HEX} & \cs{0x100} & \cs{0x00MMmmpp}, written into save
+  states\\
+\bottomrule
+\end{longtable}
+
+PPU modes and CPU flags:
+
+\begin{longtable}{@{}L{0.38\textwidth}C{0.20\textwidth}L{0.34\textwidth}@{}}
+\toprule
+\textbf{Constant} & \textbf{Value} & \textbf{Meaning}\\
+\midrule
+\endhead
+\cs{GB\_PPU\_MODE\_HBLANK} & \cs{0} & Mode~0, \cs{STAT} bits~1--0
+  \cs{00}\\
+\cs{GB\_PPU\_MODE\_VBLANK} & \cs{1} & Mode~1, \cs{01}\\
+\cs{GB\_PPU\_MODE\_OAM} & \cs{2} & Mode~2, \cs{10}\\
+\cs{GB\_PPU\_MODE\_XFER} & \cs{3} & Mode~3, \cs{11}\\
+\cs{GB\_FLAG\_Z} & \cs{0x80} & Bit~7 of \fname{F}\\
+\cs{GB\_FLAG\_N} & \cs{0x40} & Bit~6\\
+\cs{GB\_FLAG\_H} & \cs{0x20} & Bit~5\\
+\cs{GB\_FLAG\_C} & \cs{0x10} & Bit~4\\
+\bottomrule
+\end{longtable}
+
+\clearpage
+
+% ===========================================================================
+\section{Further reading}
+\label{app-reading}
+
+The specifications and test ROMs this emulator is written against.  All
+of them are free and public.
+
+\subsection{Reference documentation}
+
+\begin{longtable}{@{}L{0.30\textwidth}L{0.62\textwidth}@{}}
+\toprule
+\textbf{Source} & \textbf{Covers}\\
+\midrule
+\endhead
+\cs{gbdev.io/pandocs/PPU.html} &
+  Mode timing, \cs{STAT}, \cs{LY}/\cs{LYC}, the background, window and
+  sprite rules, and the CGB additions\\
+\cs{gbdev.io/pandocs/Memory\_Map.html} &
+  The address map, the I/O register semantics and the DMA rules\\
+\cs{gbdev.io/pandocs/Timer\_and\_Divider\_Registers.html} &
+  The divider bit select, the \cs{TIMA} overflow sequence and the
+  \cs{DIV}-write side effects\\
+\cs{gbdev.io/pandocs/Audio.html} &
+  The four channels, the frame sequencer steps, the sweep overflow rules
+  and the length-counter timing\\
+\cs{gbdev.io/pandocs/Cartridge\_Header.html} &
+  Header bytes \cs{0x0143}, \cs{0x0147}, \cs{0x0148}, \cs{0x0149} and
+  the Nintendo logo\\
+\cs{gbdev.io/pandocs/Interrupt\_Handling.html} &
+  The \cs{IF}/\cs{IE} contract, the five vectors and the five machine
+  cycles of dispatch\\
+\cs{gbdev.io/pandocs/MBC1.html}, \cs{MBC2}, \cs{MBC3}, \cs{MBC5} &
+  One page per implemented mapper\\
+\bottomrule
+\end{longtable}
+
+\subsection{Test ROMs}
+
+\begin{longtable}{@{}L{0.30\textwidth}L{0.62\textwidth}@{}}
+\toprule
+\textbf{Suite} & \textbf{Note}\\
+\midrule
+\endhead
+\cs{gb-test-roms} &
+  Blargg's ROMs, vendored under \cs{tests/}.  The most widely used
+  functional suite; the source of most of the known gaps in
+  section~\ref{known-gaps}.\\
+\cs{SameSuite} &
+  SameBoy's suite, vendored under \cs{tests/}.  One ROM per hardware
+  behaviour, which makes it the best tool for localising a bug.\\
+\cs{mooneye-test-suite} &
+  The acceptance tests, which are the closest thing to a specification
+  that can be executed.  Several tests only pass on hardware; the harness
+  filters by the suffix in the name.\\
+\bottomrule
+\end{longtable}
+
+\subsection{Internal notes}
+
+Within the repository, \fname{docs/dev/} holds the developer-facing
+material that is not part of this manual: the header-comment markers for
+\cs{tinydocs-cli}, the opcode JSON the generator consumes, and progress
+notes.  \cs{make docs} regenerates the API pages from the headers.
+
+\clearpage
+
+% ===========================================================================
+\section{Index}
+
+\printindex
+
+\end{document}

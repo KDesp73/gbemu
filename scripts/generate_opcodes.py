@@ -7,7 +7,7 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent
-JSON_PATH = REPO_ROOT / "docs" / "Opcodes.json"
+JSON_PATH = REPO_ROOT / "docs" / "dev" / "Opcodes.json"
 OUTPUT_PATH = REPO_ROOT / "src" / "opcodes.h"
 
 
