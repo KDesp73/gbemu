@@ -4,3 +4,9 @@
 [submodule "SameSuite"]
 	path = tests/SameSuite
 	url = https://github.com/LIJI32/SameSuite
+[submodule "third_party/cimgui"]
+	path = third_party/cimgui
+	url = https://github.com/cimgui/cimgui
+[submodule "third_party/imgui"]
+	path = third_party/imgui
+	url = https://github.com/ocornut/imgui

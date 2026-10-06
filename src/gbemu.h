@@ -566,6 +566,111 @@ bool gb_save_state(const gb_cpu* cpu, const gb_bus* bus, const gb_timer* timer,
 bool gb_load_state(gb_cpu* cpu, gb_bus* bus, gb_timer* timer,
                 gb_ppu* ppu, gb_apu* apu, const char* rom_path);
 
+//@module debugger
+
+//@macro GB_DEBUGGER_MAX_BREAKPOINTS
+//@desc Maximum number of PC breakpoints a gb_debugger can store
+#define GB_DEBUGGER_MAX_BREAKPOINTS 64
+
+//@type gb_debugger
+//@desc Debugger control state for one emulated machine: pause/resume/step control, a PC breakpoint list and a one-shot step-over target. The emulation loop consults it before every instruction; attach it to a frontend through gb_frontend::debug before calling gb_loop. The UI half lives in the frontend (frontend/debugger.c).
+struct gb_debugger {
+    gb_cpu* cpu;                                       // CPU whose execution is controlled
+    gb_bus* bus;                                       // Bus used for breakpoint/disassembly reads
+    bool paused;                                       // Execution frozen: gb_loop skips CPU steps
+    int  steps_remaining;                              // Instructions left to run before auto-pausing
+    bool skip_check_once;                              // Skip the next breakpoint check (continue/step while stopped on a breakpoint)
+    bool has_temp_bp;                                  // A one-shot step-over breakpoint is pending
+    uint16_t temp_bp;                                  // Address the pending step-over breakpoint fires at
+    uint16_t breakpoints[GB_DEBUGGER_MAX_BREAKPOINTS]; // PC breakpoints (linear scan, order unspecified)
+    int num_breakpoints;                               // Valid entries in breakpoints[]
+};
+
+//@func gb_debugger_init
+//@desc Initialize a debugger and bind it to the CPU/bus it controls
+//@param dbg Debugger to initialize
+//@param cpu CPU whose execution the debugger controls
+//@param bus Bus used for breakpoint and disassembly reads
+void gb_debugger_init(gb_debugger* dbg, gb_cpu* cpu, gb_bus* bus);
+
+//@func gb_debugger_has_breakpoint
+//@desc Check whether a PC breakpoint is set
+//@param dbg Debugger to query
+//@param addr Address to look up
+//@returns true if a breakpoint exists at addr
+bool gb_debugger_has_breakpoint(const gb_debugger* dbg, uint16_t addr);
+
+//@func gb_debugger_add_breakpoint
+//@desc Add a PC breakpoint (ignored when already present or the list is full)
+//@param dbg Debugger to modify
+//@param addr Address that pauses execution when reached
+//@returns true if the breakpoint was added
+bool gb_debugger_add_breakpoint(gb_debugger* dbg, uint16_t addr);
+
+//@func gb_debugger_remove_breakpoint
+//@desc Remove a PC breakpoint if present
+//@param dbg Debugger to modify
+//@param addr Address to remove
+//@returns true if a breakpoint was removed
+bool gb_debugger_remove_breakpoint(gb_debugger* dbg, uint16_t addr);
+
+//@func gb_debugger_toggle_breakpoint
+//@desc Add the breakpoint if missing, remove it if present
+//@param dbg Debugger to modify
+//@param addr Address to toggle
+//@returns true if a breakpoint is now set at addr, false otherwise
+bool gb_debugger_toggle_breakpoint(gb_debugger* dbg, uint16_t addr);
+
+//@func gb_debugger_pause
+//@desc Freeze execution immediately and cancel any pending step request
+//@param dbg Debugger to pause
+void gb_debugger_pause(gb_debugger* dbg);
+
+//@func gb_debugger_continue
+//@desc Resume execution. The next instruction is exempt from breakpoint checks, so continuing while stopped on a breakpoint executes it instead of re-triggering immediately
+//@param dbg Debugger to resume
+void gb_debugger_continue(gb_debugger* dbg);
+
+//@func gb_debugger_toggle_pause
+//@desc Pause when running, resume when paused
+//@param dbg Debugger to toggle
+void gb_debugger_toggle_pause(gb_debugger* dbg);
+
+//@func gb_debugger_step
+//@desc Run exactly n instructions (they complete within the current frame), then pause again
+//@param dbg Debugger to step
+//@param n Instruction count (values below 1 are treated as 1)
+void gb_debugger_step(gb_debugger* dbg, int n);
+
+//@func gb_debugger_step_over
+//@desc Step one instruction, but when it is a CALL/RST, set a one-shot breakpoint on the return address and continue so the callee runs to completion
+//@param dbg Debugger to step
+void gb_debugger_step_over(gb_debugger* dbg);
+
+//@func gb_debugger_hit
+//@desc Breakpoint predicate for the emulation loop: when a breakpoint (or the pending step-over target) matches pc, pause the debugger, cancel any step request and return true. The step-over breakpoint is consumed on hit
+//@param dbg Debugger to check
+//@param pc Program counter about to be executed
+//@returns true when execution must stop at pc
+bool gb_debugger_hit(gb_debugger* dbg, uint16_t pc);
+
+//@module disasm
+
+//@func gb_disasm
+//@desc Decode one instruction at addr into a human-readable string (e.g. "LD A,$01", "JR $C123"). CB-prefixed instructions are folded into a single line; unknown and illegal opcodes render as "DB $XX"
+//@param bus Bus to read the instruction bytes from
+//@param addr Address of the first instruction byte
+//@param out Buffer receiving the NUL-terminated text
+//@param out_size Buffer size in bytes
+//@returns Length of the instruction in bytes (1-3), or 0 if the buffer is too small
+int gb_disasm(gb_bus* bus, uint16_t addr, char* out, size_t out_size);
+
+//@func gb_instruction_length
+//@desc Length in bytes of the instruction at addr (used by step-over)
+//@param bus Bus to read the opcode from
+//@param addr Address of the first instruction byte
+//@returns Instruction length in bytes (1-3)
+int gb_instruction_length(gb_bus* bus, uint16_t addr);
 
 //@module prefix
 //@desc GBEMU_STRIP_PREFIX lives at the end of the header so that every symbol
@@ -594,6 +699,8 @@ bool gb_load_state(gb_cpu* cpu, gb_bus* bus, gb_timer* timer,
     #define PPUMode gb_ppu_mode
     //@type Hotkey
     #define Hotkey gb_hotkey
+    //@type Debugger
+    #define Debugger gb_debugger
 
     //@func version
     #define version gb_version
@@ -674,6 +781,32 @@ bool gb_load_state(gb_cpu* cpu, gb_bus* bus, gb_timer* timer,
     #define save_state gb_save_state
     //@func load_state
     #define load_state gb_load_state
+    //@func debugger_init
+    #define debugger_init gb_debugger_init
+    //@func debugger_has_breakpoint
+    #define debugger_has_breakpoint gb_debugger_has_breakpoint
+    //@func debugger_add_breakpoint
+    #define debugger_add_breakpoint gb_debugger_add_breakpoint
+    //@func debugger_remove_breakpoint
+    #define debugger_remove_breakpoint gb_debugger_remove_breakpoint
+    //@func debugger_toggle_breakpoint
+    #define debugger_toggle_breakpoint gb_debugger_toggle_breakpoint
+    //@func debugger_pause
+    #define debugger_pause gb_debugger_pause
+    //@func debugger_continue
+    #define debugger_continue gb_debugger_continue
+    //@func debugger_toggle_pause
+    #define debugger_toggle_pause gb_debugger_toggle_pause
+    //@func debugger_step
+    #define debugger_step gb_debugger_step
+    //@func debugger_step_over
+    #define debugger_step_over gb_debugger_step_over
+    //@func debugger_hit
+    #define debugger_hit gb_debugger_hit
+    //@func disasm
+    #define disasm gb_disasm
+    //@func instruction_length
+    #define instruction_length gb_instruction_length
 
     //@macro VERSION_MAJOR
     #define VERSION_MAJOR GB_VERSION_MAJOR
@@ -726,6 +859,10 @@ bool gb_load_state(gb_cpu* cpu, gb_bus* bus, gb_timer* timer,
     #define HOTKEY_SAVE_STATE GB_HOTKEY_SAVE_STATE
     //@const HOTKEY_LOAD_STATE
     #define HOTKEY_LOAD_STATE GB_HOTKEY_LOAD_STATE
+    //@const HOTKEY_DEBUG_PAUSE
+    #define HOTKEY_DEBUG_PAUSE GB_HOTKEY_DEBUG_PAUSE
+    //@macro DEBUGGER_MAX_BREAKPOINTS
+    #define DEBUGGER_MAX_BREAKPOINTS GB_DEBUGGER_MAX_BREAKPOINTS
 #endif // GBEMU_STRIP_PREFIX
 
 #endif // GBEMU_H
