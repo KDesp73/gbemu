@@ -25,3 +25,6 @@ web/emu-wasm.html
 web/emu-wasm.js
 web/emu-wasm.wasm
 web/emu-wasm.data
+
+# Dear ImGui window layout (written by the debugger window)
+imgui.ini

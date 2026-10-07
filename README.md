@@ -9,12 +9,15 @@ A Game Boy / Game Boy Color emulator written in C.
 ### Prerequisites
 
 - **gcc** (or any C99 compiler)
+- **g++** (only needed for the debugger's C++ sources)
 - **SDL3** (`brew install sdl3`)
 - **pkg-config** (for SDL3 detection)
+- **git submodules** (ImGui + cimgui, for the debugger)
 
 ### Build
 
 ```bash
+git submodule update --init   # once, for the debugger
 make all type=RELEASE
 ```
 
@@ -32,10 +35,25 @@ A debug build with sanitizers:
 make all
 ```
 
+#### Debugger
+
+The SDL frontend builds with an ImGui debugger in a separate window when the
+`third_party/imgui` and `third_party/cimgui` submodules are present. The
+debugger is auto-enabled in that case; control it with:
+
+```bash
+make all DEBUGGER=0    # force off (no ImGui/C++ objects)
+make all DEBUGGER=1    # force on (hard error if submodules are missing)
+```
+
+TERM (`TERM=1`) and HEADLESS (`HEADLESS=1`) builds never enable it. If the
+submodules are missing, the build prints a warning and continues without the
+debugger.
+
 ## Usage
 
 ```bash
-./emu-cli path/to/rom.gb
+./gbemu-cli path/to/rom.gb
 ```
 
 ### Environment Variables
@@ -56,8 +74,13 @@ make all
 | Enter | Start |
 | F5 | Save state |
 | F9 | Load state |
+| F1 | Toggle the debugger window |
+| F6 | Pause / resume the debugger |
 
 Close the window or press the window close button to quit.
+
+The debugger window takes input only while it has focus, so game controls keep
+working with the game window focused.
 
 ## Saves
 
@@ -104,6 +127,15 @@ Close the window or press the window close button to quit.
 ### Serial
 
 - Serial output intercepted for test ROM diagnostics (Blargg, SameSuite, mooneye)
+
+### Debugger
+
+- Separate ImGui window (SDL frontend only), toggled with F1
+- Register + flag view (AF/BC/DE/HL/SP/PC, Z/N/H/C, IME, halted)
+- Disassembly around PC with the current instruction highlighted
+- Breakpoints: toggle from the disassembly view or add by hex address
+- Step / Step Over / Continue / Pause (F6), step-over steps across CALLs
+- Memory hex viewer with region selector and address goto
 
 ### Saves
 
