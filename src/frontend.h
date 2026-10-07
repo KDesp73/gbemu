@@ -7,10 +7,12 @@
 typedef struct gb_frontend gb_frontend;
 typedef struct gb_bus gb_bus;
 typedef struct gb_apu gb_apu;
+typedef struct gb_debugger gb_debugger;
 
 typedef enum {
     GB_HOTKEY_SAVE_STATE, // Quick-save the full machine state (F5)
     GB_HOTKEY_LOAD_STATE, // Restore the last quick-save (F9)
+    GB_HOTKEY_DEBUG_PAUSE, // Toggle debugger pause/resume (F6)
 } gb_hotkey;
 
 struct gb_frontend {
@@ -25,6 +27,13 @@ struct gb_frontend {
     // what they do. on_hotkey may be NULL.
     void* hotkey_ctx;
     void (*on_hotkey)(void* ctx, gb_hotkey key);
+
+    // Debugger attachment: set by the application before gb_loop. When non-NULL
+    // the loop consults it before every instruction (pause/breakpoints) and,
+    // if render_debug is also set, asks the frontend to present the debugger
+    // UI every iteration. Both fields may stay NULL (calloc default).
+    gb_debugger* debug;
+    void (*render_debug)(gb_frontend* fe);
 };
 
 //@macro GBEMU_STRIP_PREFIX
@@ -35,6 +44,9 @@ struct gb_frontend {
 
     //@type Hotkey
     #define Hotkey gb_hotkey
+
+    //@type Debugger
+    #define Debugger gb_debugger
 
     // gb_bus/gb_apu are only forward-declared here (the vtable passes them to
     // poll_events); gbemu.h repeats these aliases so that including either
@@ -51,6 +63,9 @@ struct gb_frontend {
 
     //@const HOTKEY_LOAD_STATE
     #define HOTKEY_LOAD_STATE GB_HOTKEY_LOAD_STATE
+
+    //@const HOTKEY_DEBUG_PAUSE
+    #define HOTKEY_DEBUG_PAUSE GB_HOTKEY_DEBUG_PAUSE
 #endif // GBEMU_STRIP_PREFIX
 
 #endif // FRONTEND_H

@@ -12,6 +12,7 @@ typedef struct {
     gb_timer* timer;
     gb_ppu* ppu;
     gb_apu* apu;
+    gb_debugger* dbg;
     const char* rom_path;
 } EmuContext;
 
@@ -24,6 +25,9 @@ static void on_hotkey(void* userdata, gb_hotkey key)
         break;
     case GB_HOTKEY_LOAD_STATE:
         gb_load_state(ctx->cpu, ctx->bus, ctx->timer, ctx->ppu, ctx->apu, ctx->rom_path);
+        break;
+    case GB_HOTKEY_DEBUG_PAUSE:
+        if (ctx->dbg) gb_debugger_toggle_pause(ctx->dbg);
         break;
     }
 }
@@ -42,6 +46,7 @@ int main(int argc, char** argv)
     gb_timer timer = {0};
     gb_ppu ppu = {0};
     gb_apu apu = {0};
+    gb_debugger dbg = {0};
 
     bus.timer = &timer;
     bus.ppu = &ppu;
@@ -51,6 +56,7 @@ int main(int argc, char** argv)
     gb_timer_init(&timer);
     gb_ppu_init(&ppu);
     gb_apu_init(&apu);
+    gb_debugger_init(&dbg, &cpu, &bus);
 
     if (!gb_bus_load_rom(&bus, rom_path)) return 1;
 
@@ -84,10 +90,12 @@ int main(int argc, char** argv)
         .timer = &timer,
         .ppu = &ppu,
         .apu = &apu,
+        .dbg = &dbg,
         .rom_path = rom_path,
     };
     fe->hotkey_ctx = &ctx;
     fe->on_hotkey = on_hotkey;
+    fe->debug = &dbg;
 
     gb_loop(&cpu, &bus, &timer, &ppu, &apu, fe);
 

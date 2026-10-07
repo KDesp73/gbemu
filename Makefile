@@ -1,6 +1,7 @@
 .DEFAULT_GOAL := help
 
 include ./make/common.mk
+include ./make/debugger.mk
 include ./make/libs.mk
 include ./make/utils.mk
 include ./make/wasm.mk

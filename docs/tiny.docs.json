@@ -1,6 +1,6 @@
 {
     "name": "gbemu",
-    "timestamp": "2026-10-02 15:55:24",
+    "timestamp": "2026-10-07 12:14:31",
     "docs": [
         {
             "file": "src/gbemu.h",
@@ -2341,9 +2341,640 @@
                 "marker": "module",
                 "type": "module",
                 "args": [
+                    "debugger"
+                ],
+                "line": 569,
+                "children": [
+                    {
+                        "marker": "macro",
+                        "type": "function",
+                        "args": [
+                            "GB_DEBUGGER_MAX_BREAKPOINTS"
+                        ],
+                        "line": 571,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Maximum number of PC breakpoints a gb_debugger can store"
+                                ],
+                                "line": 572,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "type",
+                        "type": "type",
+                        "args": [
+                            "gb_debugger"
+                        ],
+                        "line": 575,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Debugger control state for one emulated machine: pause/resume/step control, a PC breakpoint list and a one-shot step-over target. The emulation loop consults it before every instruction; attach it to a frontend through gb_frontend::debug before calling gb_loop. The UI half lives in the frontend (frontend/debugger.c)."
+                                ],
+                                "line": 576,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "gb_debugger_init"
+                        ],
+                        "line": 589,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Initialize a debugger and bind it to the CPU/bus it controls"
+                                ],
+                                "line": 590,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "dbg",
+                                    "Debugger to initialize"
+                                ],
+                                "line": 591,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "cpu",
+                                    "CPU whose execution the debugger controls"
+                                ],
+                                "line": 592,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "bus",
+                                    "Bus used for breakpoint and disassembly reads"
+                                ],
+                                "line": 593,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "gb_debugger_has_breakpoint"
+                        ],
+                        "line": 596,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Check whether a PC breakpoint is set"
+                                ],
+                                "line": 597,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "dbg",
+                                    "Debugger to query"
+                                ],
+                                "line": 598,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "addr",
+                                    "Address to look up"
+                                ],
+                                "line": 599,
+                                "children": []
+                            },
+                            {
+                                "marker": "returns",
+                                "type": "return",
+                                "args": [
+                                    "true",
+                                    "if a breakpoint exists at addr"
+                                ],
+                                "line": 600,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "gb_debugger_add_breakpoint"
+                        ],
+                        "line": 603,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Add a PC breakpoint (ignored when already present or the list is full)"
+                                ],
+                                "line": 604,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "dbg",
+                                    "Debugger to modify"
+                                ],
+                                "line": 605,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "addr",
+                                    "Address that pauses execution when reached"
+                                ],
+                                "line": 606,
+                                "children": []
+                            },
+                            {
+                                "marker": "returns",
+                                "type": "return",
+                                "args": [
+                                    "true",
+                                    "if the breakpoint was added"
+                                ],
+                                "line": 607,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "gb_debugger_remove_breakpoint"
+                        ],
+                        "line": 610,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Remove a PC breakpoint if present"
+                                ],
+                                "line": 611,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "dbg",
+                                    "Debugger to modify"
+                                ],
+                                "line": 612,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "addr",
+                                    "Address to remove"
+                                ],
+                                "line": 613,
+                                "children": []
+                            },
+                            {
+                                "marker": "returns",
+                                "type": "return",
+                                "args": [
+                                    "true",
+                                    "if a breakpoint was removed"
+                                ],
+                                "line": 614,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "gb_debugger_toggle_breakpoint"
+                        ],
+                        "line": 617,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Add the breakpoint if missing, remove it if present"
+                                ],
+                                "line": 618,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "dbg",
+                                    "Debugger to modify"
+                                ],
+                                "line": 619,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "addr",
+                                    "Address to toggle"
+                                ],
+                                "line": 620,
+                                "children": []
+                            },
+                            {
+                                "marker": "returns",
+                                "type": "return",
+                                "args": [
+                                    "true",
+                                    "if a breakpoint is now set at addr, false otherwise"
+                                ],
+                                "line": 621,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "gb_debugger_pause"
+                        ],
+                        "line": 624,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Freeze execution immediately and cancel any pending step request"
+                                ],
+                                "line": 625,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "dbg",
+                                    "Debugger to pause"
+                                ],
+                                "line": 626,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "gb_debugger_continue"
+                        ],
+                        "line": 629,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Resume execution. The next instruction is exempt from breakpoint checks, so continuing while stopped on a breakpoint executes it instead of re-triggering immediately"
+                                ],
+                                "line": 630,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "dbg",
+                                    "Debugger to resume"
+                                ],
+                                "line": 631,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "gb_debugger_toggle_pause"
+                        ],
+                        "line": 634,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Pause when running, resume when paused"
+                                ],
+                                "line": 635,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "dbg",
+                                    "Debugger to toggle"
+                                ],
+                                "line": 636,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "gb_debugger_step"
+                        ],
+                        "line": 639,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Run exactly n instructions (they complete within the current frame), then pause again"
+                                ],
+                                "line": 640,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "dbg",
+                                    "Debugger to step"
+                                ],
+                                "line": 641,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "n",
+                                    "Instruction count (values below 1 are treated as 1)"
+                                ],
+                                "line": 642,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "gb_debugger_step_over"
+                        ],
+                        "line": 645,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Step one instruction, but when it is a CALL/RST, set a one-shot breakpoint on the return address and continue so the callee runs to completion"
+                                ],
+                                "line": 646,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "dbg",
+                                    "Debugger to step"
+                                ],
+                                "line": 647,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "gb_debugger_hit"
+                        ],
+                        "line": 650,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Breakpoint predicate for the emulation loop: when a breakpoint (or the pending step-over target) matches pc, pause the debugger, cancel any step request and return true. The step-over breakpoint is consumed on hit"
+                                ],
+                                "line": 651,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "dbg",
+                                    "Debugger to check"
+                                ],
+                                "line": 652,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "pc",
+                                    "Program counter about to be executed"
+                                ],
+                                "line": 653,
+                                "children": []
+                            },
+                            {
+                                "marker": "returns",
+                                "type": "return",
+                                "args": [
+                                    "true",
+                                    "when execution must stop at pc"
+                                ],
+                                "line": 654,
+                                "children": []
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "file": "src/gbemu.h",
+            "docs": {
+                "marker": "module",
+                "type": "module",
+                "args": [
+                    "disasm"
+                ],
+                "line": 657,
+                "children": [
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "gb_disasm"
+                        ],
+                        "line": 659,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Decode one instruction at addr into a human-readable string (e.g. \"LD A,$01\", \"JR $C123\"). CB-prefixed instructions are folded into a single line; unknown and illegal opcodes render as \"DB $XX\""
+                                ],
+                                "line": 660,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "bus",
+                                    "Bus to read the instruction bytes from"
+                                ],
+                                "line": 661,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "addr",
+                                    "Address of the first instruction byte"
+                                ],
+                                "line": 662,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "out",
+                                    "Buffer receiving the NUL-terminated text"
+                                ],
+                                "line": 663,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "out_size",
+                                    "Buffer size in bytes"
+                                ],
+                                "line": 664,
+                                "children": []
+                            },
+                            {
+                                "marker": "returns",
+                                "type": "return",
+                                "args": [
+                                    "Length",
+                                    "of the instruction in bytes (1-3), or 0 if the buffer is too small"
+                                ],
+                                "line": 665,
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "gb_instruction_length"
+                        ],
+                        "line": 668,
+                        "children": [
+                            {
+                                "marker": "desc",
+                                "type": "description",
+                                "args": [
+                                    "Length in bytes of the instruction at addr (used by step-over)"
+                                ],
+                                "line": 669,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "bus",
+                                    "Bus to read the opcode from"
+                                ],
+                                "line": 670,
+                                "children": []
+                            },
+                            {
+                                "marker": "param",
+                                "type": "parameter",
+                                "args": [
+                                    "addr",
+                                    "Address of the first instruction byte"
+                                ],
+                                "line": 671,
+                                "children": []
+                            },
+                            {
+                                "marker": "returns",
+                                "type": "return",
+                                "args": [
+                                    "Instruction",
+                                    "length in bytes (1-3)"
+                                ],
+                                "line": 672,
+                                "children": []
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "file": "src/gbemu.h",
+            "docs": {
+                "marker": "module",
+                "type": "module",
+                "args": [
                     "prefix"
                 ],
-                "line": 570,
+                "line": 675,
                 "children": [
                     {
                         "marker": "desc",
@@ -2351,7 +2982,7 @@
                         "args": [
                             "GBEMU_STRIP_PREFIX lives at the end of the header so that every symbol"
                         ],
-                        "line": 571,
+                        "line": 676,
                         "children": []
                     },
                     {
@@ -2360,7 +2991,7 @@
                         "args": [
                             "above is declared in its real, prefixed form before the aliases are"
                         ],
-                        "line": 572,
+                        "line": 677,
                         "children": []
                     },
                     {
@@ -2369,7 +3000,7 @@
                         "args": [
                             "introduced. Each alias maps the unprefixed spelling to the prefixed"
                         ],
-                        "line": 573,
+                        "line": 678,
                         "children": []
                     },
                     {
@@ -2378,7 +3009,7 @@
                         "args": [
                             "one, so `cpu_init` expands to `gb_cpu_init` and the ABI never changes."
                         ],
-                        "line": 574,
+                        "line": 679,
                         "children": []
                     },
                     {
@@ -2387,7 +3018,7 @@
                         "args": [
                             "GBEMU_STRIP_PREFIX"
                         ],
-                        "line": 576,
+                        "line": 681,
                         "children": [
                             {
                                 "marker": "desc",
@@ -2395,7 +3026,7 @@
                                 "args": [
                                     "Define this before including gbemu.h (or frontend.h) to alias every prefixed symbol to its unprefixed spelling, so a program that links nothing else can keep writing `CPU`, `ppu_init` or `SCREEN_WIDTH` while the library itself still exports the `gb_`/`GB_` names. This deliberately gives up namespacing: it redefines very common words (`loop`, `version`, `STR`) process-wide, so never enable it alongside another library or code of your own that uses those names. Prefer passing it on the command line (-DGBEMU_STRIP_PREFIX) over defining it in a source file, so it cannot leak into unrelated translation units."
                                 ],
-                                "line": 577,
+                                "line": 682,
                                 "children": []
                             }
                         ]
@@ -2406,7 +3037,7 @@
                         "args": [
                             "CPU"
                         ],
-                        "line": 579,
+                        "line": 684,
                         "children": []
                     },
                     {
@@ -2415,7 +3046,7 @@
                         "args": [
                             "Bus"
                         ],
-                        "line": 581,
+                        "line": 686,
                         "children": []
                     },
                     {
@@ -2424,7 +3055,7 @@
                         "args": [
                             "Timer"
                         ],
-                        "line": 583,
+                        "line": 688,
                         "children": []
                     },
                     {
@@ -2433,7 +3064,7 @@
                         "args": [
                             "PPU"
                         ],
-                        "line": 585,
+                        "line": 690,
                         "children": []
                     },
                     {
@@ -2442,7 +3073,7 @@
                         "args": [
                             "APU"
                         ],
-                        "line": 587,
+                        "line": 692,
                         "children": []
                     },
                     {
@@ -2451,7 +3082,7 @@
                         "args": [
                             "Frontend"
                         ],
-                        "line": 589,
+                        "line": 694,
                         "children": []
                     },
                     {
@@ -2460,7 +3091,7 @@
                         "args": [
                             "Flag"
                         ],
-                        "line": 591,
+                        "line": 696,
                         "children": []
                     },
                     {
@@ -2469,7 +3100,7 @@
                         "args": [
                             "PPUMode"
                         ],
-                        "line": 593,
+                        "line": 698,
                         "children": []
                     },
                     {
@@ -2478,7 +3109,16 @@
                         "args": [
                             "Hotkey"
                         ],
-                        "line": 595,
+                        "line": 700,
+                        "children": []
+                    },
+                    {
+                        "marker": "type",
+                        "type": "type",
+                        "args": [
+                            "Debugger"
+                        ],
+                        "line": 702,
                         "children": []
                     },
                     {
@@ -2487,7 +3127,7 @@
                         "args": [
                             "version"
                         ],
-                        "line": 598,
+                        "line": 705,
                         "children": []
                     },
                     {
@@ -2496,7 +3136,7 @@
                         "args": [
                             "cpu_init"
                         ],
-                        "line": 600,
+                        "line": 707,
                         "children": []
                     },
                     {
@@ -2505,7 +3145,7 @@
                         "args": [
                             "cpu_dump_fd"
                         ],
-                        "line": 602,
+                        "line": 709,
                         "children": []
                     },
                     {
@@ -2514,7 +3154,7 @@
                         "args": [
                             "cpu_dump"
                         ],
-                        "line": 607,
+                        "line": 714,
                         "children": []
                     },
                     {
@@ -2523,7 +3163,7 @@
                         "args": [
                             "cpu_step"
                         ],
-                        "line": 609,
+                        "line": 716,
                         "children": []
                     },
                     {
@@ -2532,7 +3172,7 @@
                         "args": [
                             "flag_set"
                         ],
-                        "line": 611,
+                        "line": 718,
                         "children": []
                     },
                     {
@@ -2541,7 +3181,7 @@
                         "args": [
                             "flag_get"
                         ],
-                        "line": 613,
+                        "line": 720,
                         "children": []
                     },
                     {
@@ -2550,7 +3190,7 @@
                         "args": [
                             "bus_read"
                         ],
-                        "line": 615,
+                        "line": 722,
                         "children": []
                     },
                     {
@@ -2559,7 +3199,7 @@
                         "args": [
                             "bus_write"
                         ],
-                        "line": 617,
+                        "line": 724,
                         "children": []
                     },
                     {
@@ -2568,7 +3208,7 @@
                         "args": [
                             "bus_tick"
                         ],
-                        "line": 619,
+                        "line": 726,
                         "children": []
                     },
                     {
@@ -2577,7 +3217,7 @@
                         "args": [
                             "bus_load_rom"
                         ],
-                        "line": 621,
+                        "line": 728,
                         "children": []
                     },
                     {
@@ -2586,7 +3226,7 @@
                         "args": [
                             "get_reg_by_index"
                         ],
-                        "line": 623,
+                        "line": 730,
                         "children": []
                     },
                     {
@@ -2595,7 +3235,7 @@
                         "args": [
                             "set_reg_by_index"
                         ],
-                        "line": 625,
+                        "line": 732,
                         "children": []
                     },
                     {
@@ -2604,7 +3244,7 @@
                         "args": [
                             "fetch8"
                         ],
-                        "line": 627,
+                        "line": 734,
                         "children": []
                     },
                     {
@@ -2613,7 +3253,7 @@
                         "args": [
                             "fetch16"
                         ],
-                        "line": 629,
+                        "line": 736,
                         "children": []
                     },
                     {
@@ -2622,7 +3262,7 @@
                         "args": [
                             "timer_init"
                         ],
-                        "line": 631,
+                        "line": 738,
                         "children": []
                     },
                     {
@@ -2631,7 +3271,7 @@
                         "args": [
                             "timer_step"
                         ],
-                        "line": 633,
+                        "line": 740,
                         "children": []
                     },
                     {
@@ -2640,7 +3280,7 @@
                         "args": [
                             "timer_read"
                         ],
-                        "line": 635,
+                        "line": 742,
                         "children": []
                     },
                     {
@@ -2649,7 +3289,7 @@
                         "args": [
                             "timer_write"
                         ],
-                        "line": 637,
+                        "line": 744,
                         "children": []
                     },
                     {
@@ -2658,7 +3298,7 @@
                         "args": [
                             "get_time_ns"
                         ],
-                        "line": 639,
+                        "line": 746,
                         "children": []
                     },
                     {
@@ -2667,7 +3307,7 @@
                         "args": [
                             "sleep_ns"
                         ],
-                        "line": 641,
+                        "line": 748,
                         "children": []
                     },
                     {
@@ -2676,7 +3316,7 @@
                         "args": [
                             "ppu_init"
                         ],
-                        "line": 643,
+                        "line": 750,
                         "children": []
                     },
                     {
@@ -2685,7 +3325,7 @@
                         "args": [
                             "ppu_step"
                         ],
-                        "line": 645,
+                        "line": 752,
                         "children": []
                     },
                     {
@@ -2694,7 +3334,7 @@
                         "args": [
                             "ppu_read"
                         ],
-                        "line": 647,
+                        "line": 754,
                         "children": []
                     },
                     {
@@ -2703,7 +3343,7 @@
                         "args": [
                             "ppu_write"
                         ],
-                        "line": 649,
+                        "line": 756,
                         "children": []
                     },
                     {
@@ -2712,7 +3352,7 @@
                         "args": [
                             "handle_interrupts"
                         ],
-                        "line": 651,
+                        "line": 758,
                         "children": []
                     },
                     {
@@ -2721,7 +3361,7 @@
                         "args": [
                             "apu_init"
                         ],
-                        "line": 653,
+                        "line": 760,
                         "children": []
                     },
                     {
@@ -2730,7 +3370,7 @@
                         "args": [
                             "apu_step"
                         ],
-                        "line": 655,
+                        "line": 762,
                         "children": []
                     },
                     {
@@ -2739,7 +3379,7 @@
                         "args": [
                             "apu_read"
                         ],
-                        "line": 657,
+                        "line": 764,
                         "children": []
                     },
                     {
@@ -2748,7 +3388,7 @@
                         "args": [
                             "apu_write"
                         ],
-                        "line": 659,
+                        "line": 766,
                         "children": []
                     },
                     {
@@ -2757,7 +3397,7 @@
                         "args": [
                             "apu_buf_pop"
                         ],
-                        "line": 661,
+                        "line": 768,
                         "children": []
                     },
                     {
@@ -2766,7 +3406,7 @@
                         "args": [
                             "instr"
                         ],
-                        "line": 663,
+                        "line": 770,
                         "children": []
                     },
                     {
@@ -2775,7 +3415,7 @@
                         "args": [
                             "machine_tick"
                         ],
-                        "line": 665,
+                        "line": 772,
                         "children": []
                     },
                     {
@@ -2784,7 +3424,7 @@
                         "args": [
                             "loop"
                         ],
-                        "line": 667,
+                        "line": 774,
                         "children": []
                     },
                     {
@@ -2793,7 +3433,7 @@
                         "args": [
                             "battery_load"
                         ],
-                        "line": 669,
+                        "line": 776,
                         "children": []
                     },
                     {
@@ -2802,7 +3442,7 @@
                         "args": [
                             "battery_save"
                         ],
-                        "line": 671,
+                        "line": 778,
                         "children": []
                     },
                     {
@@ -2811,7 +3451,7 @@
                         "args": [
                             "save_state"
                         ],
-                        "line": 673,
+                        "line": 780,
                         "children": []
                     },
                     {
@@ -2820,7 +3460,124 @@
                         "args": [
                             "load_state"
                         ],
-                        "line": 675,
+                        "line": 782,
+                        "children": []
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "debugger_init"
+                        ],
+                        "line": 784,
+                        "children": []
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "debugger_has_breakpoint"
+                        ],
+                        "line": 786,
+                        "children": []
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "debugger_add_breakpoint"
+                        ],
+                        "line": 788,
+                        "children": []
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "debugger_remove_breakpoint"
+                        ],
+                        "line": 790,
+                        "children": []
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "debugger_toggle_breakpoint"
+                        ],
+                        "line": 792,
+                        "children": []
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "debugger_pause"
+                        ],
+                        "line": 794,
+                        "children": []
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "debugger_continue"
+                        ],
+                        "line": 796,
+                        "children": []
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "debugger_toggle_pause"
+                        ],
+                        "line": 798,
+                        "children": []
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "debugger_step"
+                        ],
+                        "line": 800,
+                        "children": []
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "debugger_step_over"
+                        ],
+                        "line": 802,
+                        "children": []
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "debugger_hit"
+                        ],
+                        "line": 804,
+                        "children": []
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "disasm"
+                        ],
+                        "line": 806,
+                        "children": []
+                    },
+                    {
+                        "marker": "func",
+                        "type": "function",
+                        "args": [
+                            "instruction_length"
+                        ],
+                        "line": 808,
                         "children": []
                     },
                     {
@@ -2829,7 +3586,7 @@
                         "args": [
                             "VERSION_MAJOR"
                         ],
-                        "line": 678,
+                        "line": 811,
                         "children": []
                     },
                     {
@@ -2838,7 +3595,7 @@
                         "args": [
                             "VERSION_MINOR"
                         ],
-                        "line": 680,
+                        "line": 813,
                         "children": []
                     },
                     {
@@ -2847,7 +3604,7 @@
                         "args": [
                             "VERSION_PATCH"
                         ],
-                        "line": 682,
+                        "line": 815,
                         "children": []
                     },
                     {
@@ -2856,7 +3613,7 @@
                         "args": [
                             "VERSION_STRING"
                         ],
-                        "line": 684,
+                        "line": 817,
                         "children": []
                     },
                     {
@@ -2865,7 +3622,7 @@
                         "args": [
                             "VERSION_HEX"
                         ],
-                        "line": 686,
+                        "line": 819,
                         "children": []
                     },
                     {
@@ -2874,7 +3631,7 @@
                         "args": [
                             "STR"
                         ],
-                        "line": 688,
+                        "line": 821,
                         "children": []
                     },
                     {
@@ -2883,7 +3640,7 @@
                         "args": [
                             "TOSTRING"
                         ],
-                        "line": 690,
+                        "line": 823,
                         "children": []
                     },
                     {
@@ -2892,7 +3649,7 @@
                         "args": [
                             "SCREEN_WIDTH"
                         ],
-                        "line": 692,
+                        "line": 825,
                         "children": []
                     },
                     {
@@ -2901,7 +3658,7 @@
                         "args": [
                             "SCREEN_HEIGHT"
                         ],
-                        "line": 694,
+                        "line": 827,
                         "children": []
                     },
                     {
@@ -2910,7 +3667,7 @@
                         "args": [
                             "APU_BUF_SIZE"
                         ],
-                        "line": 696,
+                        "line": 829,
                         "children": []
                     },
                     {
@@ -2919,7 +3676,7 @@
                         "args": [
                             "APU_BUF_MASK"
                         ],
-                        "line": 698,
+                        "line": 831,
                         "children": []
                     },
                     {
@@ -2928,7 +3685,7 @@
                         "args": [
                             "APU_SAMPLE_RATE"
                         ],
-                        "line": 700,
+                        "line": 833,
                         "children": []
                     },
                     {
@@ -2937,7 +3694,7 @@
                         "args": [
                             "CPU_FREQ"
                         ],
-                        "line": 702,
+                        "line": 835,
                         "children": []
                     },
                     {
@@ -2946,7 +3703,7 @@
                         "args": [
                             "CYCLES_PER_FRAME"
                         ],
-                        "line": 704,
+                        "line": 837,
                         "children": []
                     },
                     {
@@ -2955,7 +3712,7 @@
                         "args": [
                             "FRAME_TIME_NS"
                         ],
-                        "line": 706,
+                        "line": 839,
                         "children": []
                     },
                     {
@@ -2964,7 +3721,7 @@
                         "args": [
                             "FLAG_Z"
                         ],
-                        "line": 709,
+                        "line": 842,
                         "children": []
                     },
                     {
@@ -2973,7 +3730,7 @@
                         "args": [
                             "FLAG_N"
                         ],
-                        "line": 711,
+                        "line": 844,
                         "children": []
                     },
                     {
@@ -2982,7 +3739,7 @@
                         "args": [
                             "FLAG_H"
                         ],
-                        "line": 713,
+                        "line": 846,
                         "children": []
                     },
                     {
@@ -2991,7 +3748,7 @@
                         "args": [
                             "FLAG_C"
                         ],
-                        "line": 715,
+                        "line": 848,
                         "children": []
                     },
                     {
@@ -3000,7 +3757,7 @@
                         "args": [
                             "PPU_MODE_HBLANK"
                         ],
-                        "line": 717,
+                        "line": 850,
                         "children": []
                     },
                     {
@@ -3009,7 +3766,7 @@
                         "args": [
                             "PPU_MODE_VBLANK"
                         ],
-                        "line": 719,
+                        "line": 852,
                         "children": []
                     },
                     {
@@ -3018,7 +3775,7 @@
                         "args": [
                             "PPU_MODE_OAM"
                         ],
-                        "line": 721,
+                        "line": 854,
                         "children": []
                     },
                     {
@@ -3027,7 +3784,7 @@
                         "args": [
                             "PPU_MODE_XFER"
                         ],
-                        "line": 723,
+                        "line": 856,
                         "children": []
                     },
                     {
@@ -3036,7 +3793,7 @@
                         "args": [
                             "HOTKEY_SAVE_STATE"
                         ],
-                        "line": 725,
+                        "line": 858,
                         "children": []
                     },
                     {
@@ -3045,7 +3802,25 @@
                         "args": [
                             "HOTKEY_LOAD_STATE"
                         ],
-                        "line": 727,
+                        "line": 860,
+                        "children": []
+                    },
+                    {
+                        "marker": "const",
+                        "type": "any",
+                        "args": [
+                            "HOTKEY_DEBUG_PAUSE"
+                        ],
+                        "line": 862,
+                        "children": []
+                    },
+                    {
+                        "marker": "macro",
+                        "type": "function",
+                        "args": [
+                            "DEBUGGER_MAX_BREAKPOINTS"
+                        ],
+                        "line": 864,
                         "children": []
                     }
                 ]
@@ -3059,7 +3834,7 @@
                 "args": [
                     "GBEMU_STRIP_PREFIX"
                 ],
-                "line": 30,
+                "line": 39,
                 "children": [
                     {
                         "marker": "desc",
@@ -3067,7 +3842,7 @@
                         "args": [
                             "Define this before including any gbemu header to alias every prefixed symbol to its unprefixed spelling, so a program that links nothing else can keep writing `CPU`, `ppu_init` or `SCREEN_WIDTH` while the library itself still exports the `gb_`/`GB_` names. This deliberately gives up namespacing: it redefines very common words (`loop`, `version`, `STR`) process-wide, so never enable it alongside another library or code of your own that uses those names. Prefer passing it on the command line (-DGBEMU_STRIP_PREFIX) over defining it in a source file, so it cannot leak into unrelated translation units."
                         ],
-                        "line": 31,
+                        "line": 40,
                         "children": []
                     }
                 ]
@@ -3081,7 +3856,7 @@
                 "args": [
                     "Frontend"
                 ],
-                "line": 33,
+                "line": 42,
                 "children": []
             }
         },
@@ -3093,7 +3868,19 @@
                 "args": [
                     "Hotkey"
                 ],
-                "line": 36,
+                "line": 45,
+                "children": []
+            }
+        },
+        {
+            "file": "src/frontend.h",
+            "docs": {
+                "marker": "type",
+                "type": "type",
+                "args": [
+                    "Debugger"
+                ],
+                "line": 48,
                 "children": []
             }
         },
@@ -3105,7 +3892,7 @@
                 "args": [
                     "Bus"
                 ],
-                "line": 43,
+                "line": 55,
                 "children": []
             }
         },
@@ -3117,7 +3904,7 @@
                 "args": [
                     "APU"
                 ],
-                "line": 46,
+                "line": 58,
                 "children": []
             }
         },
@@ -3129,7 +3916,7 @@
                 "args": [
                     "HOTKEY_SAVE_STATE"
                 ],
-                "line": 49,
+                "line": 61,
                 "children": []
             }
         },
@@ -3141,7 +3928,19 @@
                 "args": [
                     "HOTKEY_LOAD_STATE"
                 ],
-                "line": 52,
+                "line": 64,
+                "children": []
+            }
+        },
+        {
+            "file": "src/frontend.h",
+            "docs": {
+                "marker": "const",
+                "type": "any",
+                "args": [
+                    "HOTKEY_DEBUG_PAUSE"
+                ],
+                "line": 67,
                 "children": []
             }
         }
